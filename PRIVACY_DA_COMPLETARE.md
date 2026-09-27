@@ -1,0 +1,2 @@
+# Informativa privacy — BOZZA DA COMPLETARE PRIMA DEL LANCIO
+Questa non è un'informativa definitiva. Prima dell'apertura al pubblico inserire almeno: identità e contatti del titolare, finalità e basi giuridiche, categorie di dati, destinatari/responsabili, trasferimenti, tempi di conservazione, diritti degli interessati, reclamo al Garante, misure relative ai minori e gestione cookie/strumenti di terze parti.
