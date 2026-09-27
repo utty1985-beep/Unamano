@@ -1,9 +1,11 @@
 {
-  "name": "UnaMano — Bacheca locale",
+  "name": "UnaMano — Chiedi una mano. Dai una mano.",
   "short_name": "UnaMano",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f7f8",
-  "theme_color": "#ffffff",
+  "background_color": "#f5f8f7",
+  "theme_color": "#0f6b55",
+  "description": "Bacheca locale per chiedere aiuto, candidarsi e costruire reputazione tramite recensioni.",
   "icons": []
 }
