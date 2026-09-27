@@ -144,3 +144,9 @@ window.addEventListener('load',()=>{
     if(saved)localStorage.removeItem('unamano_report_url');
   }
 });
+
+(function(){
+  const s=document.createElement('script');
+  s.src='./worker-features.js?v=20260927-1';
+  document.head.appendChild(s);
+})();
