@@ -179,3 +179,59 @@ window.addEventListener('load',()=>{
   if(document.readyState==='complete')loadAcceptedChat();
   else window.addEventListener('load',loadAcceptedChat,{once:true});
 })();
+
+(function(){
+  let deferredInstallPrompt=null;
+  const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault();
+    deferredInstallPrompt=e;
+  });
+
+  const showInstallHelp=()=>{
+    if(isIOS()){
+      alert('Per installare UnaMano: tocca Condividi nel browser, poi “Aggiungi alla schermata Home”.');
+      return;
+    }
+    alert('Per installare UnaMano: apri il menu del browser (⋮) e tocca “Installa app” oppure “Aggiungi a schermata Home”.');
+  };
+
+  window.installUnaMano=async function(){
+    if(isStandalone()){
+      if(typeof toast==='function')toast('UnaMano è già installata sul telefono.');
+      return;
+    }
+    if(deferredInstallPrompt){
+      const p=deferredInstallPrompt;
+      deferredInstallPrompt=null;
+      try{
+        await p.prompt();
+        const choice=await p.userChoice;
+        if(choice?.outcome==='accepted'&&typeof toast==='function')toast('UnaMano installata sul telefono.');
+        else if(choice?.outcome!=='accepted')showInstallHelp();
+      }catch(e){showInstallHelp();}
+      return;
+    }
+    showInstallHelp();
+  };
+
+  window.addEventListener('load',()=>{
+    if(isStandalone())return;
+    const hero=document.querySelector('.hero-actions');
+    if(!hero||document.getElementById('installUnaManoBtn'))return;
+    const b=document.createElement('button');
+    b.id='installUnaManoBtn';
+    b.className='btn p';
+    b.textContent='📲 Installa sul tuo telefono';
+    b.onclick=window.installUnaMano;
+    hero.appendChild(b);
+  });
+
+  window.addEventListener('appinstalled',()=>{
+    deferredInstallPrompt=null;
+    document.getElementById('installUnaManoBtn')?.remove();
+    if(typeof toast==='function')toast('UnaMano è stata aggiunta al telefono.');
+  });
+})();
