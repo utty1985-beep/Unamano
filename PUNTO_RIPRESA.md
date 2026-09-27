@@ -73,3 +73,16 @@ Data: 27/09/2026
 
 ## Regola di prodotto
 UnaMano parte gratuito. Non gestisce pagamenti in-app. Eventuali accordi economici avvengono direttamente tra gli utenti e restano soggetti alla normativa applicabile.
+
+## Ultimo aggiornamento — installazione sul telefono
+- Aggiunto nella home il pulsante `📲 Installa sul tuo telefono`.
+- Se il browser supporta il prompt PWA, il pulsante apre direttamente la richiesta di installazione.
+- Su browser/dispositivi che non permettono il prompt diretto, viene mostrata una guida semplice con il percorso da seguire.
+- Se UnaMano è già installata come PWA, il pulsante non viene mostrato.
+
+## Prossima sessione
+- Preparare il lancio social di UnaMano.
+- Creare nuovi profili dedicati con il nome del sito su Facebook, Instagram e TikTok.
+- Verificare disponibilità e coerenza del nome/username su tutte e tre le piattaforme prima di scegliere quello definitivo.
+- Preparare immagine profilo, bio, descrizione e link al sito uguali/coerenti.
+- Impostare la prima pubblicazione e il piano iniziale di promozione/pubblicità su Facebook, Instagram e TikTok.
