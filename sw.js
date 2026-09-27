@@ -1,5 +1,5 @@
-const C='unamano-v11-20260927';
-const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./worker-features.js','./empty-city-demo.js','./profile-chat.js','./accepted-chat.js','./chat-bootstrap.js','./profile-privacy-enhancements.js','./marketplace-polish.js','./candidate-actions.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
+const C='unamano-v12-20260927';
+const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./worker-features.js','./empty-city-demo.js','./profile-chat.js','./accepted-chat.js','./chat-bootstrap.js','./profile-privacy-enhancements.js','./marketplace-polish.js','./candidate-actions.js','./activity-live.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
