@@ -5,5 +5,6 @@ function addAcceptedChatButtons(){try{if(!session?.user?.id||typeof jobs==='unde
 function install(){if(installed||typeof window.renderActivity!=='function')return false;installed=true;const old=window.renderActivity;window.renderActivity=function(){const r=old.apply(this,arguments);setTimeout(addAcceptedChatButtons,0);return r;};addAcceptedChatButtons();return true;}
 function boot(){let tries=0;const timer=setInterval(()=>{tries++;if(install())setTimeout(addAcceptedChatButtons,250);else addAcceptedChatButtons();if(installed&&tries>8)clearInterval(timer);if(tries>40)clearInterval(timer);},250);}
 if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
+if(!document.getElementById('unamanoChatBootstrap')){const s=document.createElement('script');s.id='unamanoChatBootstrap';s.src='./chat-bootstrap.js?v=20260927-1';document.head.appendChild(s);}
 if(!document.getElementById('unamanoMarketplacePolish')){const s=document.createElement('script');s.id='unamanoMarketplacePolish';s.src='./marketplace-polish.js?v=20260927-1';document.head.appendChild(s);}
 })();
