@@ -4,6 +4,7 @@ let localBoard=false;
 let liveChannel=null;
 let patchedCreateJob=false;
 let patchedLogout=false;
+const PUSH_PUBLIC_KEY='BBqUijPcpNzkaPOlA_3x-x9vF-3eRskVhtDgAESwMeDws9D2KlNaSCG4Gde3ilG-TpPHc5enhSj9P53EkcU-9NM';
 const byId=id=>document.getElementById(id);
 const norm=s=>String(s||'').trim().toLowerCase();
 const isToday=v=>{const a=new Date(v),b=new Date();return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()};
@@ -75,13 +76,10 @@ async function ensurePushSubscription(){
     const permission=await Notification.requestPermission();
     if(permission!=='granted')throw new Error('Permesso notifiche non concesso.');
   }
-  const publicKey=window.UNAMANO_CONFIG?.vapidPublicKey;
-  if(!publicKey)throw new Error('Configurazione notifiche non disponibile.');
+  const publicKey=window.UNAMANO_CONFIG?.vapidPublicKey||PUSH_PUBLIC_KEY;
   const reg=await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
-  if(!sub){
-    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(publicKey)});
-  }
+  if(!sub){sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(publicKey)});}
   const json=sub.toJSON();
   const endpoint=json.endpoint||sub.endpoint;
   const p256dh=json.keys?.p256dh;
@@ -111,7 +109,7 @@ async function loadPrefs(autoLocal){
   prefs={city:pr.data?.city||'',categories:wr.data?.categories||[],notifications_enabled:!!wr.data?.notifications_enabled};
   if(autoLocal&&prefs.city){localBoard=true;if(byId('cityFilter'))byId('cityFilter').value=prefs.city;}
   addUi();patchRender();setupLive();patchActions();
-  if(prefs.notifications_enabled&&Notification?.permission==='granted')ensurePushSubscription().then(()=>drawPrefs()).catch(()=>{});
+  if(prefs.notifications_enabled&&'Notification'in window&&Notification.permission==='granted')ensurePushSubscription().then(()=>drawPrefs()).catch(()=>{});
 }
 
 async function savePrefs(){
@@ -188,10 +186,7 @@ function setupLive(){
 
 async function sendPushForJob(jobId){
   if(!jobId||!session?.user?.id)return;
-  try{
-    const r=await sb.functions.invoke('send-job-push',{body:{job_id:jobId}});
-    if(r.error)console.warn('push dispatch failed',r.error);
-  }catch(e){console.warn('push dispatch failed',e)}
+  try{const r=await sb.functions.invoke('send-job-push',{body:{job_id:jobId}});if(r.error)console.warn('push dispatch failed',r.error)}catch(e){console.warn('push dispatch failed',e)}
 }
 window.sendPushForJob=sendPushForJob;
 
@@ -201,10 +196,7 @@ function patchActions(){
     window.createJob=async function(){
       const before=new Set((typeof jobs!=='undefined'?jobs:[]).map(j=>j.id));
       const result=await original.apply(this,arguments);
-      try{
-        const created=(typeof jobs!=='undefined'?jobs:[]).find(j=>j.owner_id===session?.user?.id&&!before.has(j.id));
-        if(created)sendPushForJob(created.id);
-      }catch(e){}
+      try{const created=(typeof jobs!=='undefined'?jobs:[]).find(j=>j.owner_id===session?.user?.id&&!before.has(j.id));if(created)sendPushForJob(created.id)}catch(e){}
       return result;
     };
     patchedCreateJob=true;
