@@ -4,6 +4,7 @@ window.UNAMANO_CONFIG={
 };
 
 window.addEventListener('load',()=>{
+  const TERMS_VERSION='2026-09-27';
   const baseUrl=()=>location.origin+location.pathname;
 
   if('serviceWorker' in navigator){
@@ -11,7 +12,8 @@ window.addEventListener('load',()=>{
   }
 
   window.shareSite=async function(){
-    const data={title:'UnaMano',text:'UnaMano — Chiedi una mano. Dai una mano.',url:baseUrl()};
+    const home=location.origin+location.pathname.replace(/[^/]*$/,'');
+    const data={title:'UnaMano',text:'UnaMano — Chiedi una mano. Dai una mano.',url:home};
     try{
       if(navigator.share){await navigator.share(data);return;}
       await navigator.clipboard.writeText(data.url);
@@ -29,7 +31,8 @@ window.addEventListener('load',()=>{
   window.shareJob=async function(id){
     let j=null;
     try{j=jobs.find(x=>x.id===id);}catch(e){}
-    const url=baseUrl()+'?job='+encodeURIComponent(id);
+    const home=location.origin+location.pathname.replace(/[^/]*$/,'');
+    const url=home+'?job='+encodeURIComponent(id);
     const text=j?`${j.title} — ${j.city} — UnaMano`:'UnaMano';
     try{
       if(navigator.share){await navigator.share({title:'UnaMano',text,url});return;}
@@ -51,5 +54,93 @@ window.addEventListener('load',()=>{
       }catch(e){}
       if(tries>=12)clearInterval(timer);
     },350);
+  }
+
+  const style=document.createElement('style');
+  style.textContent='.legal-consent{margin:12px 0;padding:12px;border:1px solid #dbe7e2;border-radius:12px;background:#f8fbfa;font-size:13px}.legal-consent label{display:flex;gap:8px;align-items:flex-start;margin:0;font-weight:650}.legal-consent input{width:auto;margin-top:3px}.site-footer{max-width:1160px;margin:0 auto 82px;padding:18px 16px;color:#687773;font-size:13px;text-align:center}.site-footer a{margin:0 6px;color:#0f6b55}.site-footer strong{color:#31443e}';
+  document.head.appendChild(style);
+
+  const testbar=document.querySelector('.testbar');
+  if(testbar)testbar.textContent='UnaMano · servizio gratuito · fase iniziale';
+
+  const pass=document.getElementById('pass');
+  const authCard=document.querySelector('#auth .card');
+  let consent=document.getElementById('legalConsentWrap');
+  if(pass&&authCard&&!consent){
+    consent=document.createElement('div');
+    consent.id='legalConsentWrap';
+    consent.className='legal-consent hidden';
+    consent.innerHTML='<label><input id="legalAccept" type="checkbox"><span>Dichiaro di avere almeno 18 anni, <a href="termini.html" target="_blank" rel="noopener">accetto i Termini di utilizzo</a> e confermo di aver letto l\' <a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a>.</span></label>';
+    pass.insertAdjacentElement('afterend',consent);
+  }
+
+  const signupTab=document.getElementById('signupTab'),loginTab=document.getElementById('loginTab');
+  signupTab?.addEventListener('click',()=>consent?.classList.remove('hidden'));
+  loginTab?.addEventListener('click',()=>consent?.classList.add('hidden'));
+
+  async function recordAcceptance(){
+    try{
+      if(localStorage.getItem('unamano_legal_pending')!==TERMS_VERSION||typeof sb==='undefined')return;
+      const r=await sb.auth.getSession();
+      const s=r?.data?.session;
+      if(!s?.user?.id)return;
+      const ins=await sb.from('legal_acceptances').insert({user_id:s.user.id,terms_version:TERMS_VERSION});
+      if(!ins.error||ins.error.code==='23505')localStorage.removeItem('unamano_legal_pending');
+    }catch(e){}
+  }
+
+  const originalSubmit=window.submitAuth;
+  if(typeof originalSubmit==='function'&&document.getElementById('authSubmit')){
+    window.submitAuth=async function(){
+      let signingUp=false;
+      try{signingUp=typeof authState!=='undefined'&&authState==='signup';}catch(e){}
+      if(signingUp&&!document.getElementById('legalAccept')?.checked){
+        const m=document.getElementById('msg');
+        if(m)m.textContent='Per registrarti devi avere almeno 18 anni, accettare i Termini e leggere l’informativa privacy.';
+        return;
+      }
+      const result=await originalSubmit.apply(this,arguments);
+      if(signingUp){
+        const m=document.getElementById('msg')?.textContent||'';
+        let hasSession=false;
+        try{hasSession=!!session;}catch(e){}
+        if(hasSession||/Registrazione effettuata|Account creato|Benvenuto/i.test(m))localStorage.setItem('unamano_legal_pending',TERMS_VERSION);
+      }
+      await recordAcceptance();
+      return result;
+    };
+    document.getElementById('authSubmit').onclick=window.submitAuth;
+    if(pass)pass.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();window.submitAuth();}};
+  }
+
+  const originalLogin=window.login;
+  if(typeof originalLogin==='function'){
+    window.login=async function(){const r=await originalLogin.apply(this,arguments);await recordAcceptance();return r;};
+  }
+  recordAcceptance();
+
+  const legalNotice=document.querySelector('#legal .notice');
+  if(legalNotice)legalNotice.innerHTML='Consulta <a href="termini.html">Termini di utilizzo</a>, <a href="privacy.html">Informativa privacy</a> e il modulo pubblico <a href="segnala.html">Segnala contenuto</a>. Prima della promozione nazionale devono essere pubblicati i dati identificativi e un recapito diretto del gestore.';
+
+  if(document.querySelector('main')&&!document.getElementById('siteFooter')){
+    const footer=document.createElement('footer');
+    footer.id='siteFooter';footer.className='site-footer';
+    footer.innerHTML='<strong>UnaMano</strong> · gratuito nella fase iniziale<br><a href="termini.html">Termini</a><a href="privacy.html">Privacy</a><a href="segnala.html">Segnala contenuto</a><a href="#" id="footerShare">Condividi</a>';
+    document.querySelector('main').insertAdjacentElement('afterend',footer);
+    document.getElementById('footerShare')?.addEventListener('click',e=>{e.preventDefault();window.shareSite();});
+  }
+
+  window.reportJob=function(id){
+    const home=location.origin+location.pathname.replace(/[^/]*$/,'');
+    localStorage.setItem('unamano_report_url',home+'?job='+encodeURIComponent(id));
+    location.href='segnala.html';
+  };
+
+  const reportUrlInput=document.getElementById('url');
+  if(reportUrlInput){
+    const fromQuery=new URLSearchParams(location.search).get('url');
+    const saved=localStorage.getItem('unamano_report_url');
+    if(fromQuery||saved)reportUrlInput.value=fromQuery||saved;
+    if(saved)localStorage.removeItem('unamano_report_url');
   }
 });
