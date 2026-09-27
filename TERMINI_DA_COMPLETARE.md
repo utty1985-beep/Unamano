@@ -1,0 +1,2 @@
+# Termini UnaMano — BOZZA DA COMPLETARE PRIMA DEL LANCIO
+UnaMano è progettata come bacheca/intermediazione tra utenti e non come datore di lavoro né sistema di pagamento. Prima del lancio definire con precisione soggetto gestore, servizi vietati, età minima, moderazione, segnalazioni, sospensione account, responsabilità degli utenti, obblighi fiscali/lavoristici e procedura reclami. Non usare questa bozza come garanzia di conformità legale.
