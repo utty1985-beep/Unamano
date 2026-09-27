@@ -1,5 +1,5 @@
-const C='unamano-v6-20260927';
-const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
+const C='unamano-v7-20260927';
+const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./worker-features.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
@@ -11,4 +11,12 @@ self.addEventListener('fetch',e=>{
     return;
   }
   e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(C).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match(e.request)));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  const url=e.notification?.data?.url||'./';
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{
+    for(const c of list){if('focus'in c){c.navigate(url);return c.focus();}}
+    if(clients.openWindow)return clients.openWindow(url);
+  }));
 });
