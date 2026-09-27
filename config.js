@@ -1,4 +1,4 @@
 window.UNAMANO_CONFIG={
-  supabaseUrl:'INSERISCI_URL_NUOVO_PROGETTO_SUPABASE',
-  supabaseKey:'INSERISCI_PUBLISHABLE_KEY_NUOVO_PROGETTO_SUPABASE'
+  supabaseUrl:'https://cfnivvdtyhpgbwmbgoke.supabase.co',
+  supabaseKey:'sb_publishable_p_nrywLxqXT26U69v_SmPA_c1-4INqb'
 };
