@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0f6b55"/>
+  <circle cx="390" cy="125" r="56" fill="#ff7a45"/>
+  <path d="M118 160c0-28 22-50 50-50s50 22 50 50v87l18-67c7-27 35-43 62-36 26 7 42 34 35 60l-14 55 31-39c18-22 50-26 72-8 22 17 26 50 8 72l-99 126c-27 34-67 54-111 54h-13c-69 0-125-56-125-125V160h36z" fill="#fff"/>
+  <text x="256" y="446" text-anchor="middle" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="#ffffff">UnaMano</text>
+</svg>
