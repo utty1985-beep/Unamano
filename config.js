@@ -155,3 +155,15 @@ window.addEventListener('load',()=>{
   };
   document.head.appendChild(s);
 })();
+
+(function(){
+  const loadExtra=()=>{
+    if(document.getElementById('unamanoProfileChatScript'))return;
+    const p=document.createElement('script');
+    p.id='unamanoProfileChatScript';
+    p.src='./profile-chat.js?v=20260927-1';
+    document.head.appendChild(p);
+  };
+  if(document.readyState==='complete')loadExtra();
+  else window.addEventListener('load',loadExtra,{once:true});
+})();
