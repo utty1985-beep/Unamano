@@ -1,60 +1,9 @@
 (function(){
 const q=id=>document.getElementById(id);
 let installed=false;
-
-function addAcceptedChatButtons(){
-  try{
-    if(!session?.user?.id||typeof jobs==='undefined'||typeof applications==='undefined')return;
-    const uid=session.user.id;
-    const map=new Map(jobs.map(j=>[j.id,j]));
-    const incoming=applications.filter(a=>map.get(a.job_id)?.owner_id===uid);
-    const outgoing=applications.filter(a=>a.applicant_id===uid);
-
-    document.querySelectorAll('#incomingApps .appcard').forEach((card,i)=>{
-      const a=incoming[i],j=a&&map.get(a.job_id);
-      if(!a||!j||a.status!=='accepted'||!['assigned','completed'].includes(j.status)||card.querySelector('.accepted-chat-btn'))return;
-      const box=document.createElement('div');
-      box.className='actions accepted-chat-actions';
-      box.innerHTML=`<button class="btn p sm accepted-chat-btn" type="button">💬 Chatta con la persona scelta</button>`;
-      box.querySelector('button').onclick=()=>{
-        if(typeof openConversation==='function')openConversation(a.applicant_id,a.job_id);
-        else if(typeof toast==='function')toast('La chat non è ancora disponibile. Ricarica la pagina.','warn');
-      };
-      card.appendChild(box);
-    });
-
-    document.querySelectorAll('#outgoingApps .appcard').forEach((card,i)=>{
-      const a=outgoing[i],j=a&&map.get(a.job_id);
-      if(!a||!j||a.status!=='accepted'||!['assigned','completed'].includes(j.status)||card.querySelector('.accepted-chat-btn'))return;
-      const box=document.createElement('div');
-      box.className='actions accepted-chat-actions';
-      box.innerHTML=`<button class="btn p sm accepted-chat-btn" type="button">💬 Chatta con chi ha pubblicato</button>`;
-      box.querySelector('button').onclick=()=>{
-        if(typeof openConversation==='function')openConversation(j.owner_id,a.job_id);
-        else if(typeof toast==='function')toast('La chat non è ancora disponibile. Ricarica la pagina.','warn');
-      };
-      card.appendChild(box);
-    });
-  }catch(e){}
-}
-
-function install(){
-  if(installed||typeof window.renderActivity!=='function')return false;
-  installed=true;
-  const old=window.renderActivity;
-  window.renderActivity=function(){const r=old.apply(this,arguments);setTimeout(addAcceptedChatButtons,0);return r;};
-  addAcceptedChatButtons();
-  return true;
-}
-
-window.addEventListener('load',()=>{
-  let tries=0;
-  const timer=setInterval(()=>{
-    tries++;
-    if(install())setTimeout(addAcceptedChatButtons,250);
-    else addAcceptedChatButtons();
-    if(installed&&tries>8)clearInterval(timer);
-    if(tries>40)clearInterval(timer);
-  },250);
-});
+function addAcceptedChatButtons(){try{if(!session?.user?.id||typeof jobs==='undefined'||typeof applications==='undefined')return;const uid=session.user.id,map=new Map(jobs.map(j=>[j.id,j])),incoming=applications.filter(a=>map.get(a.job_id)?.owner_id===uid),outgoing=applications.filter(a=>a.applicant_id===uid);document.querySelectorAll('#incomingApps .appcard').forEach((card,i)=>{const a=incoming[i],j=a&&map.get(a.job_id);if(!a||!j||a.status!=='accepted'||!['assigned','completed'].includes(j.status)||card.querySelector('.accepted-chat-btn'))return;const box=document.createElement('div');box.className='actions accepted-chat-actions';box.innerHTML=`<button class="btn p sm accepted-chat-btn" type="button">💬 Chatta con la persona scelta</button>`;box.querySelector('button').onclick=()=>{if(typeof openConversation==='function')openConversation(a.applicant_id,a.job_id);else if(typeof toast==='function')toast('La chat non è ancora disponibile. Ricarica la pagina.','warn');};card.appendChild(box);});document.querySelectorAll('#outgoingApps .appcard').forEach((card,i)=>{const a=outgoing[i],j=a&&map.get(a.job_id);if(!a||!j||a.status!=='accepted'||!['assigned','completed'].includes(j.status)||card.querySelector('.accepted-chat-btn'))return;const box=document.createElement('div');box.className='actions accepted-chat-actions';box.innerHTML=`<button class="btn p sm accepted-chat-btn" type="button">💬 Chatta con chi ha pubblicato</button>`;box.querySelector('button').onclick=()=>{if(typeof openConversation==='function')openConversation(j.owner_id,a.job_id);else if(typeof toast==='function')toast('La chat non è ancora disponibile. Ricarica la pagina.','warn');};card.appendChild(box);});}catch(e){}}
+function install(){if(installed||typeof window.renderActivity!=='function')return false;installed=true;const old=window.renderActivity;window.renderActivity=function(){const r=old.apply(this,arguments);setTimeout(addAcceptedChatButtons,0);return r;};addAcceptedChatButtons();return true;}
+function boot(){let tries=0;const timer=setInterval(()=>{tries++;if(install())setTimeout(addAcceptedChatButtons,250);else addAcceptedChatButtons();if(installed&&tries>8)clearInterval(timer);if(tries>40)clearInterval(timer);},250);}
+if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
+if(!document.getElementById('unamanoMarketplacePolish')){const s=document.createElement('script');s.id='unamanoMarketplacePolish';s.src='./marketplace-polish.js?v=20260927-1';document.head.appendChild(s);}
 })();
