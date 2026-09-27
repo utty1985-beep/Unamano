@@ -85,7 +85,7 @@ async function ensurePushSubscription(){
   const p256dh=json.keys?.p256dh;
   const auth=json.keys?.auth;
   if(!endpoint||!p256dh||!auth)throw new Error('Dati della sottoscrizione push incompleti.');
-  const r=await sb.rpc('save_push_subscription',{p_endpoint:endpoint,p_p256dh:p256dh,p_auth:auth});
+  const r=await sb.from('push_subscriptions').upsert({user_id:session.user.id,endpoint,p256dh,auth,updated_at:new Date().toISOString()},{onConflict:'endpoint'});
   if(r.error)throw r.error;
   return sub;
 }
@@ -96,7 +96,7 @@ async function removeCurrentPushSubscription(){
     const reg=await navigator.serviceWorker.ready;
     const sub=await reg.pushManager.getSubscription();
     if(!sub)return;
-    if(session?.user?.id)await sb.rpc('remove_push_subscription',{p_endpoint:sub.endpoint});
+    if(session?.user?.id)await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint).eq('user_id',session.user.id);
     await sub.unsubscribe();
   }catch(e){}
 }
