@@ -7,5 +7,12 @@
   "background_color": "#f5f8f7",
   "theme_color": "#0f6b55",
   "description": "Bacheca locale per chiedere aiuto, candidarsi e costruire reputazione tramite recensioni.",
-  "icons": []
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
