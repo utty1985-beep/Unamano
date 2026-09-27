@@ -22,6 +22,15 @@ Data: 27/09/2026
 - La bacheca è filtrabile per categoria.
 - Realtime sulla tabella `jobs` mantiene aggiornata la bacheca quando il sito è aperto.
 
+## Modalità città vuota / richieste demo
+- Se una città non ha ancora richieste reali aperte, la bacheca non appare vuota.
+- Compare un messaggio `UnaMano sta partendo` con invito a pubblicare la prima richiesta reale.
+- Vengono mostrati alcuni annunci dimostrativi chiaramente marcati `ESEMPIO` e `Richiesta dimostrativa`.
+- Le richieste demo non accettano candidature e non vengono inserite nel database come annunci reali.
+- Appena esistono richieste reali nella città, la bacheca mostra quelle reali al posto delle demo.
+- Esempi inclusi: Babysitter, Aiuto doposcuola per compiti, Giardinaggio, Spesa/commissioni e Piccoli lavori.
+- `Doposcuola` è mostrato come esempio nella categoria `Ripetizioni`.
+
 ## Notifiche push complete
 - Configurato Web Push con chiavi VAPID dedicate a UnaMano.
 - Aggiunta tabella `push_subscriptions` con RLS: ogni utente gestisce solo le proprie sottoscrizioni del browser/telefono.
