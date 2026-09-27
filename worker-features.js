@@ -2,6 +2,8 @@
 let prefs={city:'',categories:[],notifications_enabled:false};
 let localBoard=false;
 let liveChannel=null;
+let patchedCreateJob=false;
+let patchedLogout=false;
 const byId=id=>document.getElementById(id);
 const norm=s=>String(s||'').trim().toLowerCase();
 const isToday=v=>{const a=new Date(v),b=new Date();return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()};
@@ -11,6 +13,13 @@ function ensureBabysitter(){
     CATS.unshift(['👶','Babysitter']);
     if(typeof populateUi==='function')populateUi();
   }
+}
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
 function addUi(){
@@ -30,18 +39,25 @@ function addUi(){
   if(aside&&!byId('workerPrefsCard')){
     const card=document.createElement('div');
     card.id='workerPrefsCard';card.className='card';
-    card.innerHTML='<h3 style="margin-top:0">🔔 Lavori che mi interessano</h3><div class="small">Scegli le categorie per cui vuoi essere avvisato nella tua città.</div><div id="workerCats" class="skills"></div><label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px"><input id="workerNotify" type="checkbox" style="width:auto;margin-top:3px"><span>Avvisami quando arriva una nuova richiesta compatibile.</span></label><button id="saveWorkerPrefs" class="btn p" style="width:100%;margin-top:10px">Salva preferenze</button><div id="workerHint" class="small" style="margin-top:8px"></div>';
+    card.innerHTML='<h3 style="margin-top:0">🔔 Lavori che mi interessano</h3><div class="small">Scegli le categorie per cui vuoi essere avvisato nella tua città. Le notifiche push possono arrivare anche con UnaMano chiusa.</div><div id="workerCats" class="skills"></div><label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px"><input id="workerNotify" type="checkbox" style="width:auto;margin-top:3px"><span>Avvisami quando arriva una nuova richiesta compatibile.</span></label><button id="saveWorkerPrefs" class="btn p" style="width:100%;margin-top:10px">Salva preferenze</button><div id="workerHint" class="small" style="margin-top:8px"></div>';
     aside.appendChild(card);
     byId('saveWorkerPrefs').onclick=savePrefs;
   }
   drawPrefs();drawBoardInfo();
 }
 
+async function pushStateText(){
+  if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))return 'Questo dispositivo/browser non supporta le notifiche push.';
+  if(Notification.permission==='denied')return 'Notifiche bloccate dal telefono/browser: riattivale dalle impostazioni del sito.';
+  if(Notification.permission!=='granted')return 'Attiva le notifiche e il telefono ti chiederà il permesso.';
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();return sub?'Notifiche push attive anche con UnaMano chiusa.':'Permesso concesso: premi Salva preferenze per completare l’attivazione.';}catch(e){return 'Impossibile verificare lo stato delle notifiche.'}
+}
+
 function drawPrefs(){
   const w=byId('workerCats');if(!w)return;
   w.innerHTML=CATS.map(x=>'<label class="chip"><input type="checkbox" style="width:auto;margin:0 5px 0 0" value="'+x[1]+'" '+(prefs.categories.includes(x[1])?'checked':'')+'>'+x[0]+' '+x[1]+'</label>').join('');
   if(byId('workerNotify'))byId('workerNotify').checked=prefs.notifications_enabled;
-  if(byId('workerHint'))byId('workerHint').textContent=('Notification'in window&&Notification.permission==='granted')?'Notifiche autorizzate sul telefono.':'Se attivi le notifiche il telefono ti chiederà il permesso.';
+  pushStateText().then(t=>{if(byId('workerHint'))byId('workerHint').textContent=t});
 }
 
 function drawBoardInfo(){
@@ -52,6 +68,41 @@ function drawBoardInfo(){
   el.textContent=prefs.city+': '+n+' '+(n===1?'richiesta pubblicata oggi':'richieste pubblicate oggi');
 }
 
+async function ensurePushSubscription(){
+  if(!session?.user?.id)throw new Error('Accedi prima di attivare le notifiche.');
+  if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw new Error('Notifiche push non supportate su questo dispositivo.');
+  if(Notification.permission!=='granted'){
+    const permission=await Notification.requestPermission();
+    if(permission!=='granted')throw new Error('Permesso notifiche non concesso.');
+  }
+  const publicKey=window.UNAMANO_CONFIG?.vapidPublicKey;
+  if(!publicKey)throw new Error('Configurazione notifiche non disponibile.');
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(publicKey)});
+  }
+  const json=sub.toJSON();
+  const endpoint=json.endpoint||sub.endpoint;
+  const p256dh=json.keys?.p256dh;
+  const auth=json.keys?.auth;
+  if(!endpoint||!p256dh||!auth)throw new Error('Dati della sottoscrizione push incompleti.');
+  const r=await sb.rpc('save_push_subscription',{p_endpoint:endpoint,p_p256dh:p256dh,p_auth:auth});
+  if(r.error)throw r.error;
+  return sub;
+}
+
+async function removeCurrentPushSubscription(){
+  if(!('serviceWorker'in navigator)||!('PushManager'in window))return;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(!sub)return;
+    if(session?.user?.id)await sb.rpc('remove_push_subscription',{p_endpoint:sub.endpoint});
+    await sub.unsubscribe();
+  }catch(e){}
+}
+
 async function loadPrefs(autoLocal){
   if(!session?.user?.id)return;
   const uid=session.user.id;
@@ -59,7 +110,8 @@ async function loadPrefs(autoLocal){
   const wr=await sb.from('worker_preferences').select('categories,notifications_enabled').eq('user_id',uid).maybeSingle();
   prefs={city:pr.data?.city||'',categories:wr.data?.categories||[],notifications_enabled:!!wr.data?.notifications_enabled};
   if(autoLocal&&prefs.city){localBoard=true;if(byId('cityFilter'))byId('cityFilter').value=prefs.city;}
-  addUi();patchRender();setupLive();
+  addUi();patchRender();setupLive();patchActions();
+  if(prefs.notifications_enabled&&Notification?.permission==='granted')ensurePushSubscription().then(()=>drawPrefs()).catch(()=>{});
 }
 
 async function savePrefs(){
@@ -69,9 +121,13 @@ async function savePrefs(){
   if(!city){toast('Inserisci prima la tua città nel profilo.','warn');return}
   if(!categories.length){toast('Scegli almeno una categoria.','warn');return}
   let notify=!!byId('workerNotify')?.checked;
-  if(notify&&'Notification'in window&&Notification.permission!=='granted'){
-    const p=await Notification.requestPermission();notify=p==='granted';
-    if(byId('workerNotify'))byId('workerNotify').checked=notify;
+  try{
+    if(notify)await ensurePushSubscription();
+    else await removeCurrentPushSubscription();
+  }catch(e){
+    notify=false;
+    if(byId('workerNotify'))byId('workerNotify').checked=false;
+    toast(e?.message||'Non riesco ad attivare le notifiche.','warn');
   }
   const uid=session.user.id;
   const a=await sb.from('profiles').update({city,updated_at:new Date().toISOString()}).eq('id',uid);
@@ -81,7 +137,7 @@ async function savePrefs(){
   if(byId('cityFilter'))byId('cityFilter').value=city;
   drawPrefs();drawBoardInfo();patchRender();setupLive();
   if(navigator.vibrate)navigator.vibrate([80,50,80]);
-  toast('Preferenze salvate.');
+  toast(notify?'Preferenze salvate e notifiche push attive.':'Preferenze salvate.');
 }
 
 function getVisibleJobs(){
@@ -111,11 +167,9 @@ function showMyCityToday(){
 }
 function showAll(){localBoard=false;if(byId('cityFilter'))byId('cityFilter').value='';patchRender()}
 
-async function notifyJob(j){
+function notifyLiveJob(j){
   if(!prefs.notifications_enabled)return;
-  try{
-    if('serviceWorker'in navigator){const reg=await navigator.serviceWorker.ready;await reg.showNotification('UnaMano · '+j.category,{body:j.title+' · '+j.city,icon:'./icon.svg',tag:'job-'+j.id,data:{url:location.origin+location.pathname+'?job='+j.id}})}
-  }catch(e){}
+  if(document.visibilityState==='visible')toast('Nuova richiesta a '+j.city+': '+j.title);
   if(navigator.vibrate)navigator.vibrate([180,80,180]);
 }
 
@@ -126,19 +180,61 @@ function setupLive(){
   liveChannel=sb.channel('jobs-live-'+uid).on('postgres_changes',{event:'INSERT',schema:'public',table:'jobs'},p=>{
     const j=p.new;if(!j||j.owner_id===uid||j.status!=='open')return;
     if(norm(j.city)===norm(prefs.city)&&prefs.categories.includes(j.category)){
-      notifyJob(j);toast('Nuova richiesta a '+j.city+': '+j.title);
-      if(localBoard&&isToday(j.created_at)){jobs.unshift(j);patchRender()}
+      notifyLiveJob(j);
+      if(localBoard&&isToday(j.created_at)){if(!jobs.some(x=>x.id===j.id))jobs.unshift(j);patchRender()}
     }
   }).subscribe();
 }
 
-const oldLoadProfile=window.loadProfile;
-if(typeof oldLoadProfile==='function')window.loadProfile=async function(){const r=await oldLoadProfile.apply(this,arguments);addUi();await loadPrefs(false);return r};
-const oldSaveProfile=window.saveProfile;
-if(typeof oldSaveProfile==='function')window.saveProfile=async function(){const r=await oldSaveProfile.apply(this,arguments);prefs.city=(byId('pc')?.value||prefs.city).trim();drawBoardInfo();return r};
+async function sendPushForJob(jobId){
+  if(!jobId||!session?.user?.id)return;
+  try{
+    const r=await sb.functions.invoke('send-job-push',{body:{job_id:jobId}});
+    if(r.error)console.warn('push dispatch failed',r.error);
+  }catch(e){console.warn('push dispatch failed',e)}
+}
+window.sendPushForJob=sendPushForJob;
+
+function patchActions(){
+  if(!patchedCreateJob&&typeof window.createJob==='function'){
+    const original=window.createJob;
+    window.createJob=async function(){
+      const before=new Set((typeof jobs!=='undefined'?jobs:[]).map(j=>j.id));
+      const result=await original.apply(this,arguments);
+      try{
+        const created=(typeof jobs!=='undefined'?jobs:[]).find(j=>j.owner_id===session?.user?.id&&!before.has(j.id));
+        if(created)sendPushForJob(created.id);
+      }catch(e){}
+      return result;
+    };
+    patchedCreateJob=true;
+  }
+  if(!patchedLogout&&typeof window.logout==='function'){
+    const originalLogout=window.logout;
+    window.logout=async function(){await removeCurrentPushSubscription();return originalLogout.apply(this,arguments)};
+    patchedLogout=true;
+  }
+}
+
+function patchProfileHooks(){
+  if(typeof window.loadProfile==='function'&&!window.loadProfile.__workerPrefsPatched){
+    const original=window.loadProfile;
+    const wrapped=async function(){const r=await original.apply(this,arguments);addUi();await loadPrefs(false);return r};
+    wrapped.__workerPrefsPatched=true;window.loadProfile=wrapped;
+  }
+  if(typeof window.saveProfile==='function'&&!window.saveProfile.__workerPrefsPatched){
+    const original=window.saveProfile;
+    const wrapped=async function(){const r=await original.apply(this,arguments);prefs.city=(byId('pc')?.value||prefs.city).trim();drawBoardInfo();return r};
+    wrapped.__workerPrefsPatched=true;window.saveProfile=wrapped;
+  }
+}
 
 window.addEventListener('load',()=>{
-  ensureBabysitter();addUi();patchRender();
-  let tries=0;const t=setInterval(()=>{tries++;addUi();if(session?.user?.id){clearInterval(t);loadPrefs(true)}if(tries>20)clearInterval(t)},300);
+  ensureBabysitter();addUi();patchRender();patchProfileHooks();patchActions();
+  let tries=0;const t=setInterval(()=>{
+    tries++;ensureBabysitter();addUi();patchProfileHooks();patchActions();
+    if(session?.user?.id){clearInterval(t);loadPrefs(true)}
+    if(tries>30)clearInterval(t);
+  },300);
 });
 })();
