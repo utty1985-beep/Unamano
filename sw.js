@@ -1,4 +1,4 @@
-const C='unamano-v7-20260927';
+const C='unamano-v8-20260927';
 const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./worker-features.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -11,6 +11,21 @@ self.addEventListener('fetch',e=>{
     return;
   }
   e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(C).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match(e.request)));
+});
+self.addEventListener('push',e=>{
+  let d={};
+  try{d=e.data?e.data.json():{}}catch(err){d={body:e.data?e.data.text():'Nuova richiesta disponibile'}}
+  const title=d.title||'UnaMano · Nuova richiesta';
+  const options={
+    body:d.body||'È stata pubblicata una nuova richiesta compatibile con le tue preferenze.',
+    icon:d.icon||'./icon.svg',
+    badge:d.badge||'./icon.svg',
+    tag:d.tag||'unamano-job',
+    renotify:true,
+    vibrate:Array.isArray(d.vibrate)?d.vibrate:[180,80,180],
+    data:{url:d.url||'./'}
+  };
+  e.waitUntil(self.registration.showNotification(title,options));
 });
 self.addEventListener('notificationclick',e=>{
   e.notification.close();
