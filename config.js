@@ -167,3 +167,15 @@ window.addEventListener('load',()=>{
   if(document.readyState==='complete')loadExtra();
   else window.addEventListener('load',loadExtra,{once:true});
 })();
+
+(function(){
+  const loadAcceptedChat=()=>{
+    if(document.getElementById('unamanoAcceptedChatScript'))return;
+    const p=document.createElement('script');
+    p.id='unamanoAcceptedChatScript';
+    p.src='./accepted-chat.js?v=20260927-1';
+    document.head.appendChild(p);
+  };
+  if(document.readyState==='complete')loadAcceptedChat();
+  else window.addEventListener('load',loadAcceptedChat,{once:true});
+})();
