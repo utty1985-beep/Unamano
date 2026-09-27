@@ -147,6 +147,11 @@ window.addEventListener('load',()=>{
 
 (function(){
   const s=document.createElement('script');
-  s.src='./worker-features.js?v=20260927-1';
+  s.src='./worker-features.js?v=20260927-2';
+  s.onload=()=>{
+    const d=document.createElement('script');
+    d.src='./empty-city-demo.js?v=20260927-1';
+    document.head.appendChild(d);
+  };
   document.head.appendChild(s);
 })();
