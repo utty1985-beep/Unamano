@@ -1,7 +1,7 @@
 (function(){
 let channel=null,currentUser=null;
 function notify(text,type=''){if(typeof toast==='function')toast(text,type);}
-async function refresh(){try{if(typeof loadActivity==='function')await loadActivity(true);if(typeof loadJobs==='function')await loadJobs();}catch(e){}}
+async function refresh(){try{if(typeof loadJobs==='function')await loadJobs();if(typeof loadActivity==='function')await loadActivity(true);if(typeof currentSection!=='undefined'&&currentSection==='myrequests'&&typeof loadMyRequests==='function')await loadMyRequests();}catch(e){}}
 function start(){
   try{
     if(typeof sb==='undefined'||!sb||!session?.user?.id)return false;
@@ -22,4 +22,7 @@ function start(){
 }
 function boot(){let n=0;const t=setInterval(()=>{n++;if(start()&&n>6)clearInterval(t);if(n>40)clearInterval(t)},400);}
 if(document.readyState==='complete')boot();else window.addEventListener('load',boot,{once:true});
+window.addEventListener('focus',()=>{if(typeof session!=='undefined'&&session?.user?.id)refresh()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&typeof session!=='undefined'&&session?.user?.id)refresh()});
+setInterval(()=>{if(!document.hidden&&typeof session!=='undefined'&&session?.user?.id)refresh()},30000);
 })();
