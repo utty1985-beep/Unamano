@@ -21,6 +21,7 @@ loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-2');
 loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-2');
 loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-3');
 loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260928-2');
+loadScriptOnce('unamanoChatAccessGuard','./chat-access-guard.js?v=20260928-1');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
 if(existingPrivacy)loadMarketplaceExtras();
 else loadScriptOnce('unamanoPrivacyEnhancements','./profile-privacy-enhancements.js?v=20260928-5',loadMarketplaceExtras);
