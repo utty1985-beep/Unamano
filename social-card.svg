@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="t d">
+  <title id="t">UnaMano — Chiedi una mano. Dai una mano.</title>
+  <desc id="d">Anteprima social ufficiale di UnaMano.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9f7f1"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f6b55"/>
+      <stop offset="1" stop-color="#169174"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1040" cy="96" r="260" fill="#d9f1e8" opacity=".72"/>
+  <circle cx="1110" cy="560" r="205" fill="#fff0e9" opacity=".9"/>
+  <rect x="74" y="72" width="102" height="102" rx="30" fill="url(#mark)"/>
+  <text x="125" y="143" text-anchor="middle" font-size="56" font-family="Arial, sans-serif">🤝</text>
+  <text x="202" y="142" font-size="46" font-weight="800" font-family="Arial, sans-serif" fill="#0f6b55">Una<tspan fill="#ff7a45">Mano</tspan></text>
+  <text x="74" y="286" font-size="68" font-weight="800" font-family="Arial, sans-serif" fill="#17211f">Chiedi una mano.</text>
+  <text x="74" y="368" font-size="68" font-weight="800" font-family="Arial, sans-serif" fill="#17211f">Dai una mano.</text>
+  <text x="78" y="446" font-size="29" font-family="Arial, sans-serif" fill="#536760">Richieste locali, candidature, chat e recensioni.</text>
+  <rect x="74" y="500" width="458" height="62" rx="31" fill="#0f6b55"/>
+  <text x="303" y="541" text-anchor="middle" font-size="25" font-weight="700" font-family="Arial, sans-serif" fill="#ffffff">Gratuito nella fase iniziale</text>
+  <text x="1035" y="420" text-anchor="middle" font-size="170" font-family="Arial, sans-serif" opacity=".14">🤝</text>
+</svg>
