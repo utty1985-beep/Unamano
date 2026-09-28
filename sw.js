@@ -1,4 +1,4 @@
-const C='unamano-v20-20260928';
+const C='unamano-v21-20260928';
 const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./theme-v2.css','./worker-features.js','./empty-city-demo.js','./profile-chat.js','./accepted-chat.js','./chat-bootstrap.js','./profile-privacy-enhancements.js','./marketplace-polish.js','./candidate-actions.js','./activity-live.js','./workflow-fixes.js','./multi-applications.js','./site-assistant.js','./custom-categories.js','./notification-channels.js','./seo-meta.js','./soft-theme.js','./icon.svg','./privacy.html','./termini.html','./segnala.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
