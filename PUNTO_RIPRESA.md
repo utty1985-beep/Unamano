@@ -47,12 +47,7 @@ Limiti server-side attivi tramite trigger Supabase:
 - Tabella server-only `user_suspensions` con RLS e nessuna policy client.
 - Un account sospeso non può creare nuovi annunci, candidature, messaggi o recensioni.
 - Edge Function `admin-moderation` attiva con JWT obbligatorio e accesso amministrativo all'account del gestore.
-- `moderation-admin.js` aggiunge al profilo amministratore un pannello per:
-  - vedere segnalazioni utenti;
-  - vedere segnalazioni pubbliche/legali;
-  - chiudere annunci;
-  - sospendere/riattivare utenti;
-  - aggiornare lo stato delle segnalazioni.
+- `moderation-admin.js` aggiunge al profilo amministratore un pannello per vedere segnalazioni, chiudere annunci, sospendere/riattivare utenti e aggiornare gli stati.
 
 ## Cancellazione account
 - Edge Function `delete-account` attiva con JWT obbligatorio.
@@ -97,7 +92,7 @@ Restano solo:
 - Rimosso l'indice duplicato sui messaggi.
 - Aggiunto indice su `user_suspensions.created_by`.
 - Restano alcuni `unused index` perché il database ha pochissimi dati: non vengono rimossi prematuramente.
-- Restano 3 warning `multiple permissive policies` intenzionali per separare azioni con regole diverse (candidature, CV privato, aggiornamenti annunci). Non vengono fusi per non ridurre chiarezza/sicurezza delle policy.
+- Restano 3 warning `multiple permissive policies` intenzionali per separare azioni con regole diverse.
 
 ## Backup e ripristino
 Nel repository sono salvati:
@@ -118,12 +113,23 @@ Nel repository sono salvati:
 - Aggiunta pagina pubblica `contatti.html` e inserita nella sitemap.
 - Pagina `404.html` resa coerente con UnaMano e con collegamenti utili.
 
-## Onboarding e presentazione pubblica — 28/09/2026
+## Onboarding e presentazione pubblica
 - Aggiunto `onboarding.js`.
 - Al primo accesso compare una guida breve in 3 passaggi: esplora, candidati/pubblica, chat/recensioni.
 - L'onboarding viene mostrato una sola volta per dispositivo/browser tramite memoria locale.
 - Nel footer sono stati aggiunti i collegamenti `Come funziona` e `Contatti`.
 - Le nuove risorse sono incluse nella cache PWA.
+
+## Preparazione lancio completata — 28/09/2026
+- Creato `BRAND_GUIDE.md` con posizionamento, payoff, tono di voce e identità visiva.
+- Nome operativo mantenuto: **UnaMano**; payoff: **Chiedi una mano. Dai una mano.**
+- Dal controllo pubblico risultano nomi/progetti simili; prima di dominio o marchio serve verifica formale. Nessun acquisto è stato effettuato.
+- Aggiornato `DOMINIO_FUTURO.md` con strategia e candidati da verificare in futuro, senza dichiararne la disponibilità.
+- Creato `PLAY_STORE_COPY.md` con nome, breve descrizione, descrizione lunga e lista degli screenshot futuri.
+- Creato `SOCIAL_LAUNCH_KIT.md` con bio, post, messaggio WhatsApp, testo beta e scaletta Reel/Short.
+- Creato `PIANO_CRESCITA_ZERO_BUDGET.md` con lancio locale, metriche e strategia di espansione.
+- Aggiornata `CHECKLIST_PUBBLICAZIONE.md` con stato reale completato/da testare.
+- Nessuna campagna, invito o pubblicazione social è stata avviata.
 
 ## Beta predisposta ma sospesa
 - `feedback.html` e tabella `beta_feedback` pronti.
@@ -146,10 +152,11 @@ Nel repository sono salvati:
 2. Test push con app chiusa e permessi reali del sistema operativo/browser.
 3. Test effettivo di recapito email di recupero password e notifiche email.
 4. Test del pannello moderazione accedendo con l'account amministratore.
-5. Test non distruttivo della schermata cancellazione; il test distruttivo dell'Edge Function richiede un account sacrificabile, non uno dei due account reali esistenti.
+5. Test non distruttivo della schermata cancellazione; il test distruttivo dell'Edge Function richiede un account sacrificabile.
 6. Backup completo privato di database/Auth/Storage.
 7. `Leaked Password Protection` non disponibile nel piano Supabase gratuito.
-8. Dominio definitivo, social, beta, promozione e Play Store restano volutamente successivi al test finale.
+8. Verifica formale del nome/marchio e disponibilità dominio prima di qualsiasi acquisto.
+9. Pubblicazione Play Store solo dopo collaudo e preparazione pacchetto Android finale.
 
 ## Prossimo step
-Il test reale su due telefoni è stato rimandato per decisione dell'utente. Nel frattempo si possono completare ulteriori attività non distruttive: identità del marchio, dominio definitivo, materiali social/promozionali, organizzazione del lancio e preparazione Play Store. Nessun invito beta va inviato prima del collaudo finale.
+Il test reale su due telefoni è stato rimandato per decisione dell'utente. Nel frattempo il kit di lancio a costo zero è pronto. Non inviare beta/promozione prima del collaudo finale. Dopo il test: beta locale controllata, raccolta feedback, correzioni e solo successivamente lancio pubblico più ampio.
