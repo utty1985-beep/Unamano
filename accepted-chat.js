@@ -5,15 +5,23 @@ function addAcceptedChatButtons(){try{if(!session?.user?.id||typeof jobs==='unde
 function install(){if(installed||typeof window.renderActivity!=='function')return false;installed=true;const old=window.renderActivity;window.renderActivity=function(){const r=old.apply(this,arguments);setTimeout(addAcceptedChatButtons,0);return r;};addAcceptedChatButtons();return true;}
 function boot(){let tries=0;const timer=setInterval(()=>{tries++;if(install())setTimeout(addAcceptedChatButtons,250);else addAcceptedChatButtons();if(installed&&tries>8)clearInterval(timer);if(tries>40)clearInterval(timer);},250);}
 function loadScriptOnce(id,src,onload){if(document.getElementById(id)){onload?.();return}const s=document.createElement('script');s.id=id;s.src=src;if(onload){s.onload=onload;s.onerror=onload}document.head.appendChild(s);}
-function loadMarketplaceExtras(){loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260927-4');loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260927-1');loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-1');loadScriptOnce('unamanoMultiApplications','./multi-applications.js?v=20260928-1');}
+function loadMarketplaceExtras(){
+  loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260928-5',()=>{
+    loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260928-2',()=>{
+      loadScriptOnce('unamanoMultiApplications','./multi-applications.js?v=20260928-2',()=>{
+        loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-2');
+      });
+    });
+  });
+}
 if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
-loadScriptOnce('unamanoSoftTheme','./soft-theme.js?v=20260928-1');
-loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-1');
-loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-1');
-loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-1');
-loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-2');
-loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260927-2');
+loadScriptOnce('unamanoSoftTheme','./soft-theme.js?v=20260928-2');
+loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-2');
+loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-2');
+loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-2');
+loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-3');
+loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260928-2');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
 if(existingPrivacy)loadMarketplaceExtras();
-else loadScriptOnce('unamanoPrivacyEnhancements','./profile-privacy-enhancements.js?v=20260927-4',loadMarketplaceExtras);
+else loadScriptOnce('unamanoPrivacyEnhancements','./profile-privacy-enhancements.js?v=20260928-5',loadMarketplaceExtras);
 })();
