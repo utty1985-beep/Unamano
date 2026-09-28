@@ -164,7 +164,7 @@ window.addEventListener('load',()=>{
     if(document.getElementById('unamanoProfileChatScript'))return;
     const p=document.createElement('script');
     p.id='unamanoProfileChatScript';
-    p.src='./profile-chat.js?v=20260928-3';
+    p.src='./profile-chat.js?v=20260928-4';
     document.head.appendChild(p);
   };
   if(document.readyState==='complete')loadExtra();
