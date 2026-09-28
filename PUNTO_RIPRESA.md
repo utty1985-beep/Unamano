@@ -1,6 +1,6 @@
 # Punto di ripresa — UnaMano
 
-Data: 27/09/2026
+Data: 28/09/2026
 
 ## Stato attuale verificato
 - Progetto GitHub: `utty1985-beep/Unamano`
@@ -37,25 +37,46 @@ Data: 27/09/2026
 - La chiave privata VAPID è conservata solo lato Supabase nella tabella protetta `push_server_config`; non è esposta nel sito o nel repository.
 - Deployata Edge Function Supabase `send-job-push`.
 - Quando un utente pubblica una nuova richiesta, il sito invoca la funzione server-side.
-- La funzione cerca soltanto utenti con:
-  1. notifiche attive;
-  2. stessa città della richiesta;
-  3. categoria compatibile con le preferenze scelte.
+- La funzione cerca soltanto utenti con notifiche attive, stessa città della richiesta e categoria compatibile.
 - Le notifiche push possono arrivare anche con sito/PWA chiuso, se il sistema operativo/browser consente le notifiche per UnaMano.
-- Il Service Worker `sw.js` gestisce evento `push`, visualizzazione notifica, vibrazione e apertura diretta dell'annuncio toccando la notifica.
+- Il Service Worker `sw.js` gestisce evento `push`, visualizzazione notifica, vibrazione e apertura diretta dell'annuncio.
 - Sul profilo viene indicato se le notifiche push risultano realmente attive sul dispositivo.
-- Al logout la sottoscrizione push del dispositivo viene rimossa per evitare notifiche dell'account precedente sullo stesso telefono.
-- Se una sottoscrizione push scade o viene revocata, la Edge Function elimina automaticamente gli endpoint non più validi quando riceve risposta 404/410 dal servizio push.
+- Al logout la sottoscrizione push del dispositivo viene rimossa.
+- Se una sottoscrizione push scade o viene revocata, la Edge Function elimina automaticamente gli endpoint non più validi su risposta 404/410.
 
-## Sicurezza notifiche
-- RLS attivo su `push_subscriptions`.
-- Rimossi i precedenti RPC `SECURITY DEFINER` per salvataggio/rimozione push e sostituiti con normali operazioni protette da RLS.
-- Advisor sicurezza Supabase: nessun warning di sicurezza sulle nuove funzioni push; rimane solo un INFO intenzionale su `push_server_config` perché ha RLS attivo senza policy pubbliche, quindi nessun utente client può leggerlo.
+## Indicizzazione e motori di ricerca — completato 28/09/2026
+- Google Search Console verificata tramite file HTML.
+- `sitemap.xml` inviata a Google.
+- Home inviata manualmente a Google con richiesta di indicizzazione accettata.
+- Bing Webmaster Tools collegato importando la proprietà da Google Search Console.
+- Home inviata manualmente anche a Bing.
+- `robots.txt` attivo e collegato alla sitemap.
+- IndexNow configurato con chiave pubblica e workflow GitHub Actions.
+- Il workflow IndexNow notifica automaticamente gli aggiornamenti del sito ai motori compatibili.
+- Sitemap comprende home, Privacy, Termini e Segnalazioni.
+
+## Beta controllata — predisposta ma NON ancora avviata
+- Creata pagina `feedback.html` per raccogliere feedback dei tester.
+- Creata tabella Supabase `beta_feedback` con RLS e senza lettura pubblica.
+- Privacy aggiornata per documentare la raccolta feedback beta.
+- Creati contatori beta nel database per account, annunci, candidature, attività concluse, recensioni e feedback.
+- Preparato il kit di invito beta per Foggia e individuati alcuni contatti pubblici di associazioni/community.
+- Gmail collegato a ChatGPT per eventuali inviti futuri.
+- DECISIONE: **non inviare ancora inviti e non avviare la promozione**. Prima si ultima il sito e si esegue il controllo finale completo.
+
+## Stato beta attuale prima del lancio
+- 2 account presenti.
+- 2 annunci presenti.
+- 2 candidature presenti.
+- 1 candidatura accettata.
+- 1 attività completata.
+- 1 recensione.
+- 0 feedback beta.
 
 ## Video promozionale
 - Base video verde UnaMano mantenuta.
 - Audio MP3 dell'utente mantenuto.
-- Recuperata la schermata che mostra più attività oltre Babysitter (Babysitter, Giardinaggio, Spesa, Pulizie, Piccoli aiuti).
+- Recuperata la schermata che mostra più attività oltre Babysitter.
 - Creato il file finale `UnaMano_SPOT_FINALE_COMPLETO_CATEGORIE.mp4` e salvato nella Libreria ChatGPT.
 
 ## Test reale consigliato con due telefoni/account
@@ -70,19 +91,18 @@ Data: 27/09/2026
 9. Verificare notifica push/vibrazione sul telefono B e apertura dell'annuncio al tocco.
 10. Verifica comparsa nella bacheca giornaliera.
 11. Candidatura, accettazione/rifiuto/ritiro, completamento e recensione.
+12. Reset password.
+13. Foto profilo.
+14. Segnalazione contenuto.
+15. Installazione PWA su entrambi i telefoni.
 
 ## Regola di prodotto
 UnaMano parte gratuito. Non gestisce pagamenti in-app. Eventuali accordi economici avvengono direttamente tra gli utenti e restano soggetti alla normativa applicabile.
 
-## Ultimo aggiornamento — installazione sul telefono
-- Aggiunto nella home il pulsante `📲 Installa sul tuo telefono`.
-- Se il browser supporta il prompt PWA, il pulsante apre direttamente la richiesta di installazione.
-- Su browser/dispositivi che non permettono il prompt diretto, viene mostrata una guida semplice con il percorso da seguire.
-- Se UnaMano è già installata come PWA, il pulsante non viene mostrato.
-
-## Prossima sessione
-- Preparare il lancio social di UnaMano.
-- Creare nuovi profili dedicati con il nome del sito su Facebook, Instagram e TikTok.
-- Verificare disponibilità e coerenza del nome/username su tutte e tre le piattaforme prima di scegliere quello definitivo.
-- Preparare immagine profilo, bio, descrizione e link al sito uguali/coerenti.
-- Impostare la prima pubblicazione e il piano iniziale di promozione/pubblicità su Facebook, Instagram e TikTok.
+## Prossimo step
+Prima di qualsiasi lancio o invito:
+1. audit finale di sicurezza Supabase;
+2. correzione warning realmente rilevanti;
+3. controllo completo del flusso con due account/telefoni;
+4. verifica mobile/PWA e notifiche;
+5. solo dopo, beta controllata e inviti.
