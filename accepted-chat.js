@@ -16,6 +16,7 @@ function loadMarketplaceExtras(){
 }
 if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
 loadScriptOnce('unamanoGlobalBridge','./global-bridge.js?v=20260928-1');
+loadScriptOnce('unamanoLegalV28','./legal-v20260928.js?v=20260928-1');
 loadScriptOnce('unamanoSoftTheme','./soft-theme.js?v=20260928-2');
 loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-2');
 loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-2');
