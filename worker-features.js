@@ -56,7 +56,15 @@ async function pushStateText(){
 
 function drawPrefs(){
   const w=byId('workerCats');if(!w)return;
-  w.innerHTML=CATS.map(x=>'<label class="chip"><input type="checkbox" style="width:auto;margin:0 5px 0 0" value="'+x[1]+'" '+(prefs.categories.includes(x[1])?'checked':'')+'>'+x[0]+' '+x[1]+'</label>').join('');
+  const categories=new Map(CATS.map(x=>[x[1],x[0]]));
+  jobs.forEach(j=>{if(j.category&&!categories.has(j.category))categories.set(j.category,'🧩')});
+  prefs.categories.forEach(c=>{if(!categories.has(c))categories.set(c,'🧩')});
+  w.innerHTML='';
+  categories.forEach((icon,name)=>{
+    const label=document.createElement('label');label.className='chip';
+    const input=document.createElement('input');input.type='checkbox';input.value=name;input.checked=prefs.categories.includes(name);input.style.cssText='width:auto;margin:0 5px 0 0';
+    label.append(input,document.createTextNode(icon+' '+name));w.append(label);
+  });
   if(byId('workerNotify'))byId('workerNotify').checked=prefs.notifications_enabled;
   pushStateText().then(t=>{if(byId('workerHint'))byId('workerHint').textContent=t});
 }
