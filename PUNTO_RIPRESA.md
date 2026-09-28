@@ -77,7 +77,7 @@ Limiti server-side attivi tramite trigger Supabase:
 - Le tabelle di dispatch risultano ancora a zero: non è stato ancora eseguito un invio reale end-to-end dopo questo hardening.
 
 ## PWA
-- Service Worker corrente: cache `unamano-v29-20260928`.
+- Service Worker corrente: cache `unamano-v30-20260928`.
 - Inclusi nella cache anche i nuovi moduli: global bridge, consenso legale corrente, protezione chat, cancellazione account, moderazione, anti-abuso, onboarding e nuove pagine pubbliche.
 - Manifest allineato al tema verde UnaMano.
 
@@ -109,15 +109,15 @@ Nel repository sono salvati:
 - `robots.txt`, sitemap e IndexNow attivi.
 - Canonical, Open Graph, Twitter Card e dati strutturati presenti tramite `seo-meta.js`.
 - Aggiunta anteprima social `social-card.svg` 1200×630.
-- Aggiunta pagina pubblica `come-funziona.html` e inserita nella sitemap.
-- Aggiunta pagina pubblica `contatti.html` e inserita nella sitemap.
+- Pagine pubbliche indicizzabili: `come-funziona.html`, `faq.html`, `sicurezza.html`, `contatti.html`, Privacy, Termini e Segnala.
+- `faq.html` include dati strutturati FAQPage.
 - Pagina `404.html` resa coerente con UnaMano e con collegamenti utili.
 
 ## Onboarding e presentazione pubblica
 - Aggiunto `onboarding.js`.
 - Al primo accesso compare una guida breve in 3 passaggi: esplora, candidati/pubblica, chat/recensioni.
 - L'onboarding viene mostrato una sola volta per dispositivo/browser tramite memoria locale.
-- Nel footer sono stati aggiunti i collegamenti `Come funziona` e `Contatti`.
+- Nel footer sono presenti `Come funziona`, `FAQ`, `Sicurezza` e `Contatti`.
 - Le nuove risorse sono incluse nella cache PWA.
 
 ## Preparazione lancio completata — 28/09/2026
@@ -127,9 +127,10 @@ Nel repository sono salvati:
 - Aggiornato `DOMINIO_FUTURO.md` con strategia e candidati da verificare in futuro, senza dichiararne la disponibilità.
 - Creato `PLAY_STORE_COPY.md` con nome, breve descrizione, descrizione lunga e lista degli screenshot futuri.
 - Creato `SOCIAL_LAUNCH_KIT.md` con bio, post, messaggio WhatsApp, testo beta e scaletta Reel/Short.
+- Creato `SOCIAL_ACCOUNT_SETUP.md` con username candidati e ordine futuro di apertura dei profili social.
 - Creato `PIANO_CRESCITA_ZERO_BUDGET.md` con lancio locale, metriche e strategia di espansione.
 - Aggiornata `CHECKLIST_PUBBLICAZIONE.md` con stato reale completato/da testare.
-- Nessuna campagna, invito o pubblicazione social è stata avviata.
+- Nessuna campagna, invito, account social o pubblicazione social è stata avviata.
 
 ## Beta predisposta ma sospesa
 - `feedback.html` e tabella `beta_feedback` pronti.
@@ -159,4 +160,4 @@ Nel repository sono salvati:
 9. Pubblicazione Play Store solo dopo collaudo e preparazione pacchetto Android finale.
 
 ## Prossimo step
-Il test reale su due telefoni è stato rimandato per decisione dell'utente. Nel frattempo il kit di lancio a costo zero è pronto. Non inviare beta/promozione prima del collaudo finale. Dopo il test: beta locale controllata, raccolta feedback, correzioni e solo successivamente lancio pubblico più ampio.
+Il test reale su due telefoni è stato rimandato per decisione dell'utente. Tutta la preparazione non distruttiva utile prima del collaudo è ora sostanzialmente completata. Non inviare beta/promozione prima del collaudo finale. Dopo il test: beta locale controllata, raccolta feedback, correzioni e solo successivamente lancio pubblico più ampio.
