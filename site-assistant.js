@@ -27,10 +27,10 @@ function answer(text){
 function addStyles(){
  if(q('umAssistantStyle'))return;
  const s=document.createElement('style');s.id='umAssistantStyle';s.textContent=`
- #umAssistantBtn{position:fixed;right:16px;bottom:92px;z-index:70;width:58px;height:58px;border:0;border-radius:50%;background:var(--g);color:#fff;font-size:27px;box-shadow:0 12px 30px rgba(0,0,0,.22)}
- #umAssistantPanel{position:fixed;right:16px;bottom:160px;z-index:75;width:min(390px,calc(100vw - 24px));max-height:min(610px,72vh);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 55px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden}
+ #umAssistantBtn{position:fixed;right:14px;bottom:96px;z-index:99;min-width:88px;height:54px;padding:0 16px;border:0;border-radius:999px;background:var(--g);color:#fff;font-size:17px;font-weight:900;box-shadow:0 12px 30px rgba(0,0,0,.24);display:flex;align-items:center;justify-content:center;gap:7px}
+ #umAssistantPanel{position:fixed;right:12px;bottom:158px;z-index:100;width:min(390px,calc(100vw - 24px));max-height:min(610px,72vh);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 55px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden}
  #umAssistantPanel.hidden{display:none!important}.uma-head{padding:14px 15px;background:var(--g);color:#fff;display:flex;align-items:center;gap:10px}.uma-head b{flex:1}.uma-close{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:10px;width:34px;height:34px}.uma-chat{padding:13px;overflow:auto;display:flex;flex-direction:column;gap:9px;min-height:230px}.uma-msg{max-width:88%;padding:10px 12px;border-radius:14px;background:#f0f5f3;align-self:flex-start;font-size:14px;white-space:pre-wrap;word-break:break-word}.uma-msg.me{background:var(--g);color:#fff;align-self:flex-end}.uma-compose{border-top:1px solid var(--line);padding:10px;display:grid;grid-template-columns:1fr auto;gap:7px}.uma-compose input{margin:0}.uma-compose button{min-width:62px}.uma-note{font-size:11px;color:var(--muted);padding:0 12px 10px}
- @media(max-width:840px){#umAssistantBtn{bottom:84px;right:12px}#umAssistantPanel{right:12px;bottom:150px}}
+ @media(max-width:840px){#umAssistantBtn{bottom:84px;right:10px;min-width:82px;height:50px;padding:0 14px}#umAssistantPanel{right:8px;bottom:142px;width:calc(100vw - 16px)}}
  `;document.head.appendChild(s);
 }
 function linkify(txt){return safe(txt).replace(/(https:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener noreferrer">Apri link</a>');}
@@ -38,7 +38,7 @@ function addMsg(text,me=false){const box=q('umAssistantChat');if(!box)return;con
 function ask(){const i=q('umAssistantInput');if(!i)return;const text=i.value.trim();if(!text)return;i.value='';addMsg(text,true);setTimeout(()=>addMsg(answer(text)),180);}
 function build(){
  if(q('umAssistantBtn'))return;addStyles();
- const b=document.createElement('button');b.id='umAssistantBtn';b.type='button';b.setAttribute('aria-label','Apri assistente UnaMano');b.textContent='🤖';b.onclick=()=>q('umAssistantPanel')?.classList.toggle('hidden');document.body.appendChild(b);
+ const b=document.createElement('button');b.id='umAssistantBtn';b.type='button';b.setAttribute('aria-label','Apri assistente UnaMano');b.innerHTML='<span>🤖</span><span>AI</span>';b.onclick=()=>q('umAssistantPanel')?.classList.toggle('hidden');document.body.appendChild(b);
  const p=document.createElement('div');p.id='umAssistantPanel';p.className='hidden';p.innerHTML=`<div class="uma-head"><span style="font-size:24px">🤖</span><b>Assistente UnaMano</b><button class="uma-close" type="button" aria-label="Chiudi">✕</button></div><div id="umAssistantChat" class="uma-chat"></div><div class="uma-compose"><input id="umAssistantInput" maxlength="500" placeholder="Chiedi qualcosa su UnaMano"><button id="umAssistantSend" class="btn p sm" type="button">Invia</button></div><div class="uma-note">Assistente automatico per l’uso del sito. Per questioni legali, fiscali o previdenziali verifica sempre le fonti ufficiali.</div>`;document.body.appendChild(p);
  p.querySelector('.uma-close').onclick=()=>p.classList.add('hidden');q('umAssistantSend').onclick=ask;q('umAssistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ask();}});
  addMsg('Ciao! Sono l’assistente di UnaMano. Posso spiegarti come usare il sito, le candidature, la chat, il profilo, le recensioni e dove trovare le informazioni INPS.');
