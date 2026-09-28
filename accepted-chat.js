@@ -5,7 +5,7 @@ function addAcceptedChatButtons(){try{if(!session?.user?.id||typeof jobs==='unde
 function install(){if(installed||typeof window.renderActivity!=='function')return false;installed=true;const old=window.renderActivity;window.renderActivity=function(){const r=old.apply(this,arguments);setTimeout(addAcceptedChatButtons,0);return r;};addAcceptedChatButtons();return true;}
 function boot(){let tries=0;const timer=setInterval(()=>{tries++;if(install())setTimeout(addAcceptedChatButtons,250);else addAcceptedChatButtons();if(installed&&tries>8)clearInterval(timer);if(tries>40)clearInterval(timer);},250);}
 function loadScriptOnce(id,src,onload){if(document.getElementById(id)){onload?.();return}const s=document.createElement('script');s.id=id;s.src=src;if(onload){s.onload=onload;s.onerror=onload}document.head.appendChild(s);}
-function loadMarketplaceExtras(){loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260927-4');loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260927-1');}
+function loadMarketplaceExtras(){loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260927-4');loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260927-1');loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-1');}
 if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
 loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260927-2');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
