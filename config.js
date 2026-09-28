@@ -1,3 +1,10 @@
+(function(){
+  const l=document.createElement('link');
+  l.rel='stylesheet';
+  l.href='./theme-v2.css?v=20260928-2';
+  document.head.appendChild(l);
+})();
+
 window.UNAMANO_CONFIG={
   supabaseUrl:'https://cfnivvdtyhpgbwmbgoke.supabase.co',
   supabaseKey:'sb_publishable_p_nrywLxqXT26U69v_SmPA_c1-4INqb'
@@ -57,7 +64,7 @@ window.addEventListener('load',()=>{
   }
 
   const style=document.createElement('style');
-  style.textContent='.legal-consent{margin:12px 0;padding:12px;border:1px solid #dbe7e2;border-radius:12px;background:#f8fbfa;font-size:13px}.legal-consent label{display:flex;gap:8px;align-items:flex-start;margin:0;font-weight:650}.legal-consent input{width:auto;margin-top:3px}.site-footer{max-width:1160px;margin:0 auto 82px;padding:18px 16px;color:#687773;font-size:13px;text-align:center}.site-footer a{margin:0 6px;color:#0f6b55}.site-footer strong{color:#31443e}';
+  style.textContent='.legal-consent{margin:12px 0;padding:12px;border:1px solid #D5DFE8;border-radius:12px;background:#F8FAFC;font-size:13px}.legal-consent label{display:flex;gap:8px;align-items:flex-start;margin:0;font-weight:650}.legal-consent input{width:auto;margin-top:3px}.site-footer{max-width:1160px;margin:0 auto 82px;padding:18px 16px;color:#667788;font-size:13px;text-align:center}.site-footer a{margin:0 6px;color:#526B8D}.site-footer strong{color:#31465A}';
   document.head.appendChild(style);
 
   const testbar=document.querySelector('.testbar');
@@ -173,7 +180,7 @@ window.addEventListener('load',()=>{
     if(document.getElementById('unamanoAcceptedChatScript'))return;
     const p=document.createElement('script');
     p.id='unamanoAcceptedChatScript';
-    p.src='./accepted-chat.js?v=20260927-1';
+    p.src='./accepted-chat.js?v=20260928-4';
     document.head.appendChild(p);
   };
   if(document.readyState==='complete')loadAcceptedChat();
