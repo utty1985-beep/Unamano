@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f6b55">
+<meta name="robots" content="noindex,nofollow">
+<title>Feedback beta — UnaMano</title>
+<style>
+:root{--g:#0f6b55;--ink:#17211f;--muted:#687773;--line:#dbe7e2;--bg:#f5f8f7;--ok:#067647;--danger:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:760px;margin:auto;padding:26px 16px 60px}.brand{display:inline-flex;align-items:center;gap:8px;color:var(--g);font-size:22px;font-weight:900;text-decoration:none}.card{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 8px 28px rgba(20,54,45,.06)}h1{margin:0 0 8px;font-size:32px;line-height:1.1}p{margin:8px 0 16px}.note{padding:12px 14px;border-radius:13px;background:#eef7ff;border:1px solid #d1e7f8;color:#315b76}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-weight:800;margin-top:12px}input,select,textarea{width:100%;margin-top:5px;padding:12px 13px;border:1px solid #cbdad4;border-radius:12px;background:#fff;color:var(--ink);font:inherit}textarea{min-height:115px;resize:vertical}.full{grid-column:1/-1}.btn{margin-top:18px;width:100%;border:0;border-radius:13px;padding:13px 16px;background:var(--g);color:#fff;font-weight:900;font-size:16px}.btn:disabled{opacity:.55}.small{font-size:13px;color:var(--muted)}.ok,.err{margin-top:14px;padding:13px;border-radius:13px}.ok{background:#edf9f2;border:1px solid #cbead8;color:#276344}.err{background:#fff0ee;border:1px solid #f2c7c1;color:#7d291f}.stars{display:flex;gap:7px;margin-top:7px}.stars button{width:44px;height:44px;border:1px solid #d8e5e0;border-radius:12px;background:#fff;font-size:20px}.stars button.on{background:#e9f7f1;border-color:#8bc9b2}@media(max-width:600px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.card{padding:17px}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<main>
+<a class="brand" href="./">🤝 UnaMano</a>
+<div class="card">
+<h1>Aiutaci a migliorare UnaMano</h1>
+<p>Questa è la pagina di feedback della fase beta. Bastano uno o due minuti.</p>
+<div class="note"><b>Importante:</b> non inserire nomi, indirizzi, numeri di telefono, documenti o altri dati personali nel testo del feedback.</div>
+<form id="feedbackForm">
+<div class="grid">
+<label>Città <span class="small">(facoltativa)</span><input id="city" maxlength="120" placeholder="Es. Foggia"></label>
+<label>Che parte hai provato?
+<select id="stage" required>
+<option value="">Seleziona…</option>
+<option value="registrazione">Registrazione / accesso</option>
+<option value="pubblicazione">Pubblicazione richiesta</option>
+<option value="candidatura">Candidatura</option>
+<option value="scelta">Scelta della persona</option>
+<option value="chat">Chat</option>
+<option value="recensione">Recensione</option>
+<option value="altro">Altro</option>
+</select></label>
+<div class="full"><label>Quanto è stata semplice l'esperienza?</label><div class="stars" id="stars" aria-label="Valutazione da 1 a 5"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button></div><input id="rating" type="hidden" required></div>
+<label class="full">Hai trovato un problema? <span class="small">(facoltativo)</span><textarea id="problem" maxlength="2000" placeholder="Descrivi cosa è successo, senza dati personali"></textarea></label>
+<label class="full">Cosa miglioreresti? <span class="small">(facoltativo)</span><textarea id="suggestion" maxlength="2000" placeholder="Scrivi un suggerimento"></textarea></label>
+</div>
+<button id="send" class="btn" type="submit">Invia feedback</button>
+</form>
+<div id="msg" aria-live="polite"></div>
+<p class="small">I feedback servono esclusivamente a migliorare la fase beta di UnaMano. <a href="privacy.html">Privacy</a></p>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient('https://cfnivvdtyhpgbwmbgoke.supabase.co','sb_publishable_p_nrywLxqXT26U69v_SmPA_c1-4INqb');
+let rating=0;
+const ratingInput=document.getElementById('rating');
+document.querySelectorAll('#stars button').forEach(b=>b.addEventListener('click',()=>{rating=Number(b.dataset.v);ratingInput.value=String(rating);document.querySelectorAll('#stars button').forEach(x=>x.classList.toggle('on',Number(x.dataset.v)<=rating));}));
+const form=document.getElementById('feedbackForm'),msg=document.getElementById('msg'),send=document.getElementById('send');
+form.addEventListener('submit',async e=>{
+ e.preventDefault();msg.innerHTML='';
+ const stage=document.getElementById('stage').value;
+ if(!stage||!rating){msg.innerHTML='<div class="err">Seleziona la parte provata e una valutazione da 1 a 5.</div>';return;}
+ const city=document.getElementById('city').value.trim()||null;
+ const problem=document.getElementById('problem').value.trim()||null;
+ const suggestion=document.getElementById('suggestion').value.trim()||null;
+ send.disabled=true;send.textContent='Invio…';
+ const {error}=await sb.from('beta_feedback').insert({city,stage,rating,problem,suggestion});
+ send.disabled=false;send.textContent='Invia feedback';
+ if(error){msg.innerHTML='<div class="err">Non è stato possibile inviare il feedback. Riprova tra poco.</div>';return;}
+ form.reset();rating=0;document.querySelectorAll('#stars button').forEach(x=>x.classList.remove('on'));
+ msg.innerHTML='<div class="ok"><b>Grazie!</b> Feedback ricevuto.</div>';
+});
+</script>
+</body>
+</html>
