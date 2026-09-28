@@ -50,17 +50,13 @@ window.addEventListener('load',()=>{
 
   const sharedId=new URLSearchParams(location.search).get('job');
   if(sharedId){
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      try{
-        if(jobs.some(x=>x.id===sharedId)){
-          clearInterval(timer);
-          if(typeof openJob==='function')openJob(sharedId);
-        }
-      }catch(e){}
-      if(tries>=12)clearInterval(timer);
-    },350);
+    const openSharedJob=()=>{
+      if(window.__unamanoSharedJobOpened)return;
+      const found=jobs.find(x=>x.id===sharedId);
+      if(found){window.__unamanoSharedJobOpened=true;openJob(sharedId)}
+    };
+    window.addEventListener('unamano:jobs-loaded',openSharedJob);
+    openSharedJob();
   }
 
   const style=document.createElement('style');
