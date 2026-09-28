@@ -12,7 +12,20 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Submit UnaMano URL to IndexNow
+      - name: Submit UnaMano URLs to IndexNow
         run: |
           curl --fail --silent --show-error \
-            "https://api.indexnow.org/indexnow?url=https%3A%2F%2Futty1985-beep.github.io%2FUnamano%2F&key=87a6f9e9a2c6e96228181296db3e01b9&keyLocation=https%3A%2F%2Futty1985-beep.github.io%2FUnamano%2F87a6f9e9a2c6e96228181296db3e01b9.txt"
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "host": "utty1985-beep.github.io",
+              "key": "87a6f9e9a2c6e96228181296db3e01b9",
+              "keyLocation": "https://utty1985-beep.github.io/Unamano/87a6f9e9a2c6e96228181296db3e01b9.txt",
+              "urlList": [
+                "https://utty1985-beep.github.io/Unamano/",
+                "https://utty1985-beep.github.io/Unamano/privacy.html",
+                "https://utty1985-beep.github.io/Unamano/termini.html",
+                "https://utty1985-beep.github.io/Unamano/segnala.html",
+                "https://utty1985-beep.github.io/Unamano/sitemap.xml"
+              ]
+            }' \
+            https://api.indexnow.org/indexnow
