@@ -1,4 +1,4 @@
-const C='unamano-v31-20260928';
+const C='unamano-v32-20260928';
 const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./theme-v2.css','./worker-features.js','./empty-city-demo.js','./profile-chat.js','./accepted-chat.js','./global-bridge.js','./legal-v20260928.js','./chat-access-guard.js','./account-delete.js','./moderation-admin.js','./anti-abuse-ui.js','./chat-bootstrap.js','./profile-privacy-enhancements.js','./marketplace-polish.js','./candidate-actions.js','./activity-live.js','./workflow-fixes.js','./multi-applications.js','./site-assistant.js','./custom-categories.js','./notification-channels.js','./seo-meta.js','./onboarding.js','./soft-theme.js','./icon.svg','./social-card.svg','./come-funziona.html','./faq.html','./sicurezza.html','./contatti.html','./privacy.html','./termini.html','./segnala.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
