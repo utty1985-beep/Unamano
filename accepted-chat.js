@@ -7,6 +7,8 @@ function boot(){let tries=0;const timer=setInterval(()=>{tries++;if(install())se
 function loadScriptOnce(id,src,onload){if(document.getElementById(id)){onload?.();return}const s=document.createElement('script');s.id=id;s.src=src;if(onload){s.onload=onload;s.onerror=onload}document.head.appendChild(s);}
 function loadMarketplaceExtras(){loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260927-4');loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260927-1');loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-1');loadScriptOnce('unamanoMultiApplications','./multi-applications.js?v=20260928-1');}
 if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListener('load',boot,{once:true});
+loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-1');
+loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-1');
 loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-2');
 loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260927-2');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
