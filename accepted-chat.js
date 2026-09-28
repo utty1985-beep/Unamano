@@ -10,6 +10,7 @@ if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListe
 loadScriptOnce('unamanoSoftTheme','./soft-theme.js?v=20260928-1');
 loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-1');
 loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-1');
+loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-1');
 loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-2');
 loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260927-2');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
