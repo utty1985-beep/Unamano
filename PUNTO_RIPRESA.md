@@ -73,6 +73,19 @@ Data: 28/09/2026
 - 1 recensione.
 - 0 feedback beta.
 
+## Audit sicurezza e stabilità — 28/09/2026
+- Nessuna `service_role` o chiave segreta trovata nel repository pubblico.
+- Bucket `avatars` pubblico intenzionalmente; bucket `curricula` privato.
+- Policy Storage CV verificate: proprietario sempre autorizzato; proprietario dell'annuncio autorizzato solo mentre valuta una candidatura `pending` su annuncio `open`.
+- Le vecchie colonne CV presenti in `profiles` risultano vuote; aggiunta protezione database che le mantiene sempre `NULL`, per evitare future esposizioni accidentali.
+- Il CV effettivo resta in `candidate_private`.
+- Chat irrigidita: messaggi consentiti solo tra proprietario dell'annuncio e candidato accettato, per incarichi `assigned` o `completed`.
+- Aggiunto `chat-access-guard.js` per rimuovere i pulsanti di messaggistica generica e bloccare tentativi di apertura chat senza incarico accettato.
+- Service Worker aggiornato alla cache `unamano-v23-20260928` e include la protezione chat.
+- Colori PWA/manifest allineati alla grafica verde di UnaMano.
+- Advisor Supabase: le segnalazioni RLS senza policy riguardano tabelle volutamente chiuse al client (`application_notification_dispatches`, `job_notification_dispatches`, `push_server_config`).
+- Unico warning di sicurezza residuo: `Leaked Password Protection Disabled`; la funzione Supabase per bloccare password già compromesse è disponibile sui piani Pro e superiori, quindi non è un blocco risolvibile sul piano gratuito.
+
 ## Video promozionale
 - Base video verde UnaMano mantenuta.
 - Audio MP3 dell'utente mantenuto.
@@ -91,18 +104,17 @@ Data: 28/09/2026
 9. Verificare notifica push/vibrazione sul telefono B e apertura dell'annuncio al tocco.
 10. Verifica comparsa nella bacheca giornaliera.
 11. Candidatura, accettazione/rifiuto/ritiro, completamento e recensione.
-12. Reset password.
-13. Foto profilo.
-14. Segnalazione contenuto.
-15. Installazione PWA su entrambi i telefoni.
+12. Verificare che la chat sia disponibile solo dopo l'accettazione.
+13. Reset password.
+14. Foto profilo.
+15. Segnalazione contenuto.
+16. Installazione PWA su entrambi i telefoni.
 
 ## Regola di prodotto
 UnaMano parte gratuito. Non gestisce pagamenti in-app. Eventuali accordi economici avvengono direttamente tra gli utenti e restano soggetti alla normativa applicabile.
 
 ## Prossimo step
-Prima di qualsiasi lancio o invito:
-1. audit finale di sicurezza Supabase;
-2. correzione warning realmente rilevanti;
-3. controllo completo del flusso con due account/telefoni;
-4. verifica mobile/PWA e notifiche;
-5. solo dopo, beta controllata e inviti.
+- Aspettare il completamento dell'ultimo deploy GitHub Pages.
+- Eseguire il test reale completo con due account/telefoni seguendo la checklist sopra.
+- Correggere eventuali anomalie emerse nel test.
+- Solo dopo: beta controllata e inviti.
