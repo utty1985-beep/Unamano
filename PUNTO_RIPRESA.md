@@ -161,3 +161,10 @@ Nel repository sono salvati:
 
 ## Prossimo step
 Il test reale su due telefoni è stato rimandato per decisione dell'utente. Tutta la preparazione non distruttiva utile prima del collaudo è ora sostanzialmente completata. Non inviare beta/promozione prima del collaudo finale. Dopo il test: beta locale controllata, raccolta feedback, correzioni e solo successivamente lancio pubblico più ampio.
+
+## Punto social sospeso — 28/09/2026, ore 11:05 Italia
+- Account Instagram UnaMano creato: `@unamanoitalia`, selezionato nell'app sul telefono dell'utente; profilo ancora vuoto (nome, bio, logo e sito da impostare). Non è confermato il passaggio di questo account ad Azienda/Creator.
+- Per errore l'account Instagram personale `@bari.mario` è stato trasformato in Business durante la configurazione: va riportato a personale, verificando sempre il nome utente prima di agire.
+- Metricool brand UnaMano (blogId 7120922): nessun social collegato all'ultima verifica del connettore. Il primo tentativo indicava account non trovato o non Business/Creator.
+- L'accesso a Instagram nel browser dedicato si è fermato dopo CAPTCHA e messaggio di credenziali errate. Non condividere password in chat; il browser non condivide la sessione dell'app sul telefono.
+- L'utente ha chiesto di sospendere qui la configurazione social e riprenderla più avanti. Al ritorno: controllare `@unamanoitalia`, completare profilo professionale e identità pubblica, collegare Metricool, poi ripristinare `@bari.mario` a personale. Non dichiarare il collegamento completato senza verifica.
