@@ -9,7 +9,7 @@ function loadMarketplaceExtras(){
   loadScriptOnce('unamanoMarketplacePolish','./marketplace-polish.js?v=20260928-5',()=>{
     loadScriptOnce('unamanoCandidateActions','./candidate-actions.js?v=20260928-2',()=>{
       loadScriptOnce('unamanoMultiApplications','./multi-applications.js?v=20260928-2',()=>{
-        loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-2');
+        loadScriptOnce('unamanoWorkflowFixes','./workflow-fixes.js?v=20260928-3');
       });
     });
   });
