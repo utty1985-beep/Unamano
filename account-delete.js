@@ -1,6 +1,7 @@
 (function(){
   const q=id=>document.getElementById(id);
   let installed=false;
+  const getSession=()=>{try{return typeof session!=='undefined'?session:null}catch(e){return null}};
 
   function ensureStyles(){
     if(q('umAccountDeleteStyle'))return;
@@ -25,15 +26,16 @@
 
   window.deleteUnaManoAccount=async function(){
     try{
-      if(!window.session?.user?.id||!window.sb){
-        if(typeof window.toast==='function')window.toast('Accedi prima di eliminare l’account.','warn');
+      const s=getSession();
+      if(!s?.user?.id||typeof sb==='undefined'||!sb){
+        if(typeof toast==='function')toast('Accedi prima di eliminare l’account.','warn');
         return;
       }
       const first=confirm('Questa operazione elimina definitivamente l’account UnaMano e i dati collegati. Vuoi continuare?');
       if(!first)return;
       const typed=prompt('Per confermare scrivi esattamente: ELIMINA');
       if(typed!=='ELIMINA'){
-        if(typeof window.toast==='function')window.toast('Eliminazione annullata.','warn');
+        if(typeof toast==='function')toast('Eliminazione annullata.','warn');
         return;
       }
       const btn=q('deleteAccountBtn');
@@ -47,7 +49,7 @@
     }catch(e){
       const btn=q('deleteAccountBtn');
       if(btn){btn.disabled=false;btn.textContent='Elimina definitivamente il mio account';}
-      if(typeof window.toast==='function')window.toast('Non è stato possibile eliminare l’account. Riprova.','err');
+      if(typeof toast==='function')toast('Non è stato possibile eliminare l’account. Riprova.','err');
     }
   };
 
