@@ -1,7 +1,7 @@
 (function(){
   const l=document.createElement('link');
   l.rel='stylesheet';
-  l.href='./theme-v2.css?v=20260928-2';
+  l.href='./theme-v2.css?v=20260928-3';
   document.head.appendChild(l);
 })();
 
