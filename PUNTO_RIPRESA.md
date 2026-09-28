@@ -82,8 +82,8 @@ Limiti server-side attivi tramite trigger Supabase:
 - Le tabelle di dispatch risultano ancora a zero: non è stato ancora eseguito un invio reale end-to-end dopo questo hardening.
 
 ## PWA
-- Service Worker corrente: cache `unamano-v27-20260928`.
-- Inclusi nella cache anche i nuovi moduli: global bridge, consenso legale corrente, protezione chat, cancellazione account, moderazione e anti-abuso.
+- Service Worker corrente: cache `unamano-v29-20260928`.
+- Inclusi nella cache anche i nuovi moduli: global bridge, consenso legale corrente, protezione chat, cancellazione account, moderazione, anti-abuso, onboarding e nuove pagine pubbliche.
 - Manifest allineato al tema verde UnaMano.
 
 ## Audit Supabase finale
@@ -112,7 +112,18 @@ Nel repository sono salvati:
 - Google Search Console verificata, sitemap inviata e richiesta indicizzazione home accettata.
 - Bing Webmaster Tools collegato e home inviata.
 - `robots.txt`, sitemap e IndexNow attivi.
-- Workflow IndexNow e deploy GitHub Pages verificati con esito `success`.
+- Canonical, Open Graph, Twitter Card e dati strutturati presenti tramite `seo-meta.js`.
+- Aggiunta anteprima social `social-card.svg` 1200×630.
+- Aggiunta pagina pubblica `come-funziona.html` e inserita nella sitemap.
+- Aggiunta pagina pubblica `contatti.html` e inserita nella sitemap.
+- Pagina `404.html` resa coerente con UnaMano e con collegamenti utili.
+
+## Onboarding e presentazione pubblica — 28/09/2026
+- Aggiunto `onboarding.js`.
+- Al primo accesso compare una guida breve in 3 passaggi: esplora, candidati/pubblica, chat/recensioni.
+- L'onboarding viene mostrato una sola volta per dispositivo/browser tramite memoria locale.
+- Nel footer sono stati aggiunti i collegamenti `Come funziona` e `Contatti`.
+- Le nuove risorse sono incluse nella cache PWA.
 
 ## Beta predisposta ma sospesa
 - `feedback.html` e tabella `beta_feedback` pronti.
@@ -141,4 +152,4 @@ Nel repository sono salvati:
 8. Dominio definitivo, social, beta, promozione e Play Store restano volutamente successivi al test finale.
 
 ## Prossimo step
-Aprire la versione pubblicata su due telefoni e seguire il test reale completo. Correggere qualunque anomalia prima di invitare utenti esterni.
+Il test reale su due telefoni è stato rimandato per decisione dell'utente. Nel frattempo si possono completare ulteriori attività non distruttive: identità del marchio, dominio definitivo, materiali social/promozionali, organizzazione del lancio e preparazione Play Store. Nessun invito beta va inviato prima del collaudo finale.
