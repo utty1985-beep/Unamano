@@ -1,13 +1,17 @@
 (function(){
 const KEY='unamano_onboarding_seen_v1';
 const q=id=>document.getElementById(id);
-function addFooterLink(){
+function addFooterLinks(){
   const footer=q('siteFooter');
-  if(!footer||q('umHowItWorksLink'))return;
-  const a=document.createElement('a');
-  a.id='umHowItWorksLink';a.href='come-funziona.html';a.textContent='Come funziona';
-  const first=footer.querySelector('a');
-  if(first)footer.insertBefore(a,first);else footer.appendChild(a);
+  if(!footer)return;
+  if(!q('umHowItWorksLink')){
+    const a=document.createElement('a');a.id='umHowItWorksLink';a.href='come-funziona.html';a.textContent='Come funziona';
+    const first=footer.querySelector('a');if(first)footer.insertBefore(a,first);else footer.appendChild(a);
+  }
+  if(!q('umContactsLink')){
+    const a=document.createElement('a');a.id='umContactsLink';a.href='contatti.html';a.textContent='Contatti';
+    footer.appendChild(a);
+  }
 }
 function styles(){
   if(q('umOnboardingStyle'))return;
@@ -18,7 +22,7 @@ function styles(){
 }
 function close(){q('umWelcome')?.remove();try{localStorage.setItem(KEY,'1')}catch(e){}}
 function build(){
-  addFooterLink();
+  addFooterLinks();
   try{if(localStorage.getItem(KEY)==='1')return}catch(e){}
   if(q('umWelcome'))return;styles();
   const d=document.createElement('div');d.id='umWelcome';d.innerHTML=`<div class="umw-card"><div class="umw-head"><div class="umw-mark">🤝</div><div><h2>Benvenuto su UnaMano</h2><div class="small">In meno di un minuto capisci come funziona.</div></div></div><div class="umw-steps"><div class="umw-step"><span class="umw-n">1</span><div><b>Guarda le richieste</b><div class="small">Esplora la bacheca della tua zona e filtra per categoria.</div></div></div><div class="umw-step"><span class="umw-n">2</span><div><b>Candidati oppure pubblica</b><div class="small">Puoi offrire il tuo aiuto o chiedere una mano con una nuova richiesta.</div></div></div><div class="umw-step"><span class="umw-n">3</span><div><b>Chat e recensioni</b><div class="small">La chat si attiva dopo l’accettazione. Al termine dell’attività puoi lasciare una recensione.</div></div></div></div><div class="umw-actions"><a class="btn g" href="come-funziona.html">Come funziona</a><button id="umWelcomeStart" class="btn p" type="button">Inizia</button></div></div>`;
@@ -27,5 +31,5 @@ function build(){
   d.addEventListener('click',e=>{if(e.target===d)close()});
 }
 if(document.readyState==='complete')setTimeout(build,300);else window.addEventListener('load',()=>setTimeout(build,300),{once:true});
-let n=0;const t=setInterval(()=>{n++;addFooterLink();if(q('siteFooter')||n>20)clearInterval(t)},350);
+let n=0;const t=setInterval(()=>{n++;addFooterLinks();if(q('siteFooter')||n>20)clearInterval(t)},350);
 })();
