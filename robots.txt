@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://utty1985-beep.github.io/Unamano/sitemap.xml
