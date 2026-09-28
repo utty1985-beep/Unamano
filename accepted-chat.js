@@ -18,7 +18,8 @@ if(document.readyState==='complete')setTimeout(boot,0);else window.addEventListe
 loadScriptOnce('unamanoGlobalBridge','./global-bridge.js?v=20260928-1');
 loadScriptOnce('unamanoLegalV28','./legal-v20260928.js?v=20260928-1');
 loadScriptOnce('unamanoSoftTheme','./soft-theme.js?v=20260928-2');
-loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-2');
+loadScriptOnce('unamanoSeoMeta','./seo-meta.js?v=20260928-3');
+loadScriptOnce('unamanoOnboarding','./onboarding.js?v=20260928-1');
 loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-2');
 loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-2');
 loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-3');
