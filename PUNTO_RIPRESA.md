@@ -2,119 +2,143 @@
 
 Data: 28/09/2026
 
-## Stato attuale verificato
-- Progetto GitHub: `utty1985-beep/Unamano`
-- Branch principale: `main`
-- Repository pubblico.
-- GitHub Pages attivo.
-- Sito pubblico: `https://utty1985-beep.github.io/Unamano/`
-- Supabase dedicato `UnaMano` attivo e collegato tramite `config.js` con publishable key.
-- Pagine Privacy, Termini e Segnalazioni pubblicate.
-- Registrazione: 18+, accettazione Termini e lettura Privacy; registrazione dell'accettazione nel database.
-- Funzioni presenti: registrazione/accesso, recupero password, profilo, pubblicazione annunci, candidature ricevute/inviate, accetta/rifiuta/ritira candidatura, completamento attività, recensioni, segnalazioni, condivisione sito/annunci, PWA/installazione.
+## Stato generale
+- Repository: `utty1985-beep/Unamano`, branch `main`, pubblico.
+- Sito: `https://utty1985-beep.github.io/Unamano/`.
+- Backend: Supabase progetto `UnaMano` (`cfnivvdtyhpgbwmbgoke`).
+- Il progetto resta gratuito nella fase iniziale e non gestisce pagamenti in-app.
+- Beta/promozione/inviti: **NON ancora avviati per decisione dell'utente**. Si parte solo dopo il test finale reale.
 
-## Bacheca e preferenze lavoro
-- Categoria `Babysitter` aggiunta alle categorie disponibili.
-- Tabella Supabase `worker_preferences` con RLS per salvare categorie di interesse e attivazione notifiche per ogni utente.
-- Nel profilo compare la sezione `Lavori che mi interessano`, dove l'utente può scegliere una o più categorie e attivare le notifiche.
-- La città viene presa dal profilo utente e resta modificabile.
-- In home è presente la `Bacheca di oggi nella tua città`, che mostra le richieste aperte pubblicate oggi nella città dell'utente.
-- La bacheca è filtrabile per categoria.
-- Realtime sulla tabella `jobs` mantiene aggiornata la bacheca quando il sito è aperto.
+## Funzioni applicative già presenti
+- Registrazione/accesso email e password, conferma email e recupero password.
+- Profilo pubblico con città, bio, competenze, disponibilità e foto.
+- Curriculum/esperienze private in `candidate_private` e bucket `curricula` privato.
+- Pubblicazione/modifica/eliminazione annunci.
+- Candidature ricevute/inviate, rifiuto, ritiro, scelta del candidato.
+- Completamento attività e recensioni.
+- Chat privata collegata all'incarico.
+- Segnalazioni, pagina pubblica `segnala.html` e gestione delle segnalazioni.
+- Preferenze lavori/città, notifiche push, avvisi email/WhatsApp predisposti.
+- PWA/installazione, condivisione sito e singolo annuncio.
+- Bacheca giornaliera nella città dell'utente e richieste dimostrative marcate `ESEMPIO` quando non ci sono annunci reali.
 
-## Modalità città vuota / richieste demo
-- Se una città non ha ancora richieste reali aperte, la bacheca non appare vuota.
-- Compare un messaggio `UnaMano sta partendo` con invito a pubblicare la prima richiesta reale.
-- Vengono mostrati alcuni annunci dimostrativi chiaramente marcati `ESEMPIO` e `Richiesta dimostrativa`.
-- Le richieste demo non accettano candidature e non vengono inserite nel database come annunci reali.
-- Appena esistono richieste reali nella città, la bacheca mostra quelle reali al posto delle demo.
-- Esempi inclusi: Babysitter, Aiuto doposcuola per compiti, Giardinaggio, Spesa/commissioni e Piccoli lavori.
-- `Doposcuola` è mostrato come esempio nella categoria `Ripetizioni`.
+## Sicurezza CV e Storage
+- `avatars` pubblico intenzionalmente, massimo 5 MB e solo immagini ammesse.
+- `curricula` privato, massimo 10 MB, PDF/DOC/DOCX.
+- CV leggibile dal proprietario e dal proprietario di un annuncio solo mentre valuta una candidatura `pending` su un annuncio `open`.
+- Le vecchie colonne CV presenti nella tabella pubblica `profiles` sono vuote e vengono forzate a `NULL` da trigger database.
 
-## Notifiche push complete
-- Configurato Web Push con chiavi VAPID dedicate a UnaMano.
-- Aggiunta tabella `push_subscriptions` con RLS: ogni utente gestisce solo le proprie sottoscrizioni del browser/telefono.
-- La chiave privata VAPID è conservata solo lato Supabase nella tabella protetta `push_server_config`; non è esposta nel sito o nel repository.
-- Deployata Edge Function Supabase `send-job-push`.
-- Quando un utente pubblica una nuova richiesta, il sito invoca la funzione server-side.
-- La funzione cerca soltanto utenti con notifiche attive, stessa città della richiesta e categoria compatibile.
-- Le notifiche push possono arrivare anche con sito/PWA chiuso, se il sistema operativo/browser consente le notifiche per UnaMano.
-- Il Service Worker `sw.js` gestisce evento `push`, visualizzazione notifica, vibrazione e apertura diretta dell'annuncio.
-- Sul profilo viene indicato se le notifiche push risultano realmente attive sul dispositivo.
-- Al logout la sottoscrizione push del dispositivo viene rimossa.
-- Se una sottoscrizione push scade o viene revocata, la Edge Function elimina automaticamente gli endpoint non più validi su risposta 404/410.
+## Chat — regola definitiva
+- La chat si attiva solo dopo l'accettazione della candidatura.
+- Database: INSERT/SELECT/UPDATE dei messaggi consentiti solo tra proprietario dell'annuncio e persona assegnata, per incarichi `assigned` o `completed`.
+- Frontend: `chat-access-guard.js` rimuove i pulsanti di messaggistica generica e blocca aperture senza incarico valido.
+- `global-bridge.js` sincronizza sessione e client Supabase con i moduli caricati successivamente.
 
-## Indicizzazione e motori di ricerca — completato 28/09/2026
-- Google Search Console verificata tramite file HTML.
-- `sitemap.xml` inviata a Google.
-- Home inviata manualmente a Google con richiesta di indicizzazione accettata.
-- Bing Webmaster Tools collegato importando la proprietà da Google Search Console.
-- Home inviata manualmente anche a Bing.
-- `robots.txt` attivo e collegato alla sitemap.
-- IndexNow configurato con chiave pubblica e workflow GitHub Actions.
-- Il workflow IndexNow notifica automaticamente gli aggiornamenti del sito ai motori compatibili.
-- Sitemap comprende home, Privacy, Termini e Segnalazioni.
+## Protezioni anti-abuso
+Limiti server-side attivi tramite trigger Supabase:
+- Annunci: massimo 10/ora e 30/24h per utente.
+- Candidature: massimo 30/ora e 100/24h.
+- Messaggi: massimo 15/minuto e 180/ora.
+- Segnalazioni: massimo 10/ora.
+- Recensioni: massimo 20/ora.
+- `anti-abuse-ui.js` traduce gli errori tecnici in messaggi comprensibili.
 
-## Beta controllata — predisposta ma NON ancora avviata
-- Creata pagina `feedback.html` per raccogliere feedback dei tester.
-- Creata tabella Supabase `beta_feedback` con RLS e senza lettura pubblica.
-- Privacy aggiornata per documentare la raccolta feedback beta.
-- Creati contatori beta nel database per account, annunci, candidature, attività concluse, recensioni e feedback.
-- Preparato il kit di invito beta per Foggia e individuati alcuni contatti pubblici di associazioni/community.
-- Gmail collegato a ChatGPT per eventuali inviti futuri.
-- DECISIONE: **non inviare ancora inviti e non avviare la promozione**. Prima si ultima il sito e si esegue il controllo finale completo.
+## Moderazione
+- Tabella server-only `user_suspensions` con RLS e nessuna policy client.
+- Un account sospeso non può creare nuovi annunci, candidature, messaggi o recensioni.
+- Edge Function `admin-moderation` attiva con JWT obbligatorio e accesso amministrativo all'account del gestore.
+- `moderation-admin.js` aggiunge al profilo amministratore un pannello per:
+  - vedere segnalazioni utenti;
+  - vedere segnalazioni pubbliche/legali;
+  - chiudere annunci;
+  - sospendere/riattivare utenti;
+  - aggiornare lo stato delle segnalazioni.
 
-## Stato beta attuale prima del lancio
-- 2 account presenti.
-- 2 annunci presenti.
-- 2 candidature presenti.
+## Cancellazione account
+- Edge Function `delete-account` attiva con JWT obbligatorio.
+- Dal profilo compare la sezione `Elimina account`.
+- Richiede doppia conferma e digitazione di `ELIMINA`.
+- Prima dell'eliminazione rimuove i file dell'utente nei bucket `avatars` e `curricula`.
+- Elimina quindi l'utente Auth; le relazioni `ON DELETE CASCADE` rimuovono profilo e dati applicativi collegati.
+- `beta_feedback.user_id` diventa `NULL` per la relazione `ON DELETE SET NULL`.
+- Non è stato eseguito un test distruttivo su uno dei due account reali di prova per evitare perdita di dati.
+
+## Privacy e Termini
+- Privacy aggiornata al 28/09/2026 con cancellazione account, moderazione e prevenzione abusi.
+- Termini aggiornati al 28/09/2026 con chat post-accettazione, anti-abuso, sospensioni e cancellazione account.
+- `legal-v20260928.js` obbliga gli utenti già registrati ad accettare la versione `2026-09-28` prima di continuare.
+- Le accettazioni sono registrate in `legal_acceptances`.
+
+## Edge Functions attive
+- `send-job-push` — ACTIVE, JWT richiesto.
+- `send-application-notify` — ACTIVE, JWT richiesto.
+- `delete-account` — ACTIVE, JWT richiesto.
+- `admin-moderation` — ACTIVE, JWT richiesto.
+
+## Notifiche
+- Push Web con VAPID configurato.
+- `send-job-push` gestisce push e, se configurati i segreti server, email Resend e WhatsApp.
+- `send-application-notify` gestisce avvisi per nuove candidature via email/WhatsApp quando attivati.
+- Le tabelle di dispatch risultano ancora a zero: non è stato ancora eseguito un invio reale end-to-end dopo questo hardening.
+
+## PWA
+- Service Worker corrente: cache `unamano-v27-20260928`.
+- Inclusi nella cache anche i nuovi moduli: global bridge, consenso legale corrente, protezione chat, cancellazione account, moderazione e anti-abuso.
+- Manifest allineato al tema verde UnaMano.
+
+## Audit Supabase finale
+### Sicurezza
+Restano solo:
+- INFO `RLS Enabled No Policy` su tabelle volutamente server-only/chiuse al client: `application_notification_dispatches`, `job_notification_dispatches`, `push_server_config`, `user_suspensions`.
+- WARN `Leaked Password Protection Disabled`: la protezione password compromesse di Supabase è disponibile sui piani Pro e superiori, quindi non è attivabile nel piano gratuito attuale.
+- I precedenti warning sulle funzioni `SECURITY DEFINER` esposte come RPC sono stati risolti spostando l'helper sospensioni nello schema non esposto `private` e revocando l'esecuzione diretta dei trigger helper.
+
+### Prestazioni
+- Rimosso l'indice duplicato sui messaggi.
+- Aggiunto indice su `user_suspensions.created_by`.
+- Restano alcuni `unused index` perché il database ha pochissimi dati: non vengono rimossi prematuramente.
+- Restano 3 warning `multiple permissive policies` intenzionali per separare azioni con regole diverse (candidature, CV privato, aggiornamenti annunci). Non vengono fusi per non ridurre chiarezza/sicurezza delle policy.
+
+## Backup e ripristino
+Nel repository sono salvati:
+- `supabase_security_20260928.sql` — baseline riproducibile di sicurezza.
+- `supabase_security_private_helpers_20260928.sql` — hardening degli helper non esposti.
+- `RECOVERY_BACKUP.md` — procedura di ripristino.
+- sorgente delle Edge Function nuove in `supabase/functions/delete-account/` e `supabase/functions/admin-moderation/`.
+- Il repository è backup del codice/configurazione, **non dei dati personali**.
+- Non è stato creato un dump completo di database/Auth/Storage perché deve essere conservato privatamente e il connettore disponibile non espone un'operazione di backup completo sicuro.
+
+## SEO e indicizzazione
+- Google Search Console verificata, sitemap inviata e richiesta indicizzazione home accettata.
+- Bing Webmaster Tools collegato e home inviata.
+- `robots.txt`, sitemap e IndexNow attivi.
+- Workflow IndexNow e deploy GitHub Pages verificati con esito `success`.
+
+## Beta predisposta ma sospesa
+- `feedback.html` e tabella `beta_feedback` pronti.
+- Contatori beta predisposti.
+- Kit beta Foggia e contatti pubblici già preparati.
+- Gmail collegato per eventuali inviti futuri.
+- Nessun invito deve essere inviato finché non viene completato il test reale finale.
+
+## Stato dati di prova prima del test finale
+- 2 account.
+- 2 annunci.
+- 2 candidature.
 - 1 candidatura accettata.
 - 1 attività completata.
 - 1 recensione.
 - 0 feedback beta.
 
-## Audit sicurezza e stabilità — 28/09/2026
-- Nessuna `service_role` o chiave segreta trovata nel repository pubblico.
-- Bucket `avatars` pubblico intenzionalmente; bucket `curricula` privato.
-- Policy Storage CV verificate: proprietario sempre autorizzato; proprietario dell'annuncio autorizzato solo mentre valuta una candidatura `pending` su annuncio `open`.
-- Le vecchie colonne CV presenti in `profiles` risultano vuote; aggiunta protezione database che le mantiene sempre `NULL`, per evitare future esposizioni accidentali.
-- Il CV effettivo resta in `candidate_private`.
-- Chat irrigidita: messaggi consentiti solo tra proprietario dell'annuncio e candidato accettato, per incarichi `assigned` o `completed`.
-- Aggiunto `chat-access-guard.js` per rimuovere i pulsanti di messaggistica generica e bloccare tentativi di apertura chat senza incarico accettato.
-- Service Worker aggiornato alla cache `unamano-v23-20260928` e include la protezione chat.
-- Colori PWA/manifest allineati alla grafica verde di UnaMano.
-- Advisor Supabase: le segnalazioni RLS senza policy riguardano tabelle volutamente chiuse al client (`application_notification_dispatches`, `job_notification_dispatches`, `push_server_config`).
-- Unico warning di sicurezza residuo: `Leaked Password Protection Disabled`; la funzione Supabase per bloccare password già compromesse è disponibile sui piani Pro e superiori, quindi non è un blocco risolvibile sul piano gratuito.
-
-## Video promozionale
-- Base video verde UnaMano mantenuta.
-- Audio MP3 dell'utente mantenuto.
-- Recuperata la schermata che mostra più attività oltre Babysitter.
-- Creato il file finale `UnaMano_SPOT_FINALE_COMPLETO_CATEGORIE.mp4` e salvato nella Libreria ChatGPT.
-
-## Test reale consigliato con due telefoni/account
-1. Registrazione con email.
-2. Conferma email.
-3. Accesso.
-4. Impostazione città e categorie di interesse.
-5. Attivazione notifiche e accettazione del permesso del telefono/browser.
-6. Verifica nel profilo della scritta `Notifiche push attive anche con UnaMano chiusa.`
-7. Chiudere completamente UnaMano sul telefono B.
-8. Pubblicare da account A una richiesta nella stessa città e in una categoria selezionata dall'account B.
-9. Verificare notifica push/vibrazione sul telefono B e apertura dell'annuncio al tocco.
-10. Verifica comparsa nella bacheca giornaliera.
-11. Candidatura, accettazione/rifiuto/ritiro, completamento e recensione.
-12. Verificare che la chat sia disponibile solo dopo l'accettazione.
-13. Reset password.
-14. Foto profilo.
-15. Segnalazione contenuto.
-16. Installazione PWA su entrambi i telefoni.
-
-## Regola di prodotto
-UnaMano parte gratuito. Non gestisce pagamenti in-app. Eventuali accordi economici avvengono direttamente tra gli utenti e restano soggetti alla normativa applicabile.
+## Cose che richiedono ancora un test/manualità
+1. Test fisico completo con due telefoni/account: registrazione, conferma email, login, città/preferenze, annuncio, candidatura, accettazione/rifiuto/ritiro, chat, completamento, recensione.
+2. Test push con app chiusa e permessi reali del sistema operativo/browser.
+3. Test effettivo di recapito email di recupero password e notifiche email.
+4. Test del pannello moderazione accedendo con l'account amministratore.
+5. Test non distruttivo della schermata cancellazione; il test distruttivo dell'Edge Function richiede un account sacrificabile, non uno dei due account reali esistenti.
+6. Backup completo privato di database/Auth/Storage.
+7. `Leaked Password Protection` non disponibile nel piano Supabase gratuito.
+8. Dominio definitivo, social, beta, promozione e Play Store restano volutamente successivi al test finale.
 
 ## Prossimo step
-- Aspettare il completamento dell'ultimo deploy GitHub Pages.
-- Eseguire il test reale completo con due account/telefoni seguendo la checklist sopra.
-- Correggere eventuali anomalie emerse nel test.
-- Solo dopo: beta controllata e inviti.
+Aprire la versione pubblicata su due telefoni e seguire il test reale completo. Correggere qualunque anomalia prima di invitare utenti esterni.
