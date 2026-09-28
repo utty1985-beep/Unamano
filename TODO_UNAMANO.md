@@ -20,11 +20,11 @@ Aggiornata al 28/09/2026.
 
 ## Completato automaticamente
 
-- [x] **Ritiro candidatura** — una candidatura ritirata viene nascosta dalle candidature attive sia lato candidato sia lato proprietario.
+- [x] **Ritiro candidatura** — una candidatura ritirata viene nascosta dalle candidature attive sia lato candidato sia lato proprietario, mantenendo corretta l'associazione tra le card e le candidature ancora attive.
 - [x] **Permanenza annuncio in bacheca** — verificata la logica database: il ritiro/non accettazione di una candidatura non chiude l'annuncio; la richiesta resta `open` finche' il proprietario non accetta una persona. Solo l'accettazione porta lo stato a `assigned`.
 - [x] **Data e ora annunci** — aggiunta visualizzazione completa della data/ora di pubblicazione nelle card e nei dettagli dell'annuncio.
 - [x] **Stabilita moduli JavaScript** — ordinato il caricamento dei correttivi per evitare che piu' wrapper di `renderActivity`/`applyJob` si sovrascrivano in modo non deterministico.
-- [x] **Aggiornamento PWA** — incrementata la cache Service Worker a `unamano-v21-20260928` per forzare i telefoni a ricevere i nuovi file.
+- [x] **Aggiornamento PWA** — incrementata la cache Service Worker a `unamano-v22-20260928` per forzare i telefoni a ricevere i nuovi file.
 - [x] **Foto profilo** — verificato bucket `avatars`, limiti JPG/PNG/WEBP fino a 5 MB, salvataggio online e visualizzazione nel profilo.
 - [x] **Curriculum/esperienza** — bucket privato `curricula`, caricamento PDF/DOC/DOCX e accesso controllato.
 - [x] **Profilo completo** — citta, presentazione, competenze, disponibilita, recensioni, annunci e chat gia integrati.
