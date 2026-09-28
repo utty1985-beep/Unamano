@@ -1,15 +1,16 @@
 (function(){
 const CUSTOM='__unamano_custom_category__';
 const SEASONAL='Lavori stagionali / campagna';
+const BABYSITTER='Babysitter';
 const q=id=>document.getElementById(id);
 
 function safeText(v){return String(v||'').trim().replace(/\s+/g,' ')}
-function ensureBaseCategory(){
+function ensureBaseCategories(){
   try{
-    if(typeof CATS!=='undefined'&&Array.isArray(CATS)&&!CATS.some(x=>x[1]===SEASONAL)){
-      const alt=CATS.findIndex(x=>x[1]==='Altro');
-      CATS.splice(alt>=0?alt:CATS.length,0,['🌾',SEASONAL]);
-    }
+    if(typeof CATS==='undefined'||!Array.isArray(CATS))return;
+    const insertBeforeAlt=(item)=>{const i=CATS.findIndex(x=>x[1]==='Altro');CATS.splice(i>=0?i:CATS.length,0,item)};
+    if(!CATS.some(x=>x[1]===BABYSITTER))insertBeforeAlt(['👶',BABYSITTER]);
+    if(!CATS.some(x=>x[1]===SEASONAL))insertBeforeAlt(['🌾',SEASONAL]);
   }catch(e){}
 }
 function ensureSelectOption(sel,value,label=value,beforeCustom=false){
@@ -25,8 +26,9 @@ function toggleCustom(){
   if(sel.value===CUSTOM)setTimeout(()=>q('umCustomCategory')?.focus(),0);
 }
 function ensurePublisherUi(){
-  ensureBaseCategory();
+  ensureBaseCategories();
   const sel=q('newcat');if(!sel)return;
+  ensureSelectOption(sel,BABYSITTER,'👶 '+BABYSITTER,true);
   ensureSelectOption(sel,SEASONAL,'🌾 '+SEASONAL,true);
   ensureSelectOption(sel,CUSTOM,'➕ Crea una nuova categoria');
   if(!q('umCustomCategoryWrap')){
@@ -40,25 +42,37 @@ function ensurePublisherUi(){
 }
 function allKnownCategories(){
   const m=new Map();
-  try{if(typeof CATS!=='undefined')CATS.forEach(x=>m.set(x[1],x[0]||'✨'))}catch(e){}
-  try{if(typeof jobs!=='undefined')jobs.forEach(j=>{const c=safeText(j.category);if(c&&!m.has(c))m.set(c,'✨')})}catch(e){}
+  try{if(typeof CATS!=='undefined')CATS.forEach(x=>m.set(x[1],x[0]||'🧩'))}catch(e){}
+  try{if(typeof jobs!=='undefined')jobs.forEach(j=>{const c=safeText(j.category);if(c&&!m.has(c))m.set(c,'🧩')})}catch(e){}
+  m.set(BABYSITTER,'👶');
   m.set(SEASONAL,'🌾');
   return [...m.entries()];
 }
+function cityMatches(j,city){return !city||(j.city||'').toLowerCase().includes(city)}
+function syncGallery(){
+  const strip=q('categoryStrip');if(!strip)return;
+  const cats=allKnownCategories();
+  const city=(q('cityFilter')?.value||'').trim().toLowerCase();
+  let open=[];try{open=(typeof jobs!=='undefined'?jobs:[]).filter(j=>j.status==='open'&&cityMatches(j,city))}catch(e){}
+  const selected=q('cat')?.value||'';
+  strip.classList.add('um-category-gallery');
+  strip.innerHTML='';
+  const items=[['','🔎','Tutto'],...cats.map(([name,icon])=>[name,icon,name])];
+  items.forEach(([value,icon,label])=>{
+    const count=value?open.filter(j=>j.category===value).length:open.length;
+    const b=document.createElement('button');
+    b.type='button';b.className='um-category-tile'+(selected===value?' active':'');b.dataset.cat=value;
+    b.innerHTML=`<span class="um-category-icon">${icon}</span><span class="um-category-label">${label}</span><span class="um-category-count">${count}</span>`;
+    b.addEventListener('click',()=>{if(typeof pickCat==='function')pickCat(value);setTimeout(syncGallery,0)});
+    strip.appendChild(b);
+  });
+}
 function syncFilters(){
-  ensureBaseCategory();
+  ensureBaseCategories();
   const cats=allKnownCategories();
   const filter=q('cat');
   if(filter)cats.forEach(([name,icon])=>ensureSelectOption(filter,name,icon+' '+name));
-  const strip=q('categoryStrip');
-  if(strip){
-    cats.forEach(([name,icon])=>{
-      if([...strip.querySelectorAll('[data-cat]')].some(el=>el.dataset.cat===name))return;
-      const chip=document.createElement('span');chip.className='chip click';chip.dataset.cat=name;chip.textContent=icon+' '+name;
-      chip.addEventListener('click',()=>{if(typeof pickCat==='function')pickCat(name)});
-      strip.appendChild(chip);
-    });
-  }
+  syncGallery();
 }
 function patchCreate(){
   if(window.__umCustomCategoryPatched||typeof window.createJob!=='function')return false;
@@ -71,7 +85,7 @@ function patchCreate(){
       if(value.length<3){if(typeof toast==='function')toast('Scrivi il nome della nuova categoria.','warn');return}
       if(value.length>60){if(typeof toast==='function')toast('Il nome della categoria è troppo lungo.','warn');return}
       ensureSelectOption(sel,value,value,true);sel.value=value;
-      try{if(typeof CATS!=='undefined'&&!CATS.some(x=>x[1]===value))CATS.push(['✨',value])}catch(e){}
+      try{if(typeof CATS!=='undefined'&&!CATS.some(x=>x[1]===value))CATS.push(['🧩',value])}catch(e){}
     }
     const r=await old.apply(this,arguments);
     setTimeout(()=>{ensurePublisherUi();syncFilters()},80);
@@ -86,9 +100,15 @@ function patchLoadJobs(){
   window.loadJobs=async function(){const r=await old.apply(this,arguments);setTimeout(syncFilters,0);return r};
   return true;
 }
+function bindCity(){
+  const city=q('cityFilter');
+  if(city&&!city.dataset.umGalleryBound){city.dataset.umGalleryBound='1';city.addEventListener('input',()=>setTimeout(syncGallery,0))}
+  const cat=q('cat');
+  if(cat&&!cat.dataset.umGalleryBound){cat.dataset.umGalleryBound='1';cat.addEventListener('change',()=>setTimeout(syncGallery,0))}
+}
 function boot(){
-  ensurePublisherUi();syncFilters();patchCreate();patchLoadJobs();
-  let n=0;const t=setInterval(()=>{n++;ensurePublisherUi();syncFilters();patchCreate();patchLoadJobs();if((window.__umCustomCategoryPatched&&window.__umCategoryLoadPatched&&n>12)||n>60)clearInterval(t)},250);
+  ensurePublisherUi();syncFilters();patchCreate();patchLoadJobs();bindCity();
+  let n=0;const t=setInterval(()=>{n++;ensurePublisherUi();syncFilters();patchCreate();patchLoadJobs();bindCity();if((window.__umCustomCategoryPatched&&window.__umCategoryLoadPatched&&n>12)||n>60)clearInterval(t)},250);
 }
 if(document.readyState==='complete')boot();else window.addEventListener('load',boot,{once:true});
 })();
