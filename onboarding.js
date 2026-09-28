@@ -8,9 +8,14 @@ function addFooterLinks(){
     const a=document.createElement('a');a.id='umHowItWorksLink';a.href='come-funziona.html';a.textContent='Come funziona';
     const first=footer.querySelector('a');if(first)footer.insertBefore(a,first);else footer.appendChild(a);
   }
+  if(!q('umFaqLink')){
+    const a=document.createElement('a');a.id='umFaqLink';a.href='faq.html';a.textContent='FAQ';footer.appendChild(a);
+  }
+  if(!q('umSafetyLink')){
+    const a=document.createElement('a');a.id='umSafetyLink';a.href='sicurezza.html';a.textContent='Sicurezza';footer.appendChild(a);
+  }
   if(!q('umContactsLink')){
-    const a=document.createElement('a');a.id='umContactsLink';a.href='contatti.html';a.textContent='Contatti';
-    footer.appendChild(a);
+    const a=document.createElement('a');a.id='umContactsLink';a.href='contatti.html';a.textContent='Contatti';footer.appendChild(a);
   }
 }
 function styles(){
