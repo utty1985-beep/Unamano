@@ -1,31 +1,47 @@
 
-// V6.1.6 - Avvistamento storico -> mappa interna + vento attuale + Google Maps solo su scelta
+// V6.1.7 - Avvistamento storico -> mappa interna + vento attuale + tasto Google Maps visibile sulla mappa
 (function(){
+  function mapsIconSvg(){
+    return `<svg viewBox="0 0 48 48" width="30" height="30" aria-hidden="true"><path fill="#4285F4" d="M24 3c-8.3 0-15 6.5-15 14.6C9 28.7 24 45 24 45s15-16.3 15-27.4C39 9.5 32.3 3 24 3z"/><path fill="#34A853" d="M11.1 10.2C9.8 12.3 9 14.8 9 17.6c0 5.4 3.5 11.9 7.2 17.2L25 23z"/><path fill="#FBBC04" d="M24 3c-5.4 0-10.2 2.8-12.9 7.2L25 23l5.8-18.7C28.7 3.5 26.4 3 24 3z"/><path fill="#EA4335" d="M30.8 4.3L25 23l11.8 8.6c1.3-2.5 2.2-5 2.2-7.6 0-8.3-3.2-15.2-8.2-19.7z"/><circle cx="24" cy="17.5" r="6.2" fill="#fff"/></svg>`;
+  }
+
+  function ensureMapNavigateButton(){
+    const wrap=document.querySelector('.mapWrap');
+    if(!wrap||document.getElementById('ctMapsFloat'))return;
+    const b=document.createElement('button');
+    b.id='ctMapsFloat';b.type='button';b.title='Apri Google Maps per arrivare al punto';
+    b.style.cssText='display:none;position:absolute;right:12px;bottom:14px;z-index:1135;align-items:center;gap:7px;border:0;border-radius:15px;background:#fff;color:#173f2b;padding:8px 12px 8px 9px;font:800 13px/1 system-ui;box-shadow:0 3px 12px #0005;min-height:48px';
+    b.innerHTML=mapsIconSvg()+`<span>Maps</span>`;
+    b.onclick=()=>navigateSelected();
+    wrap.appendChild(b);
+  }
+  function showMapNavigateButton(show){const b=$('ctMapsFloat');if(b)b.style.display=show?'flex':'none'}
+
   const originalSelectMapPoint=selectMapPoint;
   selectMapPoint=async function(lat,lng){
     if($('selectedTitle'))$('selectedTitle').textContent='Punto selezionato';
-    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
+    if($('navigateBtn'))$('navigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
     if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
-    return await originalSelectMapPoint(lat,lng);
+    const r=await originalSelectMapPoint(lat,lng);
+    showMapNavigateButton(true);
+    return r;
   };
+
+  const originalClearSelected=clearSelected;
+  clearSelected=function(){originalClearSelected();showMapNavigateButton(false)};
 
   async function openHistoryPoint(id){
     const p=(state.points||[]).find(x=>x.id===id);
     if(!p)return toast('Punto non trovato');
     if(!Number.isFinite(+p.lat)||!Number.isFinite(+p.lng))return toast('Coordinate del punto non disponibili');
-
-    // Quando apro uno storico non devo essere riportato subito alla posizione GPS attuale.
     follow=false;
     $('followBtn')?.classList.remove('active');
     showPage('map');
     map.setView([+p.lat,+p.lng],17,{animate:true});
-
     await selectMapPoint(+p.lat,+p.lng);
     if($('selectedTitle'))$('selectedTitle').textContent=`🕊️ ${p.species||p.name||'Avvistamento salvato'}`;
     if($('selectedCoords'))$('selectedCoords').textContent=`${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)} · vento attuale`;
-    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
-
-    // Evidenzia per qualche secondo il punto aperto nello storico.
+    if($('navigateBtn'))$('navigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
     try{
       const ring=L.circleMarker([+p.lat,+p.lng],{radius:18,color:'#f2b72b',weight:4,fill:false,opacity:1}).addTo(map);
       setTimeout(()=>{try{map.removeLayer(ring)}catch{}},7000);
@@ -48,10 +64,10 @@
 
   const prevBind=bind;
   bind=function(){
-    prevBind();
-    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.6';
-    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
-    if($('pointNavigateBtn'))$('pointNavigateBtn').textContent='🗺️ Google Maps';
+    prevBind();ensureMapNavigateButton();
+    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.7';
+    if($('navigateBtn'))$('navigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
+    if($('pointNavigateBtn'))$('pointNavigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
     if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
   };
 })();
