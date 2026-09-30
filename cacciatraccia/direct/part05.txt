@@ -1,0 +1,115 @@
+
+// v5.2: controlli mappa sempre visibili + configurazione fonte/sito meteo
+(function(){
+  const css=document.createElement('style');
+  css.textContent=`
+    .mapTools{z-index:1105!important;pointer-events:auto!important}
+    .mapTools.left{left:12px!important;top:112px!important}
+    .mapTools.right{right:12px!important;top:12px!important}
+    .mapBtn{position:relative!important;z-index:1106!important;pointer-events:auto!important}
+    .gpsBadge{z-index:1104!important}
+    .layerPanel{z-index:1110!important}
+    #map .leaflet-control-container{z-index:900!important}
+    .ctWeatherSettings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px;padding:10px;background:#f4f7f1;border:1px solid #d7d8d0;border-radius:12px}
+    .ctWeatherSettings label{font-size:11px;margin-bottom:3px}
+    .ctWeatherSettings .full{grid-column:1/-1}
+    .ctWeatherSettings button{width:100%}
+    .ctWeatherNote{font-size:10px;color:#687069;margin-top:4px}
+    @media(max-width:520px){.ctWeatherSettings{grid-template-columns:1fr}.ctWeatherSettings .full{grid-column:1}.mapTools.left{top:110px!important}}
+  `;
+  document.head.appendChild(css);
+
+  const WEATHER_KEY='cacciatraccia-weather-v1';
+  const defaults={model:'best_match',site:'windy',custom:''};
+  let weatherCfg=defaults;
+  try{weatherCfg={...defaults,...JSON.parse(localStorage.getItem(WEATHER_KEY)||'{}')}}catch{}
+  const saveWeatherCfg=()=>localStorage.setItem(WEATHER_KEY,JSON.stringify(weatherCfg));
+
+  // Applica il modello scelto alle richieste automatiche Open-Meteo.
+  if(!window.__ctWeatherFetchPatched){
+    window.__ctWeatherFetchPatched=true;
+    const nativeFetch=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      try{
+        const raw=typeof input==='string'?input:input?.url;
+        if(raw&&raw.includes('api.open-meteo.com/v1/forecast')){
+          const u=new URL(raw,location.href);
+          if(weatherCfg.model&&weatherCfg.model!=='best_match')u.searchParams.set('models',weatherCfg.model);
+          else u.searchParams.delete('models');
+          if(typeof input==='string')input=u.toString();
+          else input=new Request(u.toString(),input);
+        }
+      }catch(e){console.warn('Weather model patch:',e)}
+      return nativeFetch(input,init);
+    };
+  }
+
+  function currentMapCenter(){
+    try{const c=map?.getCenter?.();if(c)return {lat:c.lat,lng:c.lng}}catch{}
+    return {lat:41.46,lng:15.55};
+  }
+
+  function openWeatherSite(){
+    const {lat,lng}=currentMapCenter();
+    let url='';
+    if(weatherCfg.site==='windy')url=`https://www.windy.com/?${lat.toFixed(5)},${lng.toFixed(5)},10`;
+    else if(weatherCfg.site==='meteoam')url='https://www.meteoam.it/it/home';
+    else if(weatherCfg.site==='3bmeteo')url='https://www.3bmeteo.com/';
+    else if(weatherCfg.site==='custom'){
+      url=(weatherCfg.custom||'').trim();
+      if(!url)return toast('Inserisci prima il sito meteo personalizzato');
+      if(!/^https?:\/\//i.test(url))url='https://'+url;
+    }
+    if(url)window.open(url,'_blank','noopener');
+  }
+
+  function initWeatherSettingsUI(){
+    if(document.getElementById('ctWeatherSettings'))return;
+    const body=$('weatherBody');
+    const card=body?.closest('.card');
+    if(!card)return;
+    const box=document.createElement('div');
+    box.id='ctWeatherSettings';
+    box.className='ctWeatherSettings';
+    box.innerHTML=`
+      <div>
+        <label>Fonte/modello usato dall'app</label>
+        <select id="ctWeatherModel">
+          <option value="best_match">Automatico (miglior modello)</option>
+          <option value="italia_meteo_arpae_icon_2i">ItaliaMeteo ARPAE ICON 2I</option>
+          <option value="ecmwf_ifs025">ECMWF IFS 0.25°</option>
+          <option value="icon_eu">DWD ICON Europa</option>
+        </select>
+        <div class="ctWeatherNote">I dati automatici restano via API Open-Meteo; qui scegli il modello meteorologico.</div>
+      </div>
+      <div>
+        <label>Sito meteo preferito per confronto</label>
+        <select id="ctWeatherSite">
+          <option value="windy">Windy</option>
+          <option value="meteoam">Meteo Aeronautica Militare</option>
+          <option value="3bmeteo">3B Meteo</option>
+          <option value="custom">Altro sito personalizzato</option>
+        </select>
+      </div>
+      <div class="full" id="ctWeatherCustomWrap" style="display:none">
+        <label>Indirizzo del sito meteo</label>
+        <input id="ctWeatherCustom" type="url" placeholder="es. https://www.miositometeo.it">
+      </div>
+      <div class="full"><button id="ctOpenWeatherSite" class="secondary">🌦 Apri sito meteo preferito</button></div>
+    `;
+    body.insertAdjacentElement('beforebegin',box);
+    const model=$('ctWeatherModel'),site=$('ctWeatherSite'),custom=$('ctWeatherCustom'),wrap=$('ctWeatherCustomWrap');
+    model.value=weatherCfg.model||'best_match';
+    site.value=weatherCfg.site||'windy';
+    custom.value=weatherCfg.custom||'';
+    const syncCustom=()=>wrap.style.display=site.value==='custom'?'block':'none';
+    syncCustom();
+    model.onchange=()=>{weatherCfg.model=model.value;saveWeatherCfg();toast('Fonte meteo aggiornata');if(selected)weather(selected.lat,selected.lng)};
+    site.onchange=()=>{weatherCfg.site=site.value;saveWeatherCfg();syncCustom()};
+    custom.onchange=()=>{weatherCfg.custom=custom.value.trim();saveWeatherCfg()};
+    $('ctOpenWeatherSite').onclick=openWeatherSite;
+  }
+
+  const previousBind=bind;
+  bind=function(){previousBind();initWeatherSettingsUI()};
+})();
