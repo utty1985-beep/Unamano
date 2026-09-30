@@ -1,5 +1,5 @@
-const CACHE='cacciatraccia-v6-13';
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.1.3','./manifest.webmanifest','./icon.svg',...Array.from({length:20},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.3`)];
+const CACHE='cacciatraccia-v6-14';
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.1.4','./manifest.webmanifest','./icon.svg',...Array.from({length:21},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.4`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
