@@ -1,0 +1,82 @@
+
+// V6.1.2 - condivisione Camminata con mappa reale + descrizione + foto facoltativa
+(function(){
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();if(fill)ctx.fill();if(stroke)ctx.stroke();
+  }
+  function coverDraw(ctx,img,x,y,w,h){
+    const ir=img.width/img.height, br=w/h;let sx=0,sy=0,sw=img.width,sh=img.height;
+    if(ir>br){sw=img.height*br;sx=(img.width-sw)/2}else{sh=img.width/br;sy=(img.height-sh)/2}
+    ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);
+  }
+  function wrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines=6){
+    const words=String(text||'').trim().split(/\s+/).filter(Boolean);let line='',lines=[];
+    for(const w of words){const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxWidth&&line){lines.push(line);line=w}else line=t;if(lines.length>=maxLines)break}
+    if(line&&lines.length<maxLines)lines.push(line);
+    lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));return lines.length;
+  }
+  function outingBounds(o){
+    const a=o.coords||[];if(!a.length)return null;
+    let minLa=Math.min(...a.map(p=>p[0])),maxLa=Math.max(...a.map(p=>p[0])),minLo=Math.min(...a.map(p=>p[1])),maxLo=Math.max(...a.map(p=>p[1]));
+    const dLa=Math.max(.0015,maxLa-minLa),dLo=Math.max(.0015,maxLo-minLo),padLa=dLa*.22,padLo=dLo*.22;
+    return {minLa:minLa-padLa,maxLa:maxLa+padLa,minLo:minLo-padLo,maxLo:maxLo+padLo};
+  }
+  async function fetchMapImage(bounds,w,h){
+    if(!bounds||!navigator.onLine)return null;
+    const bbox=[bounds.minLo,bounds.minLa,bounds.maxLo,bounds.maxLa].join(',');
+    const services=['World_Imagery','World_Street_Map'];
+    for(const svc of services){
+      try{
+        const url=`https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/export?bbox=${encodeURIComponent(bbox)}&bboxSR=4326&imageSR=4326&size=${w},${h}&format=png32&transparent=false&f=image`;
+        const r=await fetch(url,{cache:'no-store'});if(!r.ok)continue;const blob=await r.blob();
+        if('createImageBitmap' in window)return await createImageBitmap(blob);
+        const obj=URL.createObjectURL(blob);const img=await new Promise((ok,no)=>{const im=new Image();im.onload=()=>{URL.revokeObjectURL(obj);ok(im)};im.onerror=no;im.src=obj});return img;
+      }catch(e){console.warn('Mappa condivisione',svc,e)}
+    }
+    return null;
+  }
+  function drawRoute(ctx,o,b,x,y,w,h){
+    const a=o.coords||[];if(a.length<1||!b)return;
+    const px=p=>x+(p[1]-b.minLo)/(b.maxLo-b.minLo)*w;
+    const py=p=>y+h-(p[0]-b.minLa)/(b.maxLa-b.minLa)*h;
+    ctx.save();ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=14;ctx.beginPath();a.forEach((p,i)=>i?ctx.lineTo(px(p),py(p)):ctx.moveTo(px(p),py(p)));ctx.stroke();ctx.strokeStyle='#0d5a3b';ctx.lineWidth=8;ctx.stroke();
+    const mark=(p,label,color)=>{const xx=px(p),yy=py(p);ctx.fillStyle=color;ctx.beginPath();ctx.arc(xx,yy,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.fillText(label,xx+20,yy+6)};
+    mark(a[0],'Partenza','#16734b');if(a.length>1)mark(a[a.length-1],'Arrivo','#b6322b');ctx.restore();
+  }
+  async function drawPhoto(ctx,data,x,y,w,h){
+    if(!data)return false;
+    try{const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=data});coverDraw(ctx,im,x,y,w,h);return true}catch{return false}
+  }
+  async function newShareOut(id){
+    const o=state.outings.find(x=>x.id===id);if(!o)return;
+    toast('Preparo la scheda Camminata…');
+    const hasPhoto=!!o.photo,W=1080,mapH=650,descH=o.note?210:0,photoH=hasPhoto?430:0,H=260+mapH+(descH?descH+28:0)+(photoH?photoH+28:0)+70;
+    const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+    x.fillStyle='#f4f1e8';x.fillRect(0,0,W,H);
+    x.fillStyle='#173f2b';x.fillRect(0,0,W,150);x.fillStyle='#fff';x.font='bold 52px sans-serif';x.fillText('CacciaTraccia Italia',46,92);x.font='26px sans-serif';x.fillText('Camminata',48,128);
+    x.fillStyle='#17251d';x.font='bold 35px sans-serif';x.fillText(new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}),46,205);x.font='bold 42px sans-serif';x.fillStyle='#173f2b';x.fillText(`${(+o.distanceKm||0).toFixed(2)} km`,W-225,205);
+    const mx=45,my=245,mw=W-90,b=outingBounds(o);x.fillStyle='#dce5d7';roundRect(x,mx,my,mw,mapH,28,true,false);
+    const mapImg=await fetchMapImage(b,960,620);if(mapImg){x.save();roundRect(x,mx,my,mw,mapH,28,false,false);x.clip();coverDraw(x,mapImg,mx,my,mw,mapH);x.restore()}else{ x.fillStyle='#d6dfd1';x.fillRect(mx,my,mw,mapH);x.strokeStyle='#bcc8b7';x.lineWidth=2;for(let gx=mx;gx<mx+mw;gx+=80){x.beginPath();x.moveTo(gx,my);x.lineTo(gx,my+mapH);x.stroke()}for(let gy=my;gy<my+mapH;gy+=80){x.beginPath();x.moveTo(mx,gy);x.lineTo(mx+mw,gy);x.stroke()}x.fillStyle='#53675a';x.font='24px sans-serif';x.fillText('Mappa non disponibile offline',mx+28,my+45)}
+    drawRoute(x,o,b,mx,my,mw,mapH);
+    let cy=my+mapH+28;
+    if(o.note){x.fillStyle='#fff';roundRect(x,45,cy,W-90,descH,24,true,false);x.fillStyle='#173f2b';x.font='bold 28px sans-serif';x.fillText('Descrizione',76,cy+48);x.fillStyle='#27342c';x.font='26px sans-serif';wrapText(x,o.note,76,cy+92,W-152,36,4);cy+=descH+28}
+    if(hasPhoto){x.fillStyle='#fff';roundRect(x,45,cy,W-90,photoH,24,true,false);x.save();roundRect(x,58,cy+13,W-116,photoH-26,20,false,false);x.clip();await drawPhoto(x,o.photo,58,cy+13,W-116,photoH-26);x.restore();cy+=photoH+28}
+    x.fillStyle='#68746b';x.font='22px sans-serif';x.fillText('Creato con CacciaTraccia Italia',46,H-28);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(!blob)return toast('Impossibile creare la scheda');
+    const file=new File([blob],`CacciaTraccia_Camminata_${new Date(o.start).toISOString().slice(0,10)}.jpg`,{type:'image/jpeg'});
+    const text=`Camminata ${(+o.distanceKm||0).toFixed(2)} km · ${new Date(o.start).toLocaleDateString('it-IT')}${o.note?'\n'+o.note:''}`;
+    if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'CacciaTraccia Italia',text,files:[file]})}catch(e){if(e?.name==='AbortError')return}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+  }
+  function enhanceWalkingFields(){
+    const old=$('trackNote');if(old&&old.tagName!=='TEXTAREA'){
+      const ta=document.createElement('textarea');ta.id='trackNote';ta.rows=4;ta.placeholder='Es. zona battuta, uccelli incontrati, condizioni, note della giornata…';ta.value=old.value||'';old.replaceWith(ta);
+    }
+    const note=$('trackNote');const noteLabel=note?.closest('.field')?.querySelector('label');if(noteLabel)noteLabel.textContent='Descrizione da condividere (facoltativa)';
+    const photo=$('trackPhoto');const photoLabel=photo?.closest('.field')?.querySelector('label');if(photoLabel)photoLabel.textContent='Foto da aggiungere alla scheda condivisa (facoltativa)';
+    const p=document.querySelector('#page-track .card .note');if(p)p.textContent='Durante la camminata il percorso viene salvato sul telefono. Quando termini puoi condividere una scheda con mappa, traccia, km, descrizione e foto facoltativa.';
+  }
+  window.CT.share=newShareOut;
+  const prevBind=bind;
+  bind=function(){prevBind();enhanceWalkingFields();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.2'};
+})();
