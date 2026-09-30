@@ -1,0 +1,92 @@
+
+// V6.1.4 - slide leggibili + mappa reale nelle condivisioni tramite mosaico di tessere
+(function(){
+  let preparedSlideId=null;
+  const previousPrepare=window.CT?.prepareSlide;
+
+  function mercY(lat){
+    const s=Math.sin(Math.max(-85.0511,Math.min(85.0511,lat))*Math.PI/180);
+    return 0.5-Math.log((1+s)/(1-s))/(4*Math.PI);
+  }
+  function worldPoint(lat,lng,z){
+    const size=256*Math.pow(2,z);
+    return {x:(lng+180)/360*size,y:mercY(lat)*size};
+  }
+  function routeView(o,w,h){
+    const a=o?.coords||[];if(!a.length)return null;
+    let chosen=15;
+    for(let z=18;z>=3;z--){
+      const pts=a.map(p=>worldPoint(p[0],p[1],z));
+      const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+      const spanX=Math.max(...xs)-Math.min(...xs),spanY=Math.max(...ys)-Math.min(...ys);
+      if(spanX<=w*.72&&spanY<=h*.68){chosen=z;break}
+    }
+    const pts=a.map(p=>worldPoint(p[0],p[1],chosen));
+    const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+    const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+    return {z:chosen,left:cx-w/2,top:cy-h/2,pts};
+  }
+  async function tileBitmap(url){
+    try{
+      const r=await fetch(url,{mode:'cors',cache:'force-cache'});if(!r.ok)throw Error(String(r.status));const b=await r.blob();
+      if('createImageBitmap' in window)return await createImageBitmap(b);
+      const u=URL.createObjectURL(b);return await new Promise((ok,no)=>{const im=new Image();im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=no;im.src=u});
+    }catch{return null}
+  }
+  async function drawTileMap(ctx,o,x,y,w,h){
+    const view=routeView(o,w,h);if(!view)return false;
+    const z=view.z,n=Math.pow(2,z),tx0=Math.floor(view.left/256),ty0=Math.floor(view.top/256),tx1=Math.floor((view.left+w)/256),ty1=Math.floor((view.top+h)/256);
+    let drawn=0;
+    ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.fillStyle='#d9e2d4';ctx.fillRect(x,y,w,h);
+    for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++){
+      if(ty<0||ty>=n)continue;const wx=((tx%n)+n)%n;
+      let im=await tileBitmap(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${wx}`);
+      if(!im)im=await tileBitmap(`https://tile.openstreetmap.org/${z}/${wx}/${ty}.png`);
+      if(im){ctx.drawImage(im,x+tx*256-view.left,y+ty*256-view.top,256,256);drawn++}
+    }
+    if(!drawn){ctx.fillStyle='#d6dfd1';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#b7c5b4';ctx.lineWidth=2;for(let gx=x;gx<x+w;gx+=70){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx,y+h);ctx.stroke()}for(let gy=y;gy<y+h;gy+=70){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+w,gy);ctx.stroke()}ctx.fillStyle='#526557';ctx.font='24px sans-serif';ctx.fillText('Mappa non disponibile',x+28,y+44)}
+    const pts=view.pts;ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle='rgba(255,255,255,.94)';ctx.lineWidth=14;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(x+p.x-view.left,y+p.y-view.top):ctx.moveTo(x+p.x-view.left,y+p.y-view.top));ctx.stroke();ctx.strokeStyle='#0d5a3b';ctx.lineWidth=8;ctx.stroke();
+    const mark=(p,label,color)=>{const px=x+p.x-view.left,py=y+p.y-view.top;ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.fillText(label,px+18,py+5)};
+    if(pts.length){mark(pts[0],'Partenza','#16734b');if(pts.length>1)mark(pts.at(-1),'Arrivo','#b6322b')}
+    ctx.restore();return drawn>0;
+  }
+  function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,r):(ctx.rect(x,y,w,h));ctx.fill()}
+  function wrap(ctx,text,x,y,max,line,maxLines=5){const words=String(text||'').split(/\s+/).filter(Boolean);let l='',rows=[];for(const w of words){const t=l?l+' '+w:w;if(ctx.measureText(t).width>max&&l){rows.push(l);l=w}else l=t;if(rows.length>=maxLines)break}if(l&&rows.length<maxLines)rows.push(l);rows.forEach((r,i)=>ctx.fillText(r,x,y+i*line));}
+  async function drawDataPhoto(ctx,data,x,y,w,h){if(!data)return false;try{const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=data});const ir=im.width/im.height,br=w/h;let sx=0,sy=0,sw=im.width,sh=im.height;if(ir>br){sw=im.height*br;sx=(im.width-sw)/2}else{sh=im.width/br;sy=(im.height-sh)/2}ctx.drawImage(im,sx,sy,sw,sh,x,y,w,h);return true}catch{return false}}
+  async function shareBetter(id){
+    const o=(state.outings||[]).find(x=>x.id===id);if(!o)return;
+    toast('Creo la slide con la mappa…');
+    const W=1080,mapH=620,descH=o.note?190:0,photoH=o.photo?380:0,H=250+mapH+(descH?descH+25:0)+(photoH?photoH+25:0)+65;
+    const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+    g.fillStyle='#f4f1e8';g.fillRect(0,0,W,H);g.fillStyle='#173f2b';g.fillRect(0,0,W,145);g.fillStyle='#fff';g.font='bold 50px sans-serif';g.fillText('CacciaTraccia Italia',44,88);g.font='25px sans-serif';g.fillText('Camminata',46,124);
+    g.fillStyle='#17251d';g.font='bold 32px sans-serif';g.fillText(new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}),44,202);g.fillStyle='#173f2b';g.font='bold 40px sans-serif';g.textAlign='right';g.fillText(`${(+o.distanceKm||0).toFixed(2)} km`,W-44,202);g.textAlign='left';
+    const mx=44,my=235,mw=W-88;await drawTileMap(g,o,mx,my,mw,mapH);
+    let cy=my+mapH+25;
+    if(o.note){g.fillStyle='#fff';rr(g,44,cy,W-88,descH,22);g.fillStyle='#173f2b';g.font='bold 27px sans-serif';g.fillText('Descrizione',72,cy+43);g.fillStyle='#26352c';g.font='25px sans-serif';wrap(g,o.note,72,cy+82,W-144,34,4);cy+=descH+25}
+    if(o.photo){g.fillStyle='#fff';rr(g,44,cy,W-88,photoH,22);g.save();g.beginPath();g.rect(58,cy+14,W-116,photoH-28);g.clip();await drawDataPhoto(g,o.photo,58,cy+14,W-116,photoH-28);g.restore();cy+=photoH+25}
+    g.fillStyle='#68746b';g.font='21px sans-serif';g.fillText('Creato con CacciaTraccia Italia',44,H-24);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(!blob)return toast('Impossibile creare la slide');
+    const file=new File([blob],`CacciaTraccia_Camminata_${new Date(o.start).toISOString().slice(0,10)}.jpg`,{type:'image/jpeg'});const text=`Camminata ${(+o.distanceKm||0).toFixed(2)} km · ${new Date(o.start).toLocaleDateString('it-IT')}${o.note?'\n'+o.note:''}`;
+    if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'CacciaTraccia Italia',text,files:[file]})}catch(e){if(e?.name==='AbortError')return}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+  }
+
+  if(previousPrepare){window.CT.prepareSlide=function(id){preparedSlideId=id;return previousPrepare(id)}}
+  window.CT.share=shareBetter;
+
+  function compactSavedPhotos(){
+    document.querySelectorAll('#outingsList img.photoPreview').forEach(img=>{img.style.width='120px';img.style.height='90px';img.style.maxWidth='120px';img.style.objectFit='cover';img.style.borderRadius='10px';img.style.display='block';img.style.marginTop='8px'});
+  }
+  const prevRender=renderOutings;
+  renderOutings=function(){prevRender();compactSavedPhotos()};
+
+  const prevBind=bind;
+  bind=function(){
+    prevBind();
+    compactSavedPhotos();
+    const shareBtn=$('ctSlideShare');if(shareBtn)shareBtn.onclick=async()=>{if(!preparedSlideId)return;const saveBtn=$('ctSlideSave');if(saveBtn)saveBtn.click();await shareBetter(preparedSlideId)};
+    const card=$('ctSlideCard');if(card){card.style.maxWidth='100%';card.style.margin='10px 0 14px'}
+    const mapBox=$('ctSlideMap');if(mapBox)mapBox.style.height='220px';
+    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.4';
+  };
+})();
