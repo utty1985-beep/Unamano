@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.cacciatraccia.italia'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.cacciatraccia.italia'
+        minSdk 24
+        targetSdk 35
+        versionCode 617
+        versionName '6.1.7'
+    }
+
+    buildTypes {
+        debug {
+            debuggable false
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
