@@ -1,0 +1,20 @@
+function bind(){
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+  $('locateBtn').onclick=locate; $('followBtn').onclick=toggleFollow;
+  $('northBtn').onclick=()=>{ if(!setBearing(0))toast('Rotazione non disponibile su questo browser'); };
+  $('rotateLeftBtn').onclick=()=>{ if(!setBearing(getBearing()-15))toast('Rotazione non disponibile su questo browser'); };
+  $('rotateRightBtn').onclick=()=>{ if(!setBearing(getBearing()+15))toast('Rotazione non disponibile su questo browser'); };
+  $('layersBtn').onclick=()=>$('layerPanel').classList.toggle('hidden'); document.querySelectorAll('.layerChoice').forEach(b=>b.onclick=()=>{setLayer(b.dataset.basemap);$('layerPanel').classList.add('hidden');});
+  $('clearSelectedBtn').onclick=clearSelected; $('savePointBtn').onclick=()=>fillModal(null); $('navigateBtn').onclick=navigateSelected; $('shareSelectedBtn').onclick=shareSelected; $('weatherRefreshBtn').onclick=()=>selected&&weather(selected.lat,selected.lng);
+  $('quickSaveHereBtn').onclick=()=>saveCurrent('Postazione',false); $('quickSightingBtn').onclick=()=>saveCurrent('Avvistamento',true); $('quickTrackBtn').onclick=startTrack; $('quickCarBtn').onclick=parkCar;
+  $('parkHereBtn').onclick=parkCar; $('moveCarBtn').onclick=moveCar; $('returnCarBtn').onclick=carReturn; $('clearCarBtn').onclick=()=>{state.car=null;save();};
+  $('fitPointsBtn').onclick=fitPoints; $('startTrackBtn').onclick=startTrack; $('stopTrackBtn').onclick=stopTrack; $('centerTrackBtn').onclick=()=>track.coords.length&&map.fitBounds(L.latLngBounds(track.coords),{padding:[30,30]}); $('trackToCarBtn').onclick=()=>{showPage('map');carReturn();};
+  $('confirmPointBtn').onclick=savePoint; $('pointReadWeatherBtn').onclick=async()=>{if(selected){await weather(selected.lat,selected.lng);const w=selected.weather||{};$('pointWindName').value=w.windName||'';$('pointWindDir').value=w.windDir||'';$('pointWindSpeed').value=w.windSpeed||'';$('pointWindGust').value=w.windGust||'';$('pointWeatherSummary').textContent=`${w.condition||''} · ${w.windName||''} ${w.windSpeed||''} km/h`;}};
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('pointModal').classList.remove('open'));
+  $('addDiaryBtn').onclick=addDiary; $('historySearch').oninput=renderDiary; document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{historyFilter=b.dataset.history;document.querySelectorAll('[data-history]').forEach(x=>x.classList.toggle('active',x===b));renderDiary();});
+  $('exportJsonBtn').onclick=exportJSON; $('exportTxtBtn').onclick=exportTXT; $('makeSnapshotBtn').onclick=makeSnapshot; $('persistBtn').onclick=persistStorage; $('importBackup').onchange=e=>{const f=e.target.files?.[0];if(f)importBackupFile(f);e.target.value='';};
+  $('mapSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchBtn').click();}); $('searchBtn').onclick=()=>{const m=$('mapSearch').value.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$/);if(m){const lat=+m[1],lng=+m[2];map.setView([lat,lng],16);selectMapPoint(lat,lng);}else toast('Inserisci coordinate, es. 41.45, 15.55');};
+  $('diaryDate').value=new Date().toISOString().slice(0,10);
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').hidden=false;}); $('installBtn').onclick=async()=>{if(!installPrompt)return toast('Usa il menu del browser > Aggiungi a schermata Home');installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installBtn').hidden=true;};
+  const net=()=>{$('netPill').textContent=navigator.onLine?'● online':'● offline';$('netPill').classList.toggle('soft',!navigator.onLine);}; window.addEventListener('online',net);window.addEventListener('offline',net);net();
+}
