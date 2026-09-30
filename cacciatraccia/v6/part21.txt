@@ -1,10 +1,10 @@
 
-// V6.1.5 - Avvistamento storico -> mappa interna + vento attuale + Google Maps solo su scelta
+// V6.1.6 - Avvistamento storico -> mappa interna + vento attuale + Google Maps solo su scelta
 (function(){
   const originalSelectMapPoint=selectMapPoint;
   selectMapPoint=async function(lat,lng){
     if($('selectedTitle'))$('selectedTitle').textContent='Punto selezionato';
-    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Apri Google Maps';
+    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
     if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
     return await originalSelectMapPoint(lat,lng);
   };
@@ -23,7 +23,7 @@
     await selectMapPoint(+p.lat,+p.lng);
     if($('selectedTitle'))$('selectedTitle').textContent=`🕊️ ${p.species||p.name||'Avvistamento salvato'}`;
     if($('selectedCoords'))$('selectedCoords').textContent=`${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)} · vento attuale`;
-    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Google Maps per arrivarci';
+    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
 
     // Evidenzia per qualche secondo il punto aperto nello storico.
     try{
@@ -49,8 +49,9 @@
   const prevBind=bind;
   bind=function(){
     prevBind();
-    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.5';
-    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Apri Google Maps';
+    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.6';
+    if($('navigateBtn'))$('navigateBtn').textContent='🗺️ Google Maps';
+    if($('pointNavigateBtn'))$('pointNavigateBtn').textContent='🗺️ Google Maps';
     if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
   };
 })();
