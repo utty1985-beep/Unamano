@@ -1,0 +1,56 @@
+
+// V6.1.5 - Avvistamento storico -> mappa interna + vento attuale + Google Maps solo su scelta
+(function(){
+  const originalSelectMapPoint=selectMapPoint;
+  selectMapPoint=async function(lat,lng){
+    if($('selectedTitle'))$('selectedTitle').textContent='Punto selezionato';
+    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Apri Google Maps';
+    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
+    return await originalSelectMapPoint(lat,lng);
+  };
+
+  async function openHistoryPoint(id){
+    const p=(state.points||[]).find(x=>x.id===id);
+    if(!p)return toast('Punto non trovato');
+    if(!Number.isFinite(+p.lat)||!Number.isFinite(+p.lng))return toast('Coordinate del punto non disponibili');
+
+    // Quando apro uno storico non devo essere riportato subito alla posizione GPS attuale.
+    follow=false;
+    $('followBtn')?.classList.remove('active');
+    showPage('map');
+    map.setView([+p.lat,+p.lng],17,{animate:true});
+
+    await selectMapPoint(+p.lat,+p.lng);
+    if($('selectedTitle'))$('selectedTitle').textContent=`🕊️ ${p.species||p.name||'Avvistamento salvato'}`;
+    if($('selectedCoords'))$('selectedCoords').textContent=`${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)} · vento attuale`;
+    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Google Maps per arrivarci';
+
+    // Evidenzia per qualche secondo il punto aperto nello storico.
+    try{
+      const ring=L.circleMarker([+p.lat,+p.lng],{radius:18,color:'#f2b72b',weight:4,fill:false,opacity:1}).addTo(map);
+      setTimeout(()=>{try{map.removeLayer(ring)}catch{}},7000);
+    }catch{}
+    toast('Avvistamento aperto sulla mappa · vento attuale aggiornato');
+  }
+
+  renderDiary=function(){
+    const el=$('historyList');if(!el)return;
+    const q=($('historySearch')?.value||'').toLowerCase();let rows=[];
+    let sightings=(state.points||[]).filter(p=>p.type==='Avvistamento');
+    if(historyFilter==='diary')sightings=[];
+    if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
+    if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
+    rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>Giorno caccia ${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h <span class="meta">(al salvataggio)</span></div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.openHistoryPoint('${r.p.id}')">🗺 Mappa + vento attuale</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Modifica</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+  };
+
+  window.CT.openHistoryPoint=openHistoryPoint;
+
+  const prevBind=bind;
+  bind=function(){
+    prevBind();
+    const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.5';
+    if($('navigateBtn'))$('navigateBtn').textContent='🚗 Apri Google Maps';
+    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
+  };
+})();
