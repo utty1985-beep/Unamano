@@ -1,0 +1,55 @@
+
+// V6.0.4 - stabilita test: wake lock, aggiornamento, diagnostica, versione
+(function(){
+  let ctWakeLock=null;
+  async function requestWakeLock(){
+    try{
+      if(!('wakeLock' in navigator) || document.hidden || !track?.active)return;
+      ctWakeLock=await navigator.wakeLock.request('screen');
+      ctWakeLock.addEventListener('release',()=>{ctWakeLock=null});
+    }catch(e){console.warn('Wake lock non disponibile',e)}
+  }
+  async function releaseWakeLock(){try{await ctWakeLock?.release()}catch{}ctWakeLock=null}
+  const prevStart=startTrack;
+  startTrack=function(){const r=prevStart();setTimeout(requestWakeLock,250);return r};
+  const prevStop=stopTrack;
+  stopTrack=async function(){const r=await prevStop();await releaseWakeLock();return r};
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&track?.active)requestWakeLock()});
+
+  function versionBadge(){
+    if(document.getElementById('ctVersionBadge'))return;
+    const h=document.querySelector('.brand small');if(!h)return;
+    const s=document.createElement('span');s.id='ctVersionBadge';s.style.cssText='margin-left:6px;opacity:.75;font-weight:800';s.textContent='• V6.0.4';h.appendChild(s);
+  }
+  async function forceUpdate(){
+    toast('Controllo aggiornamenti…');
+    try{
+      if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.update().catch(()=>{})))}
+      const names=await caches.keys();
+      await Promise.all(names.filter(n=>n.startsWith('cacciatraccia-')).map(n=>caches.delete(n)));
+    }catch(e){console.warn('Aggiornamento cache',e)}
+    setTimeout(()=>location.replace(location.pathname+'?v=604&t='+Date.now()),350);
+  }
+  async function diagnostic(){
+    const lines=[];
+    lines.push('CacciaTraccia Italia V6.0.4');
+    lines.push('Rete: '+(navigator.onLine?'online':'offline'));
+    lines.push('Mappa: '+(window.L&&map?'OK':'non pronta'));
+    lines.push('Memoria locale: '+(()=>{try{localStorage.setItem('__ct_test','1');localStorage.removeItem('__ct_test');return 'OK'}catch{return 'errore'}})());
+    lines.push('Service Worker: '+('serviceWorker' in navigator?(navigator.serviceWorker.controller?'attivo':'disponibile'):'non disponibile'));
+    lines.push('Installazione: '+(('BeforeInstallPromptEvent' in window||installPrompt)?'disponibile quando supportata':'dipende dal browser'));
+    if(navigator.permissions?.query){try{const p=await navigator.permissions.query({name:'geolocation'});lines.push('Permesso GPS: '+p.state)}catch{lines.push('Permesso GPS: da verificare')}}
+    else lines.push('Permesso GPS: da verificare');
+    if(lastPos)lines.push(`Ultimo GPS: ±${lastPos.acc||'?'} m`);else lines.push('Ultimo GPS: non ancora ricevuto');
+    const text=lines.join('\n');
+    alert(text);
+    try{await navigator.clipboard.writeText(text)}catch{}
+  }
+  function addTestTools(){
+    const grid=document.querySelector('#ctShareInviteBox .actionGrid');if(!grid)return;
+    if(!document.getElementById('ctUpdateBtn')){const b=document.createElement('button');b.id='ctUpdateBtn';b.className='secondary';b.textContent='🔄 Controlla aggiornamenti';b.onclick=forceUpdate;grid.appendChild(b)}
+    if(!document.getElementById('ctDiagnosticBtn')){const b=document.createElement('button');b.id='ctDiagnosticBtn';b.className='secondary';b.textContent='🩺 Diagnostica rapida';b.onclick=diagnostic;grid.appendChild(b)}
+  }
+  const prevBind=bind;
+  bind=function(){prevBind();versionBadge();addTestTools()};
+})();
