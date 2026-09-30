@@ -1,0 +1,76 @@
+
+// V6.1.1 - Camminata + punti legati al giorno di caccia + avvistamenti nello storico
+(function(){
+  const HUNT_DAY_KEY='cacciatraccia-hunt-day-v1';
+  const today=()=>new Date().toISOString().slice(0,10);
+  function huntDay(){return localStorage.getItem(HUNT_DAY_KEY)||today()}
+  function setHuntDay(v){const d=v||today();localStorage.setItem(HUNT_DAY_KEY,d);const i=document.getElementById('ctHuntDay');if(i)i.value=d;renderMarkers();renderPoints()}
+
+  function ensureHuntDayUI(){
+    if(document.getElementById('ctHuntDayBar'))return;
+    const list=$('pointsList'),card=list?.closest('.card');if(!card)return;
+    const head=card.querySelector('.sectionHead');
+    const bar=document.createElement('div');bar.id='ctHuntDayBar';bar.style.cssText='display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:8px 0 12px';
+    bar.innerHTML=`<label style="flex:1;min-width:170px;font-weight:800">Giorno di caccia<input id="ctHuntDay" type="date" value="${huntDay()}" style="display:block;width:100%;margin-top:5px"></label><button id="ctHuntToday" class="secondary small" type="button">Oggi</button>`;
+    head?.insertAdjacentElement('afterend',bar);
+    $('ctHuntDay').onchange=e=>setHuntDay(e.target.value);
+    $('ctHuntToday').onclick=()=>setHuntDay(today());
+  }
+
+  const prevFillModal=fillModal;
+  fillModal=function(p){
+    prevFillModal(p);
+    if(!p&&$('pointHuntDate'))$('pointHuntDate').value=huntDay();
+    const nameLabel=$('pointName')?.closest('div')?.querySelector('label');if(nameLabel)nameLabel.textContent='Nome del punto';
+    const dayLabel=$('pointHuntDate')?.closest('div')?.querySelector('label');if(dayLabel)dayLabel.textContent='Giorno di caccia';
+  };
+
+  const prevSaveCurrent=saveCurrent;
+  saveCurrent=async function(type='Postazione',open=false){
+    const before=new Set((state.points||[]).map(p=>p.id));
+    const r=await prevSaveCurrent(type,open);
+    if(type!=='Avvistamento'){
+      const p=(state.points||[]).find(x=>!before.has(x.id));
+      if(p){p.huntDate=huntDay();save();renderMarkers();renderPoints()}
+    }
+    return r;
+  };
+
+  renderMarkers=function(){
+    markerLayer.clearLayers();const day=huntDay();
+    (state.points||[]).forEach(p=>{
+      if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
+      const m=L.marker([p.lat,p.lng],{icon:icon(p.type)}).addTo(markerLayer);
+      m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
+    });
+  };
+
+  renderPoints=function(){
+    ensureHuntDayUI();
+    const el=$('pointsList');if(!el)return;const day=huntDay();
+    const pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.huntDate===day);
+    el.innerHTML=pts.length?pts.map(p=>`<div class="item"><div class="itemTop"><div><h4>${esc(p.name||p.type)}</h4><div class="meta">${esc(p.type)} · Giorno di caccia ${esc(p.huntDate||day)}</div></div></div>${(p.windName||p.weather)?`<div class="snap">💨 ${esc(p.windName||p.weather?.windName||'')} ${p.windSpeed??p.weather?.windSpeed??'-'} km/h${p.weather?.condition?' · 🌦 '+esc(p.weather.condition):''}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.go('${p.id}')">Mappa</button><button class="mini" onclick="CT.edit('${p.id}')">✏️ Nome / giorno</button><button class="mini" onclick="CT.sharePoint('${p.id}')">↗ Condividi</button><button class="mini red" onclick="CT.del('${p.id}')">Elimina</button></div></div>`).join(''):`<div class="empty">Nessun punto per il giorno ${esc(day)}.</div>`;
+  };
+
+  renderDiary=function(){
+    const el=$('historyList');if(!el)return;const q=($('historySearch')?.value||'').toLowerCase();let rows=[];
+    let sightings=(state.points||[]).filter(p=>p.type==='Avvistamento');
+    if(historyFilter==='diary')sightings=[];
+    if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
+    if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
+    rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>Giorno caccia ${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+  };
+
+  function renameWalking(){
+    const q=$('quickTrackBtn')?.querySelector('span');if(q)q.textContent='Camminata';
+    const nav=document.querySelector('nav button[data-page="track"]');if(nav)nav.innerHTML='<b>🥾</b>Camminata';
+    const h=document.querySelector('#page-track .sectionHead h2');if(h)h.textContent='🥾 Camminata';
+    if($('startTrackBtn'))$('startTrackBtn').textContent='▶ Inizia camminata';
+    if($('stopTrackBtn'))$('stopTrackBtn').textContent='■ Termina e salva';
+    const cards=document.querySelectorAll('#page-track .card h2');cards.forEach(x=>{if(x.textContent.trim()==='Uscite salvate')x.textContent='Camminate salvate'});
+  }
+
+  const prevBind=bind;
+  bind=function(){prevBind();ensureHuntDayUI();renameWalking();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.1'};
+})();
