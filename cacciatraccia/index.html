@@ -7,8 +7,8 @@
   <meta name="description" content="CacciaTraccia Italia: appostamenti, meteo e vento, GPS, auto, percorsi, diario e backup offline." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="styles.css?v=4.1.1" />
+  <link id="maplibreCss" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.11.2/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css'" />
+  <link rel="stylesheet" href="styles.css?v=4.1.2" />
   <title>CacciaTraccia Italia</title>
 </head>
 <body>
@@ -154,7 +154,6 @@
 </div></div>
 
 <div id="toast" class="toast" role="status"></div>
-<script src="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.js"></script>
-<script type="module" src="app-loader.js?v=4.1.1"></script>
+<script type="module" src="app-loader.js?v=4.1.2"></script>
 </body>
 </html>
