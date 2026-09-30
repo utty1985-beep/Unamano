@@ -1,0 +1,53 @@
+
+// V6.0.3 - recupero uscita interrotta + installazione facilitata
+(function(){
+  const ACTIVE_TRACK_KEY='cacciatraccia-active-track-v1';
+  function persistActiveTrack(){
+    try{
+      if(!track?.active || !track.coords?.length)return;
+      localStorage.setItem(ACTIVE_TRACK_KEY,JSON.stringify({start:track.start,coords:track.coords,km:track.km,savedAt:Date.now(),note:$('trackNote')?.value||''}));
+    }catch(e){console.warn('Salvataggio percorso attivo',e)}
+  }
+  function recoveredTrack(){try{return JSON.parse(localStorage.getItem(ACTIVE_TRACK_KEY)||'null')}catch{return null}}
+  function clearRecovered(){localStorage.removeItem(ACTIVE_TRACK_KEY);document.getElementById('ctRecoveredTrack')?.remove()}
+  const originalTrackUI=trackUI;
+  trackUI=function(){originalTrackUI();persistActiveTrack()};
+  const originalStartTrack=startTrack;
+  startTrack=function(){clearRecovered();originalStartTrack();setTimeout(persistActiveTrack,300)};
+  const originalStopTrack=stopTrack;
+  stopTrack=async function(){await originalStopTrack();clearRecovered()};
+  function resumeRecovered(){
+    const r=recoveredTrack();if(!r?.coords?.length)return toast('Nessun percorso da recuperare');
+    originalStartTrack();
+    try{
+      track.start=r.start||Date.now();track.coords=r.coords||[];track.km=+r.km||0;track.line?.setLatLngs(track.coords);if($('trackNote')&&!$('trackNote').value)$('trackNote').value=r.note||'';trackUI();
+      if(track.coords.length)map.fitBounds(L.latLngBounds(track.coords),{padding:[30,30]});
+      toast('Percorso recuperato e ripreso');
+    }catch(e){console.error(e);toast('Errore nel recupero del percorso')}
+    document.getElementById('ctRecoveredTrack')?.remove();
+  }
+  function saveRecovered(){
+    const r=recoveredTrack();if(!r?.coords?.length)return toast('Nessun percorso da recuperare');
+    state.outings.unshift({id:Date.now().toString(36),start:new Date(r.start||Date.now()).toISOString(),end:new Date(r.savedAt||Date.now()).toISOString(),distanceKm:+r.km||0,coords:r.coords,photo:null,note:(r.note||'')+(r.note?' · ':'')+'uscita recuperata automaticamente'});
+    clearRecovered();save();toast('Uscita recuperata e salvata');
+  }
+  function showRecovery(){
+    const r=recoveredTrack();if(!r?.coords?.length)return;
+    if(Date.now()-(r.savedAt||0)>1000*60*60*24*3){clearRecovered();return}
+    const page=$('page-track');if(!page||document.getElementById('ctRecoveredTrack'))return;
+    const card=document.createElement('div');card.id='ctRecoveredTrack';card.className='card';
+    card.innerHTML=`<div class="sectionHead"><h3>⚠️ Uscita interrotta trovata</h3><span class="pill soft">${(+r.km||0).toFixed(2)} km</span></div><p class="note">Ho conservato ${r.coords.length} punti GPS dell'ultima uscita non terminata.</p><div class="actionGrid"><button id="ctResumeTrack" class="primary">▶ Riprendi</button><button id="ctSaveRecovered" class="secondary">💾 Salva così</button><button id="ctDiscardRecovered" class="danger">Scarta</button></div>`;
+    page.insertAdjacentElement('afterbegin',card);
+    $('ctResumeTrack').onclick=resumeRecovered;$('ctSaveRecovered').onclick=saveRecovered;$('ctDiscardRecovered').onclick=()=>{if(confirm('Scartare il percorso recuperato?')){clearRecovered();toast('Percorso recuperato scartato')}};
+  }
+  function addInstallButton(){
+    const grid=document.querySelector('#ctShareInviteBox .actionGrid');if(!grid||document.getElementById('ctInstallAppBtn'))return;
+    const b=document.createElement('button');b.id='ctInstallAppBtn';b.className='secondary';b.textContent='📲 Installa sul telefono';grid.appendChild(b);
+    b.onclick=async()=>{
+      if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installBtn')&&($('installBtn').hidden=true);return}
+      toast('Dal menu del browser scegli “Aggiungi a schermata Home” o “Installa app”');
+    };
+  }
+  const prevBind=bind;
+  bind=function(){prevBind();showRecovery();addInstallButton();document.addEventListener('visibilitychange',()=>{if(document.hidden)persistActiveTrack()});window.addEventListener('pagehide',persistActiveTrack)};
+})();
