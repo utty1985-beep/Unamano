@@ -24,11 +24,13 @@ jobs:
 
       - name: Accept Android licenses
         shell: bash
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
 
       - name: Install Android 35 SDK
         shell: bash
-        run: "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
