@@ -1,0 +1,20 @@
+const $ = id => document.getElementById(id);
+const STORE = 'cacciatraccia-direct-v5';
+const SNAP_STORE = 'cacciatraccia-direct-v5-snapshots';
+const APP_VERSION = 6;
+let state = { points: [], outings: [], diary: [], car: null };
+let map, sat, street, markerLayer, userMarker, carMarker, returnLine, lastPos = null, gpsWatch = null;
+let follow = true, selected = null, editing = null, historyFilter = 'all', installPrompt = null;
+let track = { active:false, watch:null, start:0, coords:[], km:0, timer:null, line:null };
+try { state = { ...state, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; } catch {}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); renderAll(); };
+const hav = (a,b) => { const R=6371,r=x=>x*Math.PI/180,d1=r(b[0]-a[0]),d2=r(b[1]-a[1]),q=Math.sin(d1/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(q)); };
+const wname = d => ['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((+d||0)%360)+360)%360/45)%8];
+const wdir = d => ['N','NE','E','SE','S','SO','O','NO'][Math.round((((+d||0)%360)+360)%360/45)%8];
+const wtext = c => ({0:'Sereno',1:'Prevalentemente sereno',2:'Parzialmente nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia',51:'Pioviggine',53:'Pioviggine',55:'Pioviggine forte',61:'Pioggia debole',63:'Pioggia',65:'Pioggia forte',80:'Rovesci',81:'Rovesci',82:'Rovesci forti',95:'Temporale',96:'Temporale',99:'Temporale forte'})[c] || 'Variabile';
+const when = iso => { try { return new Date(iso).toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso||''; } };
+function toast(t){ const x=$('toast'); if(!x) return alert(t); x.textContent=t; x.classList.add('show'); setTimeout(()=>x.classList.remove('show'),2400); }
+function loadScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=no; document.head.appendChild(s); }); }
+function loadCss(href){ const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+async function ensureLeaflet(){
