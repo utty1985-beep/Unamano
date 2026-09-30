@@ -2,7 +2,9 @@ async function addDiary(){ let photo=null,f=$('diaryPhoto').files[0]; if(f)photo
 function renderDiary(){
   const el=$('historyList'); if(!el)return; const q=($('historySearch')?.value||'').toLowerCase();
   let rows=[];
-  if(historyFilter!=='diary') rows.push(...state.points.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
+  let pointRows=state.points||[];
+  if(historyFilter==='sightings') pointRows=pointRows.filter(p=>p.type==='Avvistamento');
+  if(historyFilter!=='diary') rows.push(...pointRows.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
   if(historyFilter!=='sightings') rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
   rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
   el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>${esc(r.p.species||r.p.name||r.p.type)}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('') || '<div class="empty">Diario vuoto.</div>';
