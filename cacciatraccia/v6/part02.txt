@@ -1,0 +1,20 @@
+function getBearing(){ try { return Number(map?.getBearing?.() || 0); } catch { return 0; } }
+async function getFix(){ return new Promise(res=>{ if(!navigator.geolocation){ toast('GPS non disponibile'); return res(null); } navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),heading:p.coords.heading}),e=>{toast('GPS: '+e.message);res(null)},{enableHighAccuracy:true,timeout:15000,maximumAge:1000}); }); }
+function startGps(){
+  if(gpsWatch!=null || !navigator.geolocation) return;
+  gpsWatch=navigator.geolocation.watchPosition(p=>{
+    lastPos={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),heading:p.coords.heading,speed:p.coords.speed};
+    $('gpsBadge').textContent=`GPS ±${lastPos.acc} m`;
+    if(!userMarker) userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);
+    else userMarker.setLatLng([lastPos.lat,lastPos.lng]);
+    if(follow) map.setView([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});
+    updateCar();
+  },()=>{$('gpsBadge').textContent='GPS non disponibile';},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+}
+async function locate(){ const p=await getFix(); if(p){ follow=true; $('followBtn').classList.add('active'); map.setView([p.lat,p.lng],16); } }
+function toggleFollow(){ follow=!follow; $('followBtn').classList.toggle('active',follow); if(follow&&lastPos) map.setView([lastPos.lat,lastPos.lng],16); toast(follow?'Seguimi attivo':'Seguimi disattivato'); }
+async function selectMapPoint(lat,lng){ selected={lat,lng,weather:null}; $('selectedCard').classList.remove('hidden'); $('selectedCoords').textContent=`${lat.toFixed(6)}, ${lng.toFixed(6)}`; await weather(lat,lng); }
+function clearSelected(){ $('selectedCard').classList.add('hidden'); selected=null; }
+async function weather(lat,lng){
+  $('weatherBody').innerHTML='<div class="empty">Carico meteo…</div>';
+  try{
