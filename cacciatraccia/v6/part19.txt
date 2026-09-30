@@ -1,0 +1,82 @@
+
+// V6.1.3 - editor slide per Camminate salvate: descrizione + foto + anteprima + condivisione
+(function(){
+  let slideId=null,slidePhoto=null,previewMap=null,previewRoute=null;
+  const sharePrepared=window.CT?.share;
+
+  function ensureSlideModal(){
+    if(document.getElementById('ctSlideModal'))return;
+    const modal=document.createElement('div');
+    modal.id='ctSlideModal';modal.className='modal';modal.setAttribute('aria-hidden','true');
+    modal.innerHTML=`<div class="dialog" style="max-width:760px;max-height:92vh;overflow:auto">
+      <div class="sectionHead"><div><h2>🖼️ Prepara slide Camminata</h2><div class="muted">Modifica anche dopo aver salvato la camminata</div></div><button id="ctSlideClose" class="iconBtn" type="button">✕</button></div>
+      <div id="ctSlideCard" style="background:#f4f1e8;border:1px solid #d6d8cf;border-radius:18px;overflow:hidden;margin:10px 0 16px">
+        <div style="background:#173f2b;color:#fff;padding:16px 18px"><b style="font-size:22px">CacciaTraccia Italia</b><div style="opacity:.82">Camminata</div></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:14px 16px 8px;font-weight:800"><span id="ctSlideDate">-</span><span id="ctSlideKm">0.00 km</span></div>
+        <div id="ctSlideMap" style="height:300px;margin:8px 14px;border-radius:14px;overflow:hidden;background:#dce5d7"></div>
+        <div id="ctSlideDescPreview" style="display:none;background:#fff;margin:12px 14px;padding:14px;border-radius:14px;white-space:pre-wrap"></div>
+        <img id="ctSlidePhotoPreview" style="display:none;width:calc(100% - 28px);max-height:320px;object-fit:cover;margin:12px 14px;border-radius:14px" alt="Foto Camminata">
+      </div>
+      <div class="field"><label>Descrizione della slide</label><textarea id="ctSlideDesc" rows="4" placeholder="Es. zona battuta, uccelli incontrati, vento, condizioni, note della giornata…"></textarea></div>
+      <div class="field"><label>Foto facoltativa</label><input id="ctSlidePhotoInput" type="file" accept="image/*"></div>
+      <div class="actionGrid">
+        <button id="ctSlideRemovePhoto" class="secondary" type="button">🗑 Rimuovi foto</button>
+        <button id="ctSlideSave" class="secondary" type="button">💾 Salva modifiche</button>
+        <button id="ctSlideShare" class="primary" type="button">↗ Condividi slide</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    $('ctSlideClose').onclick=closeSlide;
+    modal.addEventListener('click',e=>{if(e.target===modal)closeSlide()});
+    $('ctSlideDesc').oninput=refreshSlidePreview;
+    $('ctSlidePhotoInput').onchange=async e=>{
+      const f=e.target.files?.[0];if(!f)return;
+      try{slidePhoto=await fileData(f,1400,.82);refreshSlidePreview()}catch{toast('Foto non leggibile')}
+    };
+    $('ctSlideRemovePhoto').onclick=()=>{slidePhoto=null;$('ctSlidePhotoInput').value='';refreshSlidePreview()};
+    $('ctSlideSave').onclick=()=>saveSlideEdits(true);
+    $('ctSlideShare').onclick=async()=>{if(!slideId)return;saveSlideEdits(false);const id=slideId;toast('Preparo la slide…');await sharePrepared?.(id)};
+  }
+
+  function currentOuting(){return (state.outings||[]).find(o=>o.id===slideId)||null}
+  function closeSlide(){document.getElementById('ctSlideModal')?.classList.remove('open');if(previewMap){try{previewMap.remove()}catch{}previewMap=null;previewRoute=null}}
+
+  function refreshSlidePreview(){
+    const o=currentOuting();if(!o)return;
+    $('ctSlideDate').textContent=new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+    $('ctSlideKm').textContent=`${(+o.distanceKm||0).toFixed(2)} km`;
+    const d=($('ctSlideDesc')?.value||'').trim(),dp=$('ctSlideDescPreview');dp.textContent=d;dp.style.display=d?'block':'none';
+    const im=$('ctSlidePhotoPreview');if(slidePhoto){im.src=slidePhoto;im.style.display='block'}else{im.removeAttribute('src');im.style.display='none'}
+  }
+
+  function buildPreviewMap(o){
+    if(!window.L||!o?.coords?.length)return;
+    if(previewMap){try{previewMap.remove()}catch{}previewMap=null}
+    previewMap=L.map('ctSlideMap',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(previewMap);
+    previewRoute=L.polyline(o.coords,{color:'#0d5a3b',weight:5,opacity:.95}).addTo(previewMap);
+    if(o.coords.length){L.circleMarker(o.coords[0],{radius:7,color:'#fff',weight:3,fillColor:'#16734b',fillOpacity:1}).addTo(previewMap);L.circleMarker(o.coords[o.coords.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#b6322b',fillOpacity:1}).addTo(previewMap)}
+    try{previewMap.fitBounds(previewRoute.getBounds(),{padding:[28,28],maxZoom:17})}catch{previewMap.setView(o.coords[0],15)}
+    setTimeout(()=>previewMap?.invalidateSize(),120);
+  }
+
+  function openSlide(id){
+    ensureSlideModal();const o=(state.outings||[]).find(x=>x.id===id);if(!o)return;
+    slideId=id;slidePhoto=o.photo||null;$('ctSlideDesc').value=o.note||'';$('ctSlidePhotoInput').value='';
+    $('ctSlideModal').classList.add('open');refreshSlidePreview();setTimeout(()=>buildPreviewMap(o),80);
+  }
+
+  function saveSlideEdits(showToast=true){
+    const o=currentOuting();if(!o)return false;
+    o.note=($('ctSlideDesc')?.value||'').trim();o.photo=slidePhoto||null;o.updatedAt=new Date().toISOString();save();renderOutings();refreshSlidePreview();if(showToast)toast('Slide salvata');return true;
+  }
+
+  renderOutings=function(){
+    const el=$('outingsList');if(!el)return;
+    el.innerHTML=(state.outings||[]).length?(state.outings||[]).map(o=>`<div class="item"><div class="itemTop"><div><h4>${new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}</h4><div class="meta">${new Date(o.start).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</div></div><b>${(+o.distanceKm||0).toFixed(2)} km</b></div>${o.note?`<div>${esc(o.note)}</div>`:''}${o.photo?`<img class="photoPreview" src="${o.photo}">`:''}<div class="rowBtns"><button class="mini" onclick="CT.out('${o.id}')">Mostra</button><button class="mini" onclick="CT.prepareSlide('${o.id}')">🖼️ Prepara slide</button><button class="mini red" onclick="CT.delOut('${o.id}')">Elimina</button></div></div>`).join(''):'<div class="empty">Nessuna camminata salvata.</div>';
+  };
+
+  window.CT.prepareSlide=openSlide;
+  const prevBind=bind;
+  bind=function(){prevBind();ensureSlideModal();renderOutings();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.3'};
+})();
