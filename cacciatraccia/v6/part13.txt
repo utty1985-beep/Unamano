@@ -1,0 +1,57 @@
+
+// V6.0.2 - condivisione app + invito WhatsApp/email predisposto per gruppo cloud
+(function(){
+  const SHARE_KEY='cacciatraccia-share-v1';
+  function cleanAppUrl(){
+    const u=new URL(location.href);
+    u.search='';u.hash='';
+    if(u.pathname.endsWith('/v5.html'))u.pathname=u.pathname.replace(/v5\.html$/,'');
+    return u.toString();
+  }
+  async function shareOrCopy(title,text,url){
+    try{if(navigator.share){await navigator.share({title,text,url});return true}}catch(e){if(e?.name==='AbortError')return false}
+    const full=[text,url].filter(Boolean).join('\n');
+    try{await navigator.clipboard.writeText(full);toast('Link copiato negli appunti');return true}catch{}
+    prompt('Copia e condividi questo link',full);return true;
+  }
+  function cloudInviteUrl(){
+    try{const j=JSON.parse(localStorage.getItem(SHARE_KEY)||'{}');if(j.inviteUrl)return j.inviteUrl}catch{}
+    return cleanAppUrl()+'?join=1';
+  }
+  async function shareApp(){
+    await shareOrCopy('CacciaTraccia Italia','Prova CacciaTraccia Italia: GPS, appostamenti, meteo, diario e percorsi.',cleanAppUrl());
+  }
+  function whatsappInvite(){
+    const url=cloudInviteUrl();
+    const text=`Ti invito su CacciaTraccia Italia. Apri questo link per registrarti e unirti al mio gruppo:\n${url}`;
+    location.href='https://wa.me/?text='+encodeURIComponent(text);
+  }
+  async function emailInvite(){
+    const url=cloudInviteUrl();
+    const subject='Invito CacciaTraccia Italia';
+    const body=`Ti invito su CacciaTraccia Italia.\nApri questo link per registrarti e unirti al mio gruppo:\n${url}`;
+    location.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  function initShareInviteUI(){
+    if(document.getElementById('ctShareInviteBox'))return;
+    const cloud=$('cloudStatus')?.closest('.card');
+    if(!cloud)return;
+    const box=document.createElement('div');
+    box.id='ctShareInviteBox';
+    box.className='card';
+    box.innerHTML=`<div class="sectionHead"><h3>👥 Condividi e invita</h3><span class="pill soft">beta</span></div>
+      <p class="note">Condividi l'app per farla provare. Gli inviti al gruppo sono già predisposti per e-mail e WhatsApp; quando colleghiamo il cloud separato, ogni link sarà personale e collegherà l'invitato al tuo gruppo.</p>
+      <div class="actionGrid">
+        <button id="ctShareAppBtn" class="primary">↗ Condividi app per test</button>
+        <button id="ctInviteWhatsAppBtn" class="secondary">🟢 Invita su WhatsApp</button>
+        <button id="ctInviteEmailBtn" class="secondary">✉️ Invita via e-mail</button>
+        <button id="ctMembersBtn" class="secondary" disabled>👥 Membri del gruppo</button>
+      </div>`;
+    cloud.insertAdjacentElement('beforebegin',box);
+    $('ctShareAppBtn').onclick=shareApp;
+    $('ctInviteWhatsAppBtn').onclick=whatsappInvite;
+    $('ctInviteEmailBtn').onclick=emailInvite;
+  }
+  const prevBind=bind;
+  bind=function(){prevBind();initShareInviteUI()};
+})();
