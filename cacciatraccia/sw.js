@@ -1,38 +1,44 @@
-const CACHE='cacciatraccia-v4-hosted-3';
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=4.1.2','./manifest.webmanifest','./icon.svg','./parts/app.part01.txt','./parts/app.part02.txt','./parts/app.part03.txt','./parts/app.part04.txt','./parts/app.part05.txt','./parts/app.part06.txt','./parts/app.part07.txt','./parts/app.part08.txt'];
+const CACHE='cacciatraccia-v6-1';
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=4.1.2','./manifest.webmanifest','./icon.svg',...Array.from({length:12},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.0.0`)];
 
-self.addEventListener('install',e=>e.waitUntil(
-  caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())
-));
+self.addEventListener('install',e=>e.waitUntil((async()=>{
+  const c=await caches.open(CACHE);
+  await Promise.allSettled(SHELL.map(u=>c.add(new Request(u,{cache:'reload'}))));
+  await self.skipWaiting();
+})()));
 
-self.addEventListener('activate',e=>e.waitUntil(
-  caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())
-));
+self.addEventListener('activate',e=>e.waitUntil((async()=>{
+  const keys=await caches.keys();
+  await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+  await self.clients.claim();
+})()));
 
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
   const u=new URL(e.request.url);
   const same=u.origin===location.origin;
-
   if(same){
-    e.respondWith(
-      fetch(e.request,{cache:'no-store'}).then(r=>{
-        const cp=r.clone();
-        caches.open(CACHE).then(cache=>cache.put(e.request,cp));
+    e.respondWith((async()=>{
+      try{
+        const r=await fetch(e.request,{cache:'no-store'});
+        const c=await caches.open(CACHE); c.put(e.request,r.clone()).catch(()=>{});
         return r;
-      }).catch(async()=>{
+      }catch{
         const cached=await caches.match(e.request,{ignoreSearch:true});
-        return cached || (e.request.mode==='navigate' ? caches.match('./index.html') : Promise.reject(new Error('offline')));
-      })
-    );
-    return;
+        if(cached) return cached;
+        if(e.request.mode==='navigate') return (await caches.match('./index.html')) || Response.error();
+        return Response.error();
+      }
+    })());
+  }else{
+    e.respondWith((async()=>{
+      const cached=await caches.match(e.request);
+      if(cached) return cached;
+      try{
+        const r=await fetch(e.request);
+        const c=await caches.open(CACHE); c.put(e.request,r.clone()).catch(()=>{});
+        return r;
+      }catch{return Response.error();}
+    })());
   }
-
-  e.respondWith(
-    fetch(e.request).then(r=>{
-      const cp=r.clone();
-      caches.open(CACHE).then(cache=>cache.put(e.request,cp));
-      return r;
-    }).catch(()=>caches.match(e.request))
-  );
 });
