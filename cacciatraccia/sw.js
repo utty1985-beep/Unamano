@@ -1,5 +1,5 @@
-const CACHE='cacciatraccia-v4-hosted-2';
-const SHELL=['./','./index.html','./styles.css?v=4.1.1','./app-loader.js?v=4.1.1','./manifest.webmanifest','./icon.svg','./parts/app.part01.txt','./parts/app.part02.txt','./parts/app.part03.txt','./parts/app.part04.txt','./parts/app.part05.txt','./parts/app.part06.txt','./parts/app.part07.txt','./parts/app.part08.txt'];
+const CACHE='cacciatraccia-v4-hosted-3';
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=4.1.2','./manifest.webmanifest','./icon.svg','./parts/app.part01.txt','./parts/app.part02.txt','./parts/app.part03.txt','./parts/app.part04.txt','./parts/app.part05.txt','./parts/app.part06.txt','./parts/app.part07.txt','./parts/app.part08.txt'];
 
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())
@@ -16,7 +16,7 @@ self.addEventListener('fetch',e=>{
 
   if(same){
     e.respondWith(
-      fetch(e.request).then(r=>{
+      fetch(e.request,{cache:'no-store'}).then(r=>{
         const cp=r.clone();
         caches.open(CACHE).then(cache=>cache.put(e.request,cp));
         return r;
