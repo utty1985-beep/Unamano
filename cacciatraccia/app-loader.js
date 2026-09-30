@@ -1,4 +1,4 @@
-const parts=['./direct/part00.txt','./direct/part01.txt','./direct/part02.txt','./direct/part03.txt'];
+const parts=['./direct/part00.txt','./direct/part01.txt','./direct/part02.txt','./direct/part03.txt','./direct/part04.txt'];
 function bootError(m){console.error(m);const map=document.getElementById('map');if(map)map.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore avvio: ${String(m)}</div>`}
 try{
   const texts=[];
