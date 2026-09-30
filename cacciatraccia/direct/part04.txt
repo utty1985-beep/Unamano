@@ -1,0 +1,84 @@
+
+// v5.1: ricerca località/indirizzi + correzione layout mappa
+(function(){
+  const css=document.createElement('style');
+  css.textContent=`
+    .mapQuickActions{margin:10px 0 14px!important;position:relative!important;z-index:2!important}
+    .mapWrap{margin-bottom:0!important;overflow:visible!important}
+    @media(max-width:520px){#map{height:48vh!important;min-height:340px!important;max-height:620px!important}.mapQuickActions{margin:10px 0 14px!important}}
+    .ctSearchResults{display:grid;gap:7px;margin:8px 0 12px;padding:8px;background:#fffef9;border:1px solid var(--line,#d7d8d0);border-radius:14px;box-shadow:0 4px 16px #0001}
+    .ctSearchResults.hidden{display:none!important}
+    .ctSearchTitle{font-size:12px;font-weight:800;color:#687069;padding:2px 3px}
+    .ctSearchResult{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;width:100%;border:1px solid #d7d8d0;background:#fff;border-radius:11px;padding:8px;text-align:left;color:#192119}
+    .ctSearchResult:active{background:#edf4ee}
+    .ctSearchNum{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#173f2b;color:#fff;font-weight:900}
+    .ctSearchLabel{font-size:13px;line-height:1.25}
+    .ctSearchSub{display:block;font-size:11px;color:#687069;margin-top:2px}
+  `;
+  document.head.appendChild(css);
+
+  function resultsBox(){
+    let box=document.getElementById('ctSearchResults');
+    if(!box){
+      box=document.createElement('div');
+      box.id='ctSearchResults';
+      box.className='ctSearchResults hidden';
+      const row=document.querySelector('.searchRow');
+      row?.insertAdjacentElement('afterend',box);
+    }
+    return box;
+  }
+
+  function shortLabel(r){
+    const a=r.address||{};
+    const main=a.road||a.pedestrian||a.hamlet||a.village||a.town||a.city||a.municipality||r.name||'Luogo';
+    const num=a.house_number?` ${a.house_number}`:'';
+    const city=a.city||a.town||a.village||a.municipality||'';
+    const prov=a.province||a.county||a.state||'';
+    return {main:`${main}${num}`,sub:[city,prov].filter(Boolean).join(' · ')||r.display_name};
+  }
+
+  function showResults(items){
+    const box=resultsBox();
+    if(!items.length){box.classList.remove('hidden');box.innerHTML='<div class="ctSearchTitle">Nessun posto trovato. Prova ad aggiungere città, provincia o numero civico.</div>';return;}
+    box.classList.remove('hidden');
+    box.innerHTML='<div class="ctSearchTitle">Scegli il posto trovato:</div>'+items.map((r,i)=>{const l=shortLabel(r);return `<button class="ctSearchResult" data-i="${i}"><span class="ctSearchNum">${i+1}</span><span class="ctSearchLabel">${esc(l.main)}<span class="ctSearchSub">${esc(l.sub)}</span></span></button>`}).join('');
+    box.querySelectorAll('.ctSearchResult').forEach(b=>b.onclick=()=>{
+      const r=items[+b.dataset.i],lat=+r.lat,lng=+r.lon;
+      $('mapSearch').value=r.display_name||$('mapSearch').value;
+      box.classList.add('hidden');
+      showPage('map');
+      map.setView([lat,lng],17,{animate:true});
+      selectMapPoint(lat,lng);
+    });
+  }
+
+  async function geocode(q,italyOnly=true){
+    const p=new URLSearchParams({format:'jsonv2',limit:'6',addressdetails:'1','accept-language':'it',q});
+    if(italyOnly)p.set('countrycodes','it');
+    const r=await fetch('https://nominatim.openstreetmap.org/search?'+p.toString(),{headers:{Accept:'application/json'}});
+    if(!r.ok)throw Error('Ricerca luoghi non disponibile');
+    return r.json();
+  }
+
+  async function searchPlace(){
+    const q=$('mapSearch').value.trim();
+    if(!q)return toast('Scrivi una città, un posto, una via o delle coordinate');
+    const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if(m){const lat=+m[1],lng=+m[2];resultsBox().classList.add('hidden');map.setView([lat,lng],17);selectMapPoint(lat,lng);return;}
+    const box=resultsBox();box.classList.remove('hidden');box.innerHTML='<div class="ctSearchTitle">🔎 Cerco “'+esc(q)+'”…</div>';
+    try{
+      let items=await geocode(q,true);
+      if(!items.length)items=await geocode(q,false);
+      showResults(items);
+    }catch(e){box.innerHTML='<div class="ctSearchTitle">'+esc(e.message||'Errore ricerca')+'</div>';}
+  }
+
+  const oldBind=bind;
+  bind=function(){
+    oldBind();
+    resultsBox();
+    $('mapSearch').placeholder='Cerca città, località, via e numero civico';
+    $('searchBtn').onclick=searchPlace;
+  };
+})();
