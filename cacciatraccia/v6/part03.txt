@@ -1,0 +1,20 @@
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
+    const r=await fetch(u); if(!r.ok) throw Error('Meteo non disponibile'); const j=await r.json(), c=j.current||{};
+    selected=selected||{lat,lng};
+    selected.weather={fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m};
+    $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${wname(c.wind_direction_10m)} ${wdir(c.wind_direction_10m)}</b><small>${Math.round(c.wind_speed_10m||0)} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${Math.round(c.wind_gusts_10m||0)} km/h</b></div></div>`;
+    $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ $('weatherBody').innerHTML=`<div class="empty">${esc(e.message)}${navigator.onLine?'':' · ultimo dato salvato resta nel punto'}</div>`; }
+}
+function ensureModalActions(){
+  const confirm=$('confirmPointBtn'); if(!confirm || $('pointShareModalBtn')) return;
+  const wrap=document.createElement('div'); wrap.className='actionGrid'; wrap.style.marginTop='8px';
+  wrap.innerHTML='<button id="pointNavigateBtn" class="secondary" type="button">▶ Partenza</button><button id="pointShareModalBtn" class="secondary" type="button">↗ Condividi punto</button>';
+  confirm.parentElement.insertAdjacentElement('beforebegin',wrap);
+}
+function fillModal(p){
+  ensureModalActions(); editing=p?.id||null;
+  selected={lat:p?.lat??selected?.lat,lng:p?.lng??selected?.lng,weather:p?.weather||selected?.weather||null};
+  $('pointModalTitle').textContent=p?'Dettagli punto salvato':'Nuovo punto';
+  $('pointModalCoords').textContent=selected?`${selected.lat.toFixed(6)}, ${selected.lng.toFixed(6)}`:'';
+  $('pointType').value=p?.type||'Postazione'; $('pointName').value=p?.name||''; $('pointHuntDate').value=p?.huntDate||new Date().toISOString().slice(0,10);
