@@ -37,17 +37,61 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build installable APK
+      - name: Build unsigned release APK
         working-directory: android-cacciatraccia
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleRelease --stacktrace
 
-      - name: Rename APK
-        run: cp android-cacciatraccia/app/build/outputs/apk/debug/app-debug.apk CacciaTraccia-Italia-v6.1.7.apk
+      - name: Sign APK with v1 + v2 + v3 signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS="$(openssl rand -hex 24)"
+          KEYSTORE="$RUNNER_TEMP/cacciatraccia-release.keystore"
+          keytool -genkeypair \
+            -keystore "$KEYSTORE" \
+            -storepass "$PASS" \
+            -keypass "$PASS" \
+            -alias cacciatraccia \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=CacciaTraccia Italia, OU=Mobile, O=CacciaTraccia Italia, L=Foggia, ST=Puglia, C=IT"
 
-      - name: Upload APK
+          UNSIGNED="android-cacciatraccia/app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="$RUNNER_TEMP/cacciatraccia-aligned.apk"
+          FINAL="CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED.apk"
+          ZIPALIGN="$ANDROID_HOME/build-tools/35.0.0/zipalign"
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+
+          "$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias cacciatraccia \
+            --ks-pass "pass:$PASS" \
+            --key-pass "pass:$PASS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$FINAL" \
+            "$ALIGNED"
+
+          "$APKSIGNER" verify --verbose --print-certs "$FINAL"
+
+          printf '%s' "$PASS" > "$RUNNER_TEMP/signing-password.txt"
+          zip -j CacciaTraccia-SIGNING-PRIVATE.zip "$KEYSTORE" "$RUNNER_TEMP/signing-password.txt"
+
+      - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-Italia-v6.1.7
-          path: CacciaTraccia-Italia-v6.1.7.apk
+          name: CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED
+          path: CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload private signing backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: CacciaTraccia-SIGNING-PRIVATE
+          path: CacciaTraccia-SIGNING-PRIVATE.zip
           if-no-files-found: error
           retention-days: 30
