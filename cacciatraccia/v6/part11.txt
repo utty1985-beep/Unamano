@@ -1,0 +1,16 @@
+window.CT={
+  go:id=>{const p=state.points.find(x=>x.id===id);if(p){showPage('map');map.setView([p.lat,p.lng],16);selectMapPoint(p.lat,p.lng);}},
+  edit:id=>{const p=state.points.find(x=>x.id===id);if(p)fillModal(p);},
+  del:id=>{if(confirm('Eliminare punto?')){state.points=state.points.filter(x=>x.id!==id);save();}},
+  sharePoint:id=>{const p=state.points.find(x=>x.id===id);if(p)shareText(pointShareText(p),p.name||'CacciaTraccia Italia');},
+  out:id=>{const o=state.outings.find(x=>x.id===id);if(o?.coords?.length){showPage('map');const l=L.polyline(o.coords,{color:'#7b4d19',weight:4}).addTo(map);map.fitBounds(l.getBounds());setTimeout(()=>map.removeLayer(l),20000);}},
+  share:shareOut,
+  delOut:id=>{if(confirm('Eliminare questa uscita?')){state.outings=state.outings.filter(x=>x.id!==id);save();}},
+  restoreSnap
+};
+(async()=>{
+  try{
+    if('serviceWorker' in navigator){ try{ await navigator.serviceWorker.register('./sw.js?v=6'); }catch(e){console.warn('SW',e);} }
+    ensureModalActions(); await ensureLeaflet(); bind(); initMap();
+  }catch(e){ console.error(e); const m=document.getElementById('map'); if(m)m.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore mappa: ${esc(e.message)}. Ricarica una volta con Internet attivo.</div>`; }
+})();
