@@ -1,13 +1,14 @@
 (function(){
   const PUSH_PUBLIC_KEY='BBqUijPcpNzkaPOlA_3x-x9vF-3eRskVhtDgAESwMeDws9D2KlNaSCG4Gde3ilG-TpPHc5enhSj9P53EkcU-9NM';
   const q=id=>document.getElementById(id);
+  const ready=()=>typeof session!=='undefined'&&!!session?.user?.id&&typeof sb!=='undefined'&&!!sb;
   let installed=false;
 
   function toastMsg(msg,type){try{if(typeof toast==='function')return toast(msg,type)}catch(e){} console.log(msg)}
   function keyBytes(s){const pad='='.repeat((4-s.length%4)%4),b=(s+pad).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 
   async function ensureSubscription(){
-    if(!window.session?.user?.id)throw new Error('Accedi prima di attivare le notifiche.');
+    if(!ready())throw new Error('Accedi prima di attivare le notifiche.');
     if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw new Error('Le notifiche push non sono supportate su questo dispositivo.');
     if(Notification.permission!=='granted'){
       const p=await Notification.requestPermission();
@@ -24,7 +25,7 @@
   }
 
   async function setEnabled(enabled){
-    if(!window.session?.user?.id||!window.sb)return;
+    if(!ready())return;
     const btn=q('ownerPushAppBtn');if(btn){btn.disabled=true;btn.textContent=enabled?'Attivazione…':'Disattivazione…'}
     try{
       if(enabled)await ensureSubscription();
@@ -42,7 +43,7 @@
   }
 
   async function loadState(){
-    if(!window.session?.user?.id||!window.sb)return;
+    if(!ready())return;
     const r=await sb.from('worker_preferences').select('push_application_notifications_enabled').eq('user_id',session.user.id).maybeSingle();
     const enabled=!!r.data?.push_application_notifications_enabled;
     const cb=q('ownerPushAppNotify');if(cb)cb.checked=enabled;
