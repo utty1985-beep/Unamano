@@ -1,5 +1,5 @@
-const CACHE='cacciatraccia-v6-17';
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.1.7','./manifest.webmanifest','./icon.svg',...Array.from({length:22},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.7`)];
+const CACHE='cacciatraccia-v6-19';
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.1.9','./manifest.webmanifest','./icon.svg',...Array.from({length:23},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.9`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
@@ -9,7 +9,7 @@ self.addEventListener('install',e=>e.waitUntil((async()=>{
 
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
   const keys=await caches.keys();
-  await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+  await Promise.all(keys.filter(k=>k!==CACHE && k!=='cacciatraccia-offline-tiles-v1').map(k=>caches.delete(k)));
   await self.clients.claim();
 })()));
 
