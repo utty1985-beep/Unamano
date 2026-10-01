@@ -24,6 +24,7 @@ loadScriptOnce('unamanoCustomCategories','./custom-categories.js?v=20260928-2');
 loadScriptOnce('unamanoNotificationChannels','./notification-channels.js?v=20260928-2');
 loadScriptOnce('unamanoApplicationPushUi','./application-push-ui.js?v=20261001-1');
 loadScriptOnce('unamanoApplicationStatusNotify','./application-status-notify.js?v=20261001-1');
+loadScriptOnce('unamanoCityDeepLink','./city-deeplink.js?v=20261001-1');
 loadScriptOnce('unamanoSiteAssistant','./site-assistant.js?v=20260928-3');
 loadScriptOnce('unamanoChatBootstrap','./chat-bootstrap.js?v=20260928-2');
 loadScriptOnce('unamanoChatAccessGuard','./chat-access-guard.js?v=20260928-1');
