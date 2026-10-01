@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UnaMano Italia — Chiedi o offri una mano nella tua città</title>
+<meta name="description" content="UnaMano è una bacheca italiana per mettere in contatto persone della stessa città: chiedi una mano o renditi disponibile per attività e piccoli aiuti occasionali.">
+<link rel="canonical" href="https://utty1985-beep.github.io/Unamano/italia.html">
+<meta property="og:title" content="UnaMano Italia — Chiedi una mano. Dai una mano.">
+<meta property="og:description" content="Cerca richieste nella tua città o pubblica gratuitamente ciò per cui ti serve una mano.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://utty1985-beep.github.io/Unamano/italia.html">
+<meta property="og:image" content="https://utty1985-beep.github.io/Unamano/social-card.svg">
+<meta name="theme-color" content="#0f6b55">
+<style>
+:root{--g:#0f6b55;--ink:#17211f;--muted:#64736e;--line:#dbe7e2;--bg:#f5f8f7;--card:#fff}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}a{color:var(--g)}.wrap{max-width:1020px;margin:auto;padding:22px 16px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}.brand{font-size:24px;font-weight:900;text-decoration:none}.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:26px;box-shadow:0 10px 30px rgba(20,54,45,.06)}.hero{background:linear-gradient(135deg,#dff5ec,#fff)}h1{font-size:clamp(36px,6vw,60px);line-height:1.02;letter-spacing:-1.7px;margin:8px 0 14px}h2{margin-top:0}.lead{font-size:18px;color:#4d625b;max-width:760px}.search{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}.search input{flex:1;min-width:220px;border:1px solid var(--line);border-radius:13px;padding:12px 14px;font-size:16px}.btn{display:inline-block;text-decoration:none;border-radius:13px;padding:12px 16px;font-weight:850;border:1px solid var(--line);cursor:pointer}.p{background:var(--g);color:#fff;border-color:var(--g)}.g{background:#fff;color:#23352f}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}.card{border-radius:18px;padding:18px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{background:#eef7f3;border:1px solid #d5ebe1;border-radius:999px;padding:8px 11px;font-size:13px}.note{margin-top:18px;padding:14px;border-radius:14px;background:#fff8e7;border:1px solid #f0dfae;color:#6c5421}.small{font-size:13px;color:var(--muted)}footer{margin-top:25px;text-align:center;color:var(--muted);font-size:13px}@media(max-width:700px){.grid{grid-template-columns:1fr}.hero{padding:22px}.top{align-items:flex-start;flex-direction:column}}
+</style>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebPage",
+  "name":"UnaMano Italia",
+  "description":"Bacheca nazionale per mettere in contatto persone della stessa città che chiedono o offrono una mano.",
+  "url":"https://utty1985-beep.github.io/Unamano/italia.html",
+  "isPartOf":{"@type":"WebSite","name":"UnaMano","url":"https://utty1985-beep.github.io/Unamano/"},
+  "areaServed":{"@type":"Country","name":"Italia"}
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="brand" href="./">🤝 UnaMano</a><a class="btn g" href="./">Apri la bacheca</a></div>
+  <main>
+    <section class="hero">
+      <div class="small">🇮🇹 Italia · servizio gratuito nella fase iniziale</div>
+      <h1>Una mano, nella tua città.</h1>
+      <p class="lead">UnaMano mette in contatto persone che hanno bisogno di un piccolo aiuto con persone disponibili nella stessa zona. Cerca la tua città, pubblica una richiesta oppure candidati a una richiesta già presente.</p>
+      <form class="search" onsubmit="event.preventDefault();const c=document.getElementById('city').value.trim();if(c)location.href='./?city='+encodeURIComponent(c);else location.href='./';">
+        <input id="city" name="city" autocomplete="address-level2" placeholder="Scrivi la tua città, es. Foggia" aria-label="Città">
+        <button class="btn p" type="submit">Cerca nella mia città</button>
+      </form>
+    </section>
+
+    <div class="grid">
+      <section class="card"><h2>Per chi cerca una mano</h2><p>Pubblica ciò che ti serve indicando città, giorno, orario e una descrizione chiara. Le persone interessate possono candidarsi e sarai tu a scegliere con chi proseguire.</p></section>
+      <section class="card"><h2>Per chi vuole rendersi disponibile</h2><p>Imposta la tua città e le categorie che ti interessano. Puoi consultare la bacheca e candidarti alle richieste compatibili con disponibilità e competenze.</p></section>
+      <section class="card"><h2>Categorie</h2><div class="chips"><span class="chip">👶 Babysitter</span><span class="chip">🌱 Giardinaggio</span><span class="chip">🧹 Pulizie</span><span class="chip">🛒 Spesa</span><span class="chip">🧓 Assistenza</span><span class="chip">🐕 Pet sitting</span><span class="chip">📚 Ripetizioni</span><span class="chip">🔧 Piccoli lavori</span><span class="chip">💻 Tecnologia</span></div></section>
+      <section class="card"><h2>Contatto diretto</h2><p>Dopo l'accettazione di una candidatura si apre la chat privata. UnaMano non gestisce pagamenti: eventuali accordi restano tra gli utenti e devono rispettare la normativa applicabile.</p></section>
+    </div>
+
+    <div class="note"><b>Sicurezza prima di tutto.</b> Non pubblicare indirizzi completi, documenti o dati sensibili negli annunci. Per attività professionali o regolamentate verifica sempre i requisiti previsti dalla legge.</div>
+
+    <section class="card" style="margin-top:18px;text-align:center"><h2>Parti dalla tua città</h2><p>Se nella tua zona ci sono ancora poche richieste, puoi pubblicare la prima e condividere UnaMano con persone della tua città.</p><div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap"><a class="btn p" href="./">Entra in UnaMano</a><a class="btn g" href="./come-funziona.html">Come funziona</a><a class="btn g" href="./foggia.html">UnaMano Foggia</a></div></section>
+  </main>
+  <footer>UnaMano · <a href="privacy.html">Privacy</a> · <a href="termini.html">Termini</a> · <a href="sicurezza.html">Sicurezza</a></footer>
+</div>
+</body>
+</html>
