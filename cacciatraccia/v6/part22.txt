@@ -1,0 +1,237 @@
+
+// V6.1.9 - verifica condizioni appostamenti, pioggia/cambio vento, Favugna, GPS orientato, area offline, backup automatico, condivisione completa punti
+(function(){
+  const CT_VER='6.1.9';
+  const AUTO_SNAP_KEY='cacciatraccia-auto-snapshot-v1';
+  const OFFLINE_TILE_CACHE='cacciatraccia-offline-tiles-v1';
+  let ctHeadingFollow=true,conditionLayer=null;
+
+  // ---------- nomi locali del vento ----------
+  function localWindName(name){
+    const n=String(name||'').trim();
+    return n==='Libeccio'?'Libeccio (Favugna)':n;
+  }
+  function angleDiff(a,b){
+    const x=Math.abs((((+a||0)-(+b||0)+540)%360)-180);return x;
+  }
+  function fmtHour(iso){try{return new Date(iso).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{return '-'}}
+  function fmtDateTime(iso){try{return new Date(iso).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return iso||'-'}}
+  function isoLocal(date){
+    const p=n=>String(n).padStart(2,'0');
+    return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+  }
+  function decorateLocalWind(root=document){
+    try{
+      root.querySelectorAll('.snap,.weatherNow,#historyList,#pointsList,#pointWeatherSummary,#weatherBody').forEach(el=>{
+        if(el.dataset?.ctWindDecorated==='1'&&el.textContent.includes('Favugna'))return;
+        const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+        const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+        nodes.forEach(n=>{if(/Libeccio(?! \(Favugna\))/.test(n.nodeValue||''))n.nodeValue=n.nodeValue.replace(/Libeccio(?! \(Favugna\))/g,'Libeccio (Favugna)')});
+        if(el.dataset)el.dataset.ctWindDecorated='1';
+      });
+    }catch{}
+  }
+
+  // ---------- meteo esteso: pioggia e prossimo cambio vento ----------
+  function nearestHourlyIndex(times,target=Date.now()){
+    if(!times?.length)return -1;let best=0,bd=Infinity;
+    times.forEach((t,i)=>{const d=Math.abs(new Date(t).getTime()-target);if(d<bd){bd=d;best=i}});return best;
+  }
+  function firstWindChange(hourly,startIndex){
+    const dirs=hourly?.wind_direction_10m||[],speeds=hourly?.wind_speed_10m||[],times=hourly?.time||[];
+    if(startIndex<0||!times.length)return null;
+    const d0=+dirs[startIndex]||0,s0=+speeds[startIndex]||0;
+    for(let i=startIndex+1;i<Math.min(times.length,startIndex+13);i++){
+      if(angleDiff(d0,+dirs[i]||0)>=45||Math.abs((+speeds[i]||0)-s0)>=12){
+        return {time:times[i],dir:+dirs[i]||0,speed:+speeds[i]||0};
+      }
+    }
+    return null;
+  }
+  weather=async function(lat,lng){
+    $('weatherBody').innerHTML='<div class="empty">Carico meteo…</div>';
+    try{
+      const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=7`;
+      const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),c=j.current||{},h=j.hourly||{};
+      selected=selected||{lat,lng};
+      const idx=nearestHourlyIndex(h.time,Date.now()),rain=idx>=0?(h.precipitation_probability?.[idx]??null):null,change=firstWindChange(h,idx);
+      selected.weather={fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
+      const cards=[];
+      for(let i=Math.max(0,idx);i<Math.min((h.time||[]).length,Math.max(0,idx)+6);i++){
+        cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${Math.round(h.precipitation_probability?.[i]||0)}%</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${Math.round(h.wind_speed_10m?.[i]||0)} km/h</span></div>`);
+      }
+      $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${Math.round(c.wind_speed_10m||0)} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${Math.round(c.wind_gusts_10m||0)} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'stabile 12 h'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
+      $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+      decorateLocalWind();
+    }catch(e){
+      $('weatherBody').innerHTML=`<div class="empty">${esc(e.message)}${navigator.onLine?'':' · ultimo dato salvato resta nel punto'}</div>`;
+    }
+  };
+
+  // ---------- GPS: segue posizione + orientamento, ma lascia ruotare manualmente ----------
+  startGps=function(){
+    if(gpsWatch!=null||!navigator.geolocation)return;
+    gpsWatch=navigator.geolocation.watchPosition(p=>{
+      lastPos={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),heading:p.coords.heading,speed:p.coords.speed};
+      $('gpsBadge').textContent=`GPS ±${lastPos.acc} m`;
+      if(!userMarker)userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);
+      else userMarker.setLatLng([lastPos.lat,lastPos.lng]);
+      if(follow){
+        map.setView([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});
+        if(ctHeadingFollow&&Number.isFinite(+lastPos.heading)&&(+lastPos.speed||0)>.6)setBearing(+lastPos.heading);
+      }
+      updateCar();
+    },()=>{$('gpsBadge').textContent='GPS non disponibile';},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  };
+
+  // Quando fissi rapidamente un punto, conserva automaticamente il meteo di quel momento.
+  const prevSaveCurrent619=saveCurrent;
+  saveCurrent=async function(type='Postazione',open=false){
+    const before=new Set((state.points||[]).map(x=>x.id));
+    const r=await prevSaveCurrent619(type,open);
+    const p=(state.points||[]).find(x=>!before.has(x.id));
+    if(p&&navigator.onLine){
+      try{
+        const oldSelected=selected;
+        selected={lat:p.lat,lng:p.lng,weather:p.weather||null};
+        await weather(p.lat,p.lng);
+        if(selected?.weather){
+          p.weather=JSON.parse(JSON.stringify(selected.weather));
+          p.windName=p.weather.windName||p.windName||'';
+          p.windDir=p.weather.windDir||p.windDir||'';
+          p.windDeg=p.weather.windDeg;
+          p.windSpeed=p.weather.windSpeed;
+          p.windGust=p.weather.windGust;
+          save();
+          if(open){
+            $('pointWindName')&&($('pointWindName').value=p.windName||'');
+            $('pointWindDir')&&($('pointWindDir').value=p.windDir||'');
+            $('pointWindSpeed')&&($('pointWindSpeed').value=p.windSpeed??'');
+            $('pointWindGust')&&($('pointWindGust').value=p.windGust??'');
+            $('pointWeatherSummary')&&($('pointWeatherSummary').textContent=`${p.weather.condition||''} · ${localWindName(p.windName)} ${p.windSpeed??'-'} km/h · pioggia ${p.weather.rainProbability??'-'}%`);
+          }
+        }
+        if(oldSelected&&!open)selected=oldSelected;
+      }catch(e){console.warn('Meteo automatico punto',e)}
+    }
+    return r;
+  };
+
+  // ---------- verifica condizioni appostamenti ----------
+  function ensureConditionModal(){
+    if(document.getElementById('ctConditionModal'))return;
+    const style=document.createElement('style');style.textContent=`
+      .ctHourly{display:flex;gap:7px;overflow:auto;padding:9px 1px 2px;margin-top:8px}.ctHour{min-width:150px;display:grid;gap:3px;background:#f4f7f1;border:1px solid #d7d8d0;border-radius:11px;padding:8px;font-size:11px}.ctHour b{font-size:13px}.ctCondResult{border:1px solid #d7d8d0;border-left:6px solid #8c958d;border-radius:13px;padding:11px;margin:8px 0;background:#fff}.ctCondResult.good{border-left-color:#1e8b4e;background:#f1fbf4}.ctCondResult.bad{border-left-color:#b74c3e;background:#fff7f5}.ctCondTitle{display:flex;justify-content:space-between;gap:8px;align-items:center}.ctCondTitle b{font-size:15px}.ctCondMeta{font-size:12px;line-height:1.5;margin-top:5px}.ctGood{color:#14753f;font-weight:900}.ctBad{color:#a3392d;font-weight:900}.ctQuestion{font-size:20px!important;font-weight:900!important}.ctOfflineNote{font-size:11px;color:#657067;margin-top:7px}`;document.head.appendChild(style);
+    const modal=document.createElement('div');modal.id='ctConditionModal';modal.className='modal';
+    const now=new Date();now.setMinutes(0,0,0);now.setHours(now.getHours()+1);
+    modal.innerHTML=`<div class="dialog" style="max-width:760px;max-height:92vh;overflow:auto"><div class="sectionHead"><div><h2>❓ Verifica condizioni appostamenti</h2><div class="muted">Confronto con vento e condizioni salvate quando hai fissato ogni appostamento</div></div><button id="ctConditionClose" class="iconBtn">✕</button></div><div class="formGrid"><div><label>Data</label><input id="ctConditionDate" type="date" value="${isoLocal(now).slice(0,10)}"></div><div><label>Ora</label><input id="ctConditionTime" type="time" value="${isoLocal(now).slice(11,16)}"></div><div class="full"><div class="actionGrid"><button id="ctCondToday" class="secondary" type="button">Oggi</button><button id="ctCondTomorrow" class="secondary" type="button">Domani</button><button id="ctConditionRun" class="primary" type="button">🌦 Verifica tutti</button></div></div></div><div id="ctConditionSummary" class="ctOfflineNote">Verifico vento, raffiche, probabilità di pioggia e il primo cambio importante nelle ore successive.</div><div id="ctConditionResults"></div></div>`;
+    document.body.appendChild(modal);
+    $('ctConditionClose').onclick=()=>modal.classList.remove('open');modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
+    const setDay=plus=>{const d=new Date();d.setDate(d.getDate()+plus);$('ctConditionDate').value=isoLocal(d).slice(0,10)};
+    $('ctCondToday').onclick=()=>setDay(0);$('ctCondTomorrow').onclick=()=>setDay(1);$('ctConditionRun').onclick=runConditionCheck;
+  }
+  function openConditionCheck(){ensureConditionModal();$('ctConditionModal').classList.add('open')}
+  function ensureConditionButton(){
+    const right=document.querySelector('.mapTools.right');if(right&&!$('ctConditionBtn')){const b=document.createElement('button');b.id='ctConditionBtn';b.className='mapBtn ctQuestion';b.title='Verifica condizioni appostamenti';b.textContent='?';right.appendChild(b);b.onclick=openConditionCheck}
+  }
+  function pointBaseWind(p){
+    let deg=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;
+    if(deg==null){const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];const n=p.windName||p.weather?.windName,ix=names.indexOf(n);if(ix>=0)deg=ix*45}
+    const speed=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;
+    return {deg,speed};
+  }
+  async function forecastAtPoint(p,target){
+    const day=isoLocal(target).slice(0,10),u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
+    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),h=j.hourly||{};const idx=nearestHourlyIndex(h.time,target.getTime());if(idx<0)throw Error('Orario non disponibile');const change=firstWindChange(h,idx);
+    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,code:h.weather_code?.[idx],change};
+  }
+  function clearConditionLayer(){try{conditionLayer?.clearLayers()}catch{}conditionLayer=null}
+  async function runConditionCheck(){
+    const date=$('ctConditionDate').value,time=$('ctConditionTime').value||'08:00';if(!date)return toast('Scegli la data');
+    const target=new Date(`${date}T${time}:00`);if(Number.isNaN(target.getTime()))return toast('Data o ora non valida');
+    const pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
+    const out=$('ctConditionResults');if(!pts.length){out.innerHTML='<div class="empty">Non hai ancora appostamenti/punti salvati da verificare.</div>';return}
+    if(!navigator.onLine){out.innerHTML='<div class="empty">Per controllare una previsione nuova serve Internet. I punti e i dati salvati restano comunque disponibili offline.</div>';return}
+    out.innerHTML='<div class="empty">Controllo gli appostamenti…</div>';$('ctConditionRun').disabled=true;clearConditionLayer();conditionLayer=L.layerGroup().addTo(map);
+    const rows=[];
+    for(const p of pts){
+      try{
+        const f=await forecastAtPoint(p,target),base=pointBaseWind(p);let good=false,reason='';
+        if(base.deg==null||base.speed==null){reason='Manca il vento di riferimento salvato';}
+        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed);good=dd<=45&&ds<=10&&f.rain<=55;reason=`Δ direzione ${Math.round(dd)}° · Δ velocità ${Math.round(ds)} km/h`;}
+        rows.push({p,f,good,reason,base});
+        const color=good?'#1e8b4e':'#b74c3e';L.circleMarker([p.lat,p.lng],{radius:16,color,weight:5,fillColor:color,fillOpacity:.16}).addTo(conditionLayer);
+      }catch(e){rows.push({p,error:e.message||'Errore meteo'})}
+    }
+    const ok=rows.filter(r=>r.good).length;$('ctConditionSummary').innerHTML=`Controllo per <b>${esc(fmtDateTime(target.toISOString()))}</b> · <span class="ctGood">${ok} simili</span> su ${rows.length}. Il verde significa “simile alle condizioni registrate”, non garantisce che il meteo resti invariato.`;
+    out.innerHTML=rows.map(r=>{
+      if(r.error)return `<div class="ctCondResult"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span>⚠️</span></div><div class="ctCondMeta">${esc(r.error)}</div></div>`;
+      const change=r.f.change?`${fmtHour(r.f.change.time)} → ${esc(localWindName(wname(r.f.change.dir)))} ${Math.round(r.f.change.speed)} km/h`:'nessun cambio importante nelle 12 h successive';
+      const ref=r.base.deg==null?'non registrato':`${esc(localWindName(wname(r.base.deg)))} ${Math.round(r.base.speed||0)} km/h`;
+      return `<div class="ctCondResult ${r.good?'good':'bad'}"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span class="${r.good?'ctGood':'ctBad'}">${r.good?'● SIMILE':'● DIVERSA'}</span></div><div class="ctCondMeta">Riferimento salvato: <b>${ref}</b><br>Previsione: <b>${esc(localWindName(wname(r.f.dir)))} ${wdir(r.f.dir)} · ${Math.round(r.f.speed)} km/h</b> · raffiche ${Math.round(r.f.gust)} km/h<br>🌧 Pioggia: <b>${Math.round(r.f.rain)}%</b> · 🌦 ${esc(wtext(r.f.code))}<br>↻ Cambio vento: <b>${change}</b><br><span class="muted">${esc(r.reason)}</span></div><div class="rowBtns"><button class="mini" onclick="CT.condMap('${r.p.id}')">🗺 Mappa</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Dettagli</button></div></div>`;
+    }).join('');
+    $('ctConditionRun').disabled=false;decorateLocalWind(out);
+  }
+
+  // ---------- salva un'area satellitare da usare con poca rete ----------
+  function tileXY(lat,lng,z){const n=2**z,x=Math.floor((lng+180)/360*n),y=Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n);return {x,y}}
+  async function saveOfflineArea(){
+    if(!map)return toast('Mappa non pronta');if(!navigator.onLine)return toast('Serve Internet per salvare una nuova area');
+    const b=map.getBounds(),base=Math.max(10,Math.min(17,Math.round(map.getZoom()))),reqs=[];
+    for(const z of [base,Math.min(18,base+1)]){
+      const nw=tileXY(b.getNorth(),b.getWest(),z),se=tileXY(b.getSouth(),b.getEast(),z),n=2**z;
+      for(let y=Math.max(0,nw.y-1);y<=Math.min(n-1,se.y+1);y++)for(let x=nw.x-1;x<=se.x+1;x++){const xx=((x%n)+n)%n;reqs.push(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${xx}`)}
+    }
+    const urls=[...new Set(reqs)].slice(0,220);if(!urls.length)return toast('Area non disponibile');
+    toast(`Salvo ${urls.length} tessere mappa…`);let done=0;
+    try{
+      const cache=await caches.open(OFFLINE_TILE_CACHE);
+      for(let i=0;i<urls.length;i+=8){const batch=urls.slice(i,i+8);await Promise.allSettled(batch.map(async u=>{const q=new Request(u,{mode:'no-cors',cache:'reload'});const r=await fetch(q);if(r)await cache.put(q,r.clone());done++}));}
+      localStorage.setItem('cacciatraccia-offline-area-last',JSON.stringify({at:new Date().toISOString(),count:done,center:map.getCenter(),zoom:base}));toast(`Area offline salvata: ${done} tessere`);
+    }catch(e){console.warn(e);toast('Salvataggio area incompleto: '+done+' tessere')}
+  }
+  function ensureOfflineButton(){
+    const card=$('page-backup')?.querySelector('.card:last-child');if(card&&!$('ctOfflineAreaBtn')){const b=document.createElement('button');b.id='ctOfflineAreaBtn';b.className='secondary';b.style.marginTop='10px';b.textContent='📥 Salva area mappa attuale offline';b.onclick=()=>{showPage('map');setTimeout(saveOfflineArea,180)};card.appendChild(b)}
+  }
+
+  // ---------- backup automatico locale silenzioso ----------
+  function autoSnapshot(force=false){
+    try{
+      const last=+localStorage.getItem(AUTO_SNAP_KEY)||0;if(!force&&Date.now()-last<6*60*60*1000)return;
+      const arr=snapshots(),copy=JSON.parse(JSON.stringify(state));arr.unshift({id:'auto-'+Date.now().toString(36),at:new Date().toISOString(),auto:true,data:copy});localStorage.setItem(SNAP_STORE,JSON.stringify(arr.slice(0,25)));localStorage.setItem(AUTO_SNAP_KEY,String(Date.now()));renderSnapshots();
+    }catch(e){console.warn('Backup automatico',e)}
+  }
+  function markAutoSnapshots(){
+    document.querySelectorAll('#snapshotsList .item').forEach(el=>{if(el.textContent&&!el.querySelector('.ctAutoMark')){const b=document.createElement('span');b.className='ctAutoMark muted';b.style.marginLeft='6px';b.textContent='backup';el.querySelector('b')?.appendChild(b)}})
+  }
+  const prevRenderSnapshots=renderSnapshots;
+  renderSnapshots=function(){prevRenderSnapshots();markAutoSnapshots()};
+
+  // ---------- condivisione punto con foto quando presente ----------
+  async function dataUrlFile(data,name='CacciaTraccia-punto.jpg'){
+    if(!data)return null;try{const r=await fetch(data),b=await r.blob();return new File([b],name,{type:b.type||'image/jpeg'})}catch{return null}
+  }
+  async function sharePointFull(id){
+    const p=(state.points||[]).find(x=>x.id===id);if(!p)return;
+    const text=pointShareText(p).replace(/Libeccio/g,'Libeccio (Favugna)'),file=await dataUrlFile(p.photo,`CacciaTraccia_${String(p.name||p.type||'punto').replace(/[^a-z0-9_-]+/gi,'_')}.jpg`);
+    try{if(file&&navigator.share&&navigator.canShare?.({files:[file]}))return await navigator.share({title:p.name||'CacciaTraccia Italia',text,files:[file]});if(navigator.share)return await navigator.share({title:p.name||'CacciaTraccia Italia',text})}catch(e){if(e?.name==='AbortError')return}
+    await shareText(text,p.name||'CacciaTraccia Italia');
+  }
+
+  // ---------- integrazione UI / comportamento manuale mappa ----------
+  const prevRenderAll=renderAll;
+  renderAll=function(){prevRenderAll();decorateLocalWind();};
+  const prevBind=bind;
+  bind=function(){
+    prevBind();ensureConditionModal();ensureConditionButton();ensureOfflineButton();autoSnapshot(false);decorateLocalWind();
+    const oldFollow=$('followBtn')?.onclick;if($('followBtn'))$('followBtn').onclick=()=>{oldFollow?.();if(follow)ctHeadingFollow=true};
+    if($('rotateLeftBtn'))$('rotateLeftBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(getBearing()-15))toast('Rotazione non disponibile su questo browser')};
+    if($('rotateRightBtn'))$('rotateRightBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(getBearing()+15))toast('Rotazione non disponibile su questo browser')};
+    if($('northBtn'))$('northBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(0))toast('Rotazione non disponibile su questo browser')};
+    map?.on('dragstart',()=>{if(follow){follow=false;$('followBtn')?.classList.remove('active')}});
+    window.addEventListener('pagehide',()=>autoSnapshot(true));document.addEventListener('visibilitychange',()=>{if(document.hidden)autoSnapshot(false)});
+    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_VER;
+  };
+  window.CT.sharePoint=sharePointFull;
+  window.CT.condMap=id=>{const p=(state.points||[]).find(x=>x.id===id);if(!p)return;$('ctConditionModal')?.classList.remove('open');showPage('map');follow=false;$('followBtn')?.classList.remove('active');map.setView([p.lat,p.lng],17,{animate:true});selectMapPoint(p.lat,p.lng)};
+})();
