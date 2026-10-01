@@ -1,8 +1,10 @@
 (function(){
   let patchedAccept=false,patchedDecline=false,deepLinkHandled=false;
+  const hasSession=()=>typeof session!=='undefined'&&!!session?.user?.id;
+  const hasSb=()=>typeof sb!=='undefined'&&!!sb;
 
   async function notifyStatus(applicationId){
-    if(!applicationId||!window.sb||!window.session?.user?.id)return;
+    if(!applicationId||!hasSb()||!hasSession())return;
     try{
       const r=await sb.functions.invoke('send-application-status-notify',{body:{application_id:applicationId}});
       if(r.error)console.warn('status notification dispatch failed',r.error);
@@ -38,7 +40,7 @@
     if(deepLinkHandled)return;
     const params=new URLSearchParams(location.search);
     if(params.get('activity')!=='1')return;
-    if(window.session?.user?.id&&typeof window.go==='function'){
+    if(hasSession()&&typeof go==='function'){
       deepLinkHandled=true;
       go('activity');
       setTimeout(()=>{try{history.replaceState({},'',location.pathname)}catch(e){}},300);
