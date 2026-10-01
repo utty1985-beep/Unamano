@@ -10,8 +10,8 @@ android {
         applicationId 'com.cacciatraccia.italia'
         minSdk 24
         targetSdk 35
-        versionCode 618
-        versionName '6.1.8'
+        versionCode 619
+        versionName '6.1.9'
     }
 
     buildTypes {
