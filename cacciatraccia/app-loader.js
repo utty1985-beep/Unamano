@@ -1,4 +1,4 @@
-const parts=[...Array(22)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.7`);
+const parts=[...Array(23)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.9`);
 function bootError(m){console.error(m);const map=document.getElementById('map');if(map)map.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore avvio: ${String(m)}</div>`}
 try{
   const texts=[];
