@@ -41,57 +41,28 @@ jobs:
         working-directory: android-cacciatraccia
         run: gradle :app:assembleRelease --stacktrace
 
-      - name: Sign APK with v1 + v2 + v3 signatures
+      - name: Prepare unsigned APK and official signing tools
         shell: bash
         run: |
           set -euo pipefail
-          PASS="$(openssl rand -hex 24)"
-          KEYSTORE="$RUNNER_TEMP/cacciatraccia-release.keystore"
-          keytool -genkeypair \
-            -keystore "$KEYSTORE" \
-            -storepass "$PASS" \
-            -keypass "$PASS" \
-            -alias cacciatraccia \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=CacciaTraccia Italia, OU=Mobile, O=CacciaTraccia Italia, L=Foggia, ST=Puglia, C=IT"
+          cp android-cacciatraccia/app/build/outputs/apk/release/app-release-unsigned.apk CacciaTraccia-Italia-v6.1.9-UNSIGNED.apk
+          mkdir -p CacciaTraccia-signing-tools
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" CacciaTraccia-signing-tools/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" CacciaTraccia-signing-tools/zipalign
+          chmod +x CacciaTraccia-signing-tools/zipalign
 
-          UNSIGNED="android-cacciatraccia/app/build/outputs/apk/release/app-release-unsigned.apk"
-          ALIGNED="$RUNNER_TEMP/cacciatraccia-aligned.apk"
-          FINAL="CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED.apk"
-          ZIPALIGN="$ANDROID_HOME/build-tools/35.0.0/zipalign"
-          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
-
-          "$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
-          "$APKSIGNER" sign \
-            --ks "$KEYSTORE" \
-            --ks-key-alias cacciatraccia \
-            --ks-pass "pass:$PASS" \
-            --key-pass "pass:$PASS" \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            --out "$FINAL" \
-            "$ALIGNED"
-
-          "$APKSIGNER" verify --verbose --print-certs "$FINAL"
-
-          printf '%s' "$PASS" > "$RUNNER_TEMP/signing-password.txt"
-          zip -j CacciaTraccia-SIGNING-PRIVATE.zip "$KEYSTORE" "$RUNNER_TEMP/signing-password.txt"
-
-      - name: Upload installable APK
+      - name: Upload unsigned APK
         uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED
-          path: CacciaTraccia-Italia-v6.1.8-UNIVERSAL-SIGNED.apk
+          name: CacciaTraccia-Italia-v6.1.9-UNSIGNED
+          path: CacciaTraccia-Italia-v6.1.9-UNSIGNED.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload private signing backup
+      - name: Upload Android signing tools
         uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-SIGNING-PRIVATE
-          path: CacciaTraccia-SIGNING-PRIVATE.zip
+          name: CacciaTraccia-Android-Signing-Tools
+          path: CacciaTraccia-signing-tools/
           if-no-files-found: error
           retention-days: 30
