@@ -41,28 +41,33 @@ jobs:
         working-directory: android-cacciatraccia
         run: gradle :app:assembleRelease --stacktrace
 
-      - name: Prepare unsigned APK and official signing tools
+      - name: Align APK and export official signing tools
         shell: bash
         run: |
           set -euo pipefail
-          cp android-cacciatraccia/app/build/outputs/apk/release/app-release-unsigned.apk CacciaTraccia-Italia-v6.1.9-UNSIGNED.apk
+          UNSIGNED="android-cacciatraccia/app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="CacciaTraccia-Italia-v6.1.9-ALIGNED-UNSIGNED.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -p -f 4 "$UNSIGNED" "$ALIGNED"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$ALIGNED" > CacciaTraccia-zipalign-check.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$ALIGNED" > CacciaTraccia-apk-metadata.txt
           mkdir -p CacciaTraccia-signing-tools
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" CacciaTraccia-signing-tools/apksigner.jar
-          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" CacciaTraccia-signing-tools/zipalign
-          chmod +x CacciaTraccia-signing-tools/zipalign
 
-      - name: Upload unsigned APK
+      - name: Upload aligned unsigned APK
         uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-Italia-v6.1.9-UNSIGNED
-          path: CacciaTraccia-Italia-v6.1.9-UNSIGNED.apk
+          name: CacciaTraccia-Italia-v6.1.9-ALIGNED-UNSIGNED
+          path: |
+            CacciaTraccia-Italia-v6.1.9-ALIGNED-UNSIGNED.apk
+            CacciaTraccia-zipalign-check.txt
+            CacciaTraccia-apk-metadata.txt
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload Android signing tools
+      - name: Upload Android signing tool
         uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-Android-Signing-Tools
-          path: CacciaTraccia-signing-tools/
+          name: CacciaTraccia-Android-ApkSigner
+          path: CacciaTraccia-signing-tools/apksigner.jar
           if-no-files-found: error
           retention-days: 30
