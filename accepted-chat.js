@@ -28,6 +28,7 @@ loadScriptOnce('unamanoChatAccessGuard','./chat-access-guard.js?v=20260928-1');
 loadScriptOnce('unamanoAccountDelete','./account-delete.js?v=20260928-2');
 loadScriptOnce('unamanoModerationAdmin','./moderation-admin.js?v=20260928-1');
 loadScriptOnce('unamanoAntiAbuseUi','./anti-abuse-ui.js?v=20260928-1');
+loadScriptOnce('unamanoGrowthShare','./growth-share.js?v=20261001-1');
 const existingPrivacy=document.getElementById('unamanoPrivacyEnhancements')||document.getElementById('unamanoProfilePrivacyEnhancements');
 if(existingPrivacy)loadMarketplaceExtras();
 else loadScriptOnce('unamanoPrivacyEnhancements','./profile-privacy-enhancements.js?v=20260928-5',loadMarketplaceExtras);
