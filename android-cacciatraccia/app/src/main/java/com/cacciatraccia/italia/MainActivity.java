@@ -20,7 +20,7 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=617";
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=619";
     private static final int REQ_LOCATION = 41;
     private static final int REQ_FILE = 42;
 
@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         s.setUseWideViewPort(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " CacciaTracciaAndroid/6.1.7");
+        s.setUserAgentString(s.getUserAgentString() + " CacciaTracciaAndroid/6.1.9");
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
