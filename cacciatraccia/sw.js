@@ -1,4 +1,4 @@
-const CACHE='cacciatraccia-v6-1-11';
+const CACHE='cacciatraccia-v6-1-12';
 const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.1.11','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.1.11`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
