@@ -1,0 +1,146 @@
+
+// V6.1.10 - Audio personali locali: carica dal telefono, salva offline, player compatto
+(function(){
+  const AUDIO_DB='cacciatraccia-audio-v1', STORE='tracks';
+  let audioDb=null,tracks=[],currentId=null,audioEl=null;
+
+  function openAudioDb(){
+    if(audioDb)return Promise.resolve(audioDb);
+    return new Promise((resolve,reject)=>{
+      const req=indexedDB.open(AUDIO_DB,1);
+      req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};
+      req.onsuccess=()=>{audioDb=req.result;resolve(audioDb)};
+      req.onerror=()=>reject(req.error);
+    });
+  }
+  async function audioAll(){
+    const db=await openAudioDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readonly'),rq=tx.objectStore(STORE).getAll();
+      rq.onsuccess=()=>resolve((rq.result||[]).sort((a,b)=>(a.addedAt||0)-(b.addedAt||0)));
+      rq.onerror=()=>reject(rq.error);
+    });
+  }
+  async function audioPut(item){
+    const db=await openAudioDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(item);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+  }
+  async function audioDelete(id){
+    const db=await openAudioDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+  }
+  function formatTime(s){if(!Number.isFinite(s))return '0:00';s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+  function currentTrack(){return tracks.find(t=>t.id===currentId)||null}
+  function urlForTrack(t){if(!t?.blob)return null;return URL.createObjectURL(t.blob)}
+
+  function ensureAudioUI(){
+    if(document.getElementById('ctAudioBar'))return;
+    const style=document.createElement('style');
+    style.textContent=`
+#ctAudioBar{position:fixed;left:8px;right:8px;bottom:72px;z-index:1600;background:#fffdf8;border:1px solid #d7d8d0;border-radius:16px;box-shadow:0 5px 22px #0003;padding:9px 10px;font:600 13px/1.25 system-ui;color:#173f2b}
+#ctAudioBar.collapsed .ctAudioBody{display:none}
+#ctAudioHead{display:flex;align-items:center;gap:8px}
+#ctAudioHead strong{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ctAudioHead button,#ctAudioBody button,.ctAudioFileLabel{border:1px solid #cdd2c9;background:#fff;border-radius:10px;padding:7px 9px;font-weight:800;color:#173f2b}
+#ctAudioBody{margin-top:8px;display:grid;gap:8px}
+#ctAudioControls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#ctAudioProgress{width:100%}
+#ctAudioList{max-height:160px;overflow:auto;display:grid;gap:5px}
+.ctAudioRow{display:flex;align-items:center;gap:6px;background:#f5f7f2;border-radius:10px;padding:6px 7px}
+.ctAudioRow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctAudioRow.active{outline:2px solid #2b7b51}
+.ctAudioFileLabel{display:inline-flex;align-items:center;cursor:pointer}
+.ctAudioFileLabel input{display:none}
+.ctAudioTiny{font-size:11px;color:#69756c}
+@media(max-width:520px){#ctAudioBar{bottom:66px;left:6px;right:6px}.ctAudioRow{font-size:12px}}
+    `;
+    document.head.appendChild(style);
+
+    const bar=document.createElement('div');bar.id='ctAudioBar';bar.className='collapsed';
+    bar.innerHTML=`
+      <div id="ctAudioHead">
+        <span>🎵</span><strong id="ctAudioNow">Audio personali</strong>
+        <button id="ctAudioToggle" type="button" title="Apri/chiudi">▲</button>
+      </div>
+      <div class="ctAudioBody">
+        <div id="ctAudioControls">
+          <label class="ctAudioFileLabel">＋ Carica dal telefono<input id="ctAudioInput" type="file" accept="audio/*" multiple></label>
+          <button id="ctAudioPrev" type="button">⏮</button>
+          <button id="ctAudioPlay" type="button">▶</button>
+          <button id="ctAudioNext" type="button">⏭</button>
+          <button id="ctAudioLoop" type="button">🔁 Ripeti: no</button>
+        </div>
+        <input id="ctAudioProgress" type="range" min="0" max="1000" value="0" aria-label="Posizione audio">
+        <div class="ctAudioTiny"><span id="ctAudioTime">0:00 / 0:00</span> · i file restano salvati solo su questo telefono</div>
+        <div id="ctAudioList"></div>
+      </div>`;
+    document.body.appendChild(bar);
+
+    audioEl=new Audio();audioEl.preload='metadata';
+    $('ctAudioToggle').onclick=()=>{bar.classList.toggle('collapsed');$('ctAudioToggle').textContent=bar.classList.contains('collapsed')?'▲':'▼'};
+    $('ctAudioInput').onchange=async e=>{
+      const files=[...(e.target.files||[])];if(!files.length)return;
+      let ok=0;
+      for(const f of files){
+        if(!String(f.type||'').startsWith('audio/'))continue;
+        try{
+          await audioPut({id:'aud_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2),name:f.name||'Audio',type:f.type||'audio/*',size:f.size||0,addedAt:Date.now()+ok,blob:f});
+          ok++;
+        }catch(err){console.warn('Audio save',err)}
+      }
+      e.target.value='';await refreshTracks();toast(ok?ok+' audio salvati sul telefono':'Nessun audio aggiunto');
+    };
+    $('ctAudioPlay').onclick=()=>{if(!currentTrack()&&tracks[0])loadTrack(tracks[0].id,false);if(!audioEl?.src)return;audioEl.paused?audioEl.play().catch(()=>{}):audioEl.pause()};
+    $('ctAudioPrev').onclick=()=>moveTrack(-1);
+    $('ctAudioNext').onclick=()=>moveTrack(1);
+    $('ctAudioLoop').onclick=()=>{audioEl.loop=!audioEl.loop;$('ctAudioLoop').textContent='🔁 Ripeti: '+(audioEl.loop?'sì':'no')};
+    $('ctAudioProgress').oninput=e=>{if(audioEl&&Number.isFinite(audioEl.duration))audioEl.currentTime=(+e.target.value/1000)*audioEl.duration};
+    audioEl.addEventListener('play',()=>{$('ctAudioPlay').textContent='⏸'});
+    audioEl.addEventListener('pause',()=>{$('ctAudioPlay').textContent='▶'});
+    audioEl.addEventListener('timeupdate',()=>{
+      if(!audioEl)return;
+      const d=audioEl.duration||0,c=audioEl.currentTime||0;
+      $('ctAudioProgress').value=d?String(Math.round(c/d*1000)):'0';
+      $('ctAudioTime').textContent=formatTime(c)+' / '+formatTime(d);
+    });
+    audioEl.addEventListener('ended',()=>{if(!audioEl.loop)moveTrack(1,true)});
+  }
+
+  async function refreshTracks(){
+    try{tracks=await audioAll()}catch(e){console.warn('Audio DB',e);tracks=[]}
+    renderAudioList();
+  }
+  function renderAudioList(){
+    const host=$('ctAudioList');if(!host)return;
+    host.innerHTML=tracks.length?tracks.map(t=>`<div class="ctAudioRow ${t.id===currentId?'active':''}"><button type="button" onclick="CT.audioPlay('${t.id}')">▶</button><b title="${esc(t.name)}">${esc(t.name)}</b><span class="ctAudioTiny">${t.size?Math.max(1,Math.round(t.size/1024/1024))+' MB':''}</span><button type="button" onclick="CT.audioDel('${t.id}')">🗑</button></div>`).join(''):'<div class="empty">Nessun audio caricato dal telefono.</div>';
+  }
+  function loadTrack(id,auto=true){
+    const t=tracks.find(x=>x.id===id);if(!t||!audioEl)return;
+    if(audioEl._ctUrl)try{URL.revokeObjectURL(audioEl._ctUrl)}catch{}
+    const u=urlForTrack(t);if(!u)return;
+    currentId=id;audioEl._ctUrl=u;audioEl.src=u;$('ctAudioNow').textContent=t.name||'Audio personale';renderAudioList();
+    if(auto)audioEl.play().catch(()=>{});
+  }
+  function moveTrack(step,auto=true){
+    if(!tracks.length)return;
+    let i=tracks.findIndex(t=>t.id===currentId);if(i<0)i=0;else i=(i+step+tracks.length)%tracks.length;
+    loadTrack(tracks[i].id,auto);
+  }
+  async function delTrack(id){
+    const was=currentId===id;
+    if(was&&audioEl){audioEl.pause();audioEl.removeAttribute('src');currentId=null;$('ctAudioNow').textContent='Audio personali'}
+    await audioDelete(id);await refreshTracks();
+  }
+
+  window.CT.audioPlay=id=>loadTrack(id,true);
+  window.CT.audioDel=id=>delTrack(id);
+
+  const prevBind=bind;
+  bind=function(){prevBind();ensureAudioUI();refreshTracks();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.10'};
+})();
