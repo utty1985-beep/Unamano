@@ -4,17 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#173f2b" />
-  <meta name="description" content="Passione Funghi e Caccia: caccia, funghi, meteo e vento, GPS, auto, percorsi, diario e backup offline." />
+  <meta name="description" content="Passione Funghi e Caccia: GPS, caccia, funghi, meteo, vento, camminate, diario e backup offline." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link id="maplibreCss" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.11.2/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css'" />
-  <link rel="stylesheet" href="styles.css?v=4.1.5" />
+  <link rel="stylesheet" href="styles.css?v=4.1.2" />
   <title>Passione Funghi e Caccia</title>
 </head>
 <body>
 <header class="topbar">
   <div class="brand"><div class="logo">🧭</div><div><h1>Passione Funghi e Caccia</h1><small>GPS • caccia • funghi • meteo • diario • offline</small></div></div>
-  <div class="topActions"><span id="netPill" class="pill">● controllo rete…</span><button id="installBtn" class="ghost" hidden>Installa</button></div>
+  <div class="topActions"><span id="netPill" class="pill">● controllo rete…</span><button id="backupQuickBtn" class="ghost" title="Dati e backup">🛡</button><button id="installBtn" class="ghost" hidden>Installa</button></div>
 </header>
 
 <main>
@@ -49,7 +49,7 @@
       <button id="quickTrackBtn" class="quickAction"><b>🔴</b><span>Camminata</span></button>
       <button id="quickCarBtn" class="quickAction"><b>🚗</b><span>Segna auto</span></button>
     </div>
-    <div class="hint">“Salva punto” registra subito la posizione GPS attuale. Poi tocca il punto salvato sulla mappa per aggiungere uccelli trovati, vento, giorno di caccia, note e foto. Puoi ruotare la mappa con due dita oppure con ↶ ↷.</div>
+    <div class="hint">“Salva punto” registra subito la posizione GPS attuale. Poi tocca il punto salvato sulla mappa per aggiungere uccelli o funghi trovati, vento, giorno, note e foto. Puoi ruotare la mappa con due dita oppure con ↶ ↷.</div>
 
     <div id="selectedCard" class="card selected hidden">
       <div class="sectionHead"><div><h2 id="selectedTitle">Punto selezionato</h2><div id="selectedCoords" class="muted"></div></div><button id="clearSelectedBtn" class="iconBtn">✕</button></div>
@@ -79,21 +79,21 @@
 
     <div class="card">
       <div class="sectionHead"><h2>📍 Punti salvati</h2><button id="fitPointsBtn" class="secondary small">Mostra tutti</button></div>
-      <div class="legend"><span>🟢 Postazione</span><span>🟤 Passaggio</span><span>🔴 Avvistamento</span><span>🔵 Parcheggio</span></div>
+      <div class="legend"><span>🟢 Postazione</span><span>🟤 Passaggio</span><span>🔴 Avvistamento uccelli</span><span>🍄 Funghi</span><span>🔵 Parcheggio</span></div>
       <div id="pointsList" class="list"></div>
     </div>
   </section>
 
   <section id="page-track" class="page">
     <div class="card">
-      <div class="sectionHead"><h2>🥾 Percorso a piedi</h2><span id="trackStatus" class="pill soft">fermo</span></div>
+      <div class="sectionHead"><h2>🥾 Camminata</h2><span id="trackStatus" class="pill soft">fermo</span></div>
       <div class="metricGrid"><div class="metric"><b id="trackDistance">0.00 km</b><span>Distanza</span></div><div class="metric"><b id="trackTime">00:00</b><span>Durata</span></div><div class="metric"><b id="trackPoints">0</b><span>Punti GPS</span></div></div>
       <div class="field"><label>Foto di quello che hai preso / dell'uscita (fotocamera o galleria)</label><input id="trackPhoto" type="file" accept="image/*" /></div>
       <div class="field"><label>Nota uscita</label><input id="trackNote" placeholder="es. tordi visti al rientro" /></div>
-      <div class="actionGrid"><button id="startTrackBtn" class="primary">▶ Inizia percorso</button><button id="stopTrackBtn" class="danger" disabled>■ Termina e salva</button><button id="centerTrackBtn" class="secondary">⌖ Mostra percorso</button><button id="trackToCarBtn" class="secondary">🚗 Torna all’auto</button></div>
+      <div class="actionGrid"><button id="startTrackBtn" class="primary">▶ Inizia camminata</button><button id="stopTrackBtn" class="danger" disabled>■ Termina e salva</button><button id="centerTrackBtn" class="secondary">⌖ Mostra percorso</button><button id="trackToCarBtn" class="secondary">🚗 Torna all’auto</button></div>
       <p class="note">Il percorso viene salvato sul telefono anche senza Internet. Quando termini l'uscita, puoi condividerla sui social con il tracciato percorso, i km, la data e la foto caricata dall'app. Su Android il browser può ridurre il GPS quando l’app resta a lungo in background: per il Play Store la versione nativa potrà usare il servizio di localizzazione in primo piano.</p>
     </div>
-    <div class="card"><h2>Uscite salvate</h2><div id="outingsList" class="list"></div></div>
+    <div class="card"><h2>Camminate salvate</h2><div id="outingsList" class="list"></div></div>
   </section>
 
   <section id="page-diary" class="page">
@@ -128,9 +128,8 @@
 
 <nav>
   <button data-page="map" class="active"><b>🗺</b>Mappa</button>
-  <button data-page="track"><b>🥾</b>Percorso</button>
+  <button data-page="track"><b>🥾</b>Camminata</button>
   <button data-page="diary"><b>📓</b>Diario</button>
-  <button data-page="backup"><b>🛡</b>Backup</button>
 </nav>
 
 <div id="pointModal" class="modal" aria-hidden="true"><div class="dialog">
@@ -156,6 +155,6 @@
 </div></div>
 
 <div id="toast" class="toast" role="status"></div>
-<script type="module" src="app-loader.js?v=6.2.2"></script>
+<script type="module" src="app-loader.js?v=6.3.0"></script>
 </body>
 </html>
