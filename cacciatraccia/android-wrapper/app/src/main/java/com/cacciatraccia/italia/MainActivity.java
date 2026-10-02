@@ -18,7 +18,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
     private static final int REQ_FILE = 4102;
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6111";
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6114";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingGeoOrigin;
@@ -35,11 +35,11 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setGeolocationEnabled(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " CacciaTracciaAndroid/6.1.11");
+        s.setUserAgentString(s.getUserAgentString() + " CacciaTracciaAndroid/6.1.14");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (state == null) webView.loadUrl(START_URL);
+        if (state == null) { webView.clearCache(true); webView.loadUrl(START_URL); }
         else webView.restoreState(state);
     }
 
