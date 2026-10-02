@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.15';
+  const FINAL_VER='6.3.16';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -915,15 +915,26 @@
   function ctARDeviceMotion(e){
     ctARHasMotionSensor=true;
     const r=e?.rotationRate||{};
-    const vals=[r.alpha,r.beta,r.gamma].map(Number).filter(Number.isFinite);
-    const spin=vals.length?Math.max(...vals.map(Math.abs)):0;
-    // Una rotazione vera del telefono mantiene il filtro AR libero per mezzo secondo.
-    if(spin>5.5)ctARMotionUntil=performance.now()+650;
+    const yaw=Math.abs(Number(r.alpha)||0);
+    // Solo la rotazione orizzontale sinistra/destra sblocca l'AR.
+    // Inclinare il telefono in alto/basso o lateralmente non muove i punti.
+    if(yaw>5.5)ctARMotionUntil=performance.now()+650;
+  }
+  function ctTiltCompensatedHeading(e){
+    const alpha=Number(e?.alpha),beta=Number(e?.beta),gamma=Number(e?.gamma);
+    if(!Number.isFinite(alpha)||!Number.isFinite(beta)||!Number.isFinite(gamma))return null;
+    const d=Math.PI/180,z=alpha*d,x=beta*d,y=gamma*d;
+    const cX=Math.cos(x),cY=Math.cos(y),cZ=Math.cos(z),sX=Math.sin(x),sY=Math.sin(y),sZ=Math.sin(z);
+    const vx=-cZ*sY-sZ*sX*cY;
+    const vy=-sZ*sY+cZ*sX*cY;
+    let h=Math.atan2(vx,vy)*180/Math.PI;
+    if(h<0)h+=360;
+    return h;
   }
   function ctAROrientation(e){
     let h=null;
     if(Number.isFinite(+e.webkitCompassHeading))h=+e.webkitCompassHeading;
-    else if(Number.isFinite(+e.alpha))h=(360-(+e.alpha)+360)%360;
+    else h=ctTiltCompensatedHeading(e);
     if(h==null)return;
     const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
     const target=(h+a+360)%360;
