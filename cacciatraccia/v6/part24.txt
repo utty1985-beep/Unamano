@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.2';
+  const FINAL_VER='6.3.3';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -102,6 +102,7 @@
     b.onclick=carReturn;b.dataset.ctHelp='Mostra la linea di rientro verso l’auto salvata.';
   }
   renderCar=function(){
+    if(!map){syncCarButton();return}
     if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
     if(state.car){
       carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:30px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})});
@@ -327,7 +328,7 @@
     const search=$('quickSpeciesBtn');if(search){search.onclick=openMushSpecies;search.dataset.ctHelp='Scatta o scegli una foto: l’app propone una specie e ne mostra le caratteristiche.'}
     const backup=$('backupQuickBtn');if(backup)backup.onclick=()=>showPage('backup');
     map?.on('dragstart',()=>{if(follow){follow=false;syncFollow()}});
-    syncCarButton();renderCar();
+    syncCarButton();
     const v=$('ctVersionBadge');if(v)v.textContent='• V'+FINAL_VER;
   };
 
