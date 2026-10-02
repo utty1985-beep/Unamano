@@ -1,5 +1,5 @@
-const CACHE='passione-funghi-caccia-v6-3-14-ar-gyro-lock';
-const SHELL=['./','./index.html','./styles.css?v=4.1.3','./app-loader.js?v=6.3.14','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.3.14`)];
+const CACHE='passione-funghi-caccia-v6-3-15-proximity-stable-ar';
+const SHELL=['./','./index.html','./styles.css?v=4.1.3','./app-loader.js?v=6.3.15','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.3.15`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
