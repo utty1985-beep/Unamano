@@ -19,17 +19,17 @@
     return cleanAppUrl()+'?join=1';
   }
   async function shareApp(){
-    await shareOrCopy('CacciaTraccia Italia','Prova CacciaTraccia Italia: GPS, appostamenti, meteo, diario e percorsi.',cleanAppUrl());
+    await shareOrCopy('Passione Funghi e Caccia','Prova Passione Funghi e Caccia: GPS, appostamenti, meteo, diario e percorsi.',cleanAppUrl());
   }
   function whatsappInvite(){
     const url=cloudInviteUrl();
-    const text=`Ti invito su CacciaTraccia Italia. Apri questo link per registrarti e unirti al mio gruppo:\n${url}`;
+    const text=`Ti invito su Passione Funghi e Caccia. Apri questo link per registrarti e unirti al mio gruppo:\n${url}`;
     location.href='https://wa.me/?text='+encodeURIComponent(text);
   }
   async function emailInvite(){
     const url=cloudInviteUrl();
-    const subject='Invito CacciaTraccia Italia';
-    const body=`Ti invito su CacciaTraccia Italia.\nApri questo link per registrarti e unirti al mio gruppo:\n${url}`;
+    const subject='Invito Passione Funghi e Caccia';
+    const body=`Ti invito su Passione Funghi e Caccia.\nApri questo link per registrarti e unirti al mio gruppo:\n${url}`;
     location.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
   function initShareInviteUI(){
