@@ -1,0 +1,108 @@
+
+// V6.1.15 - mappa stabile + Seguimi attivo/disattivo ben visibile
+(function(){
+  const CT_PATCH_VER='6.1.15';
+
+  // Usa una versione stabile del plugin di rotazione. Se fallisce, la mappa parte comunque senza rotazione.
+  ensureLeaflet=async function(){
+    if(!window.L){
+      loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+      await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
+    }
+    if(!window.L) throw Error('Leaflet non disponibile');
+    try{
+      loadCss('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.css');
+      await loadScript('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.umd.min.js');
+    }catch(e){
+      console.warn('Rotazione non disponibile, avvio mappa standard',e);
+    }
+  };
+
+  function buildBaseMap(useRotate){
+    const host=$('map');
+    if(!host) throw Error('Contenitore mappa non trovato');
+    const opts=useRotate&&L?.Map?.prototype?.setBearing
+      ? {zoomControl:true,rotate:true,touchRotate:true,bearing:0}
+      : {zoomControl:true};
+
+    map=L.map('map',opts);
+    map.setView([41.5,14],6);
+
+    sat=L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:19,attribution:'Tiles © Esri'}
+    );
+    street=L.tileLayer(
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {maxZoom:19,attribution:'© OpenStreetMap'}
+    );
+
+    sat.addTo(map);
+    markerLayer=L.layerGroup();
+    markerLayer.addTo(map);
+    map.on('click',e=>selectMapPoint(e.latlng.lat,e.latlng.lng));
+  }
+
+  initMap=function(){
+    let firstError=null;
+    try{
+      buildBaseMap(true);
+    }catch(e){
+      firstError=e;
+      console.warn('Avvio mappa con rotazione fallito, riprovo standard',e);
+      try{map?.remove?.()}catch{}
+      map=null;sat=null;street=null;markerLayer=null;
+      const host=$('map');if(host)host.innerHTML='';
+      try{
+        buildBaseMap(false);
+      }catch(e2){
+        console.error('Avvio mappa standard fallito',e2);
+        throw firstError||e2;
+      }
+    }
+    syncFollowButton();
+    startGps();
+    renderAll();
+    setTimeout(()=>{try{map.invalidateSize()}catch{}},150);
+  };
+
+  function syncFollowButton(){
+    const b=$('followBtn');if(!b)return;
+    b.classList.toggle('active',!!follow);
+    b.style.background=follow?'#173f2b':'#fff';
+    b.style.color=follow?'#fff':'#173f2b';
+    b.setAttribute('aria-pressed',follow?'true':'false');
+    b.setAttribute('aria-label',follow?'Seguimi attivato':'Seguimi disattivato');
+    b.title=follow?'Seguimi: ATTIVO':'Seguimi: DISATTIVO';
+    b.dataset.ctHelp=follow
+      ? 'Seguimi attivo: la mappa segue la tua posizione. Tocca per disattivarlo.'
+      : 'Seguimi disattivato: la mappa resta ferma. Tocca per attivarlo.';
+  }
+
+  const oldToggleFollow=toggleFollow;
+  toggleFollow=function(){
+    oldToggleFollow();
+    syncFollowButton();
+  };
+
+  const oldLocate=locate;
+  locate=async function(){
+    await oldLocate();
+    syncFollowButton();
+  };
+
+  const prevBind=bind;
+  bind=function(){
+    prevBind();
+    const b=$('followBtn');
+    if(b){
+      b.onclick=()=>{toggleFollow();syncFollowButton();};
+      syncFollowButton();
+    }
+    map?.on?.('dragstart',()=>{if(follow){follow=false;syncFollowButton();toast('Seguimi disattivato')}});
+    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
+  };
+
+  const prevRenderAll=renderAll;
+  renderAll=function(){prevRenderAll();syncFollowButton();};
+})();
