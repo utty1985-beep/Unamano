@@ -1,398 +1,335 @@
 
-// V6.1.11 - aiuto contestuale: pressione prolungata sui simboli/tasti
+// V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const HELP_DELAY=650;
-  const descriptions={
-    locateBtn:'Centra la mappa sulla tua posizione GPS attuale.',
-    followBtn:'Attiva o disattiva il seguimento: la mappa si sposta insieme a te.',
-    northBtn:'Riporta la mappa con il Nord in alto.',
-    rotateLeftBtn:'Ruota la mappa verso sinistra.',
-    rotateRightBtn:'Ruota la mappa verso destra.',
-    layersBtn:'Apre la scelta tra mappa satellitare, stradale e livello Venti.',
-    ctConditionBtn:'Controlla le condizioni previste sui tuoi appostamenti e le confronta con quelle salvate.',
-    quickSightingBtn:'Salva rapidamente un avvistamento nella posizione in cui ti trovi.',
-    quickSaveHereBtn:'Salva un punto nella posizione GPS attuale.',
-    quickTrackBtn:'Apre la Camminata per registrare il percorso GPS della giornata.',
-    quickCarBtn:'Memorizza dove hai lasciato l’auto.',
-    savePointBtn:'Salva la posizione selezionata tra i tuoi punti.',
-    navigateBtn:'Apre Google Maps per raggiungere il punto selezionato.',
-    shareSelectedBtn:'Condivide il punto selezionato con le informazioni disponibili.',
-    weatherRefreshBtn:'Aggiorna meteo e vento del punto selezionato.',
-    parkHereBtn:'Fissa la posizione attuale dell’auto sulla mappa.',
-    moveCarBtn:'Permette di aggiornare la posizione salvata dell’auto.',
-    returnCarBtn:'Mostra il percorso per ritornare alla posizione dell’auto.',
-    clearCarBtn:'Rimuove la posizione dell’auto salvata.',
-    fitPointsBtn:'Inquadra sulla mappa tutti i punti salvati visibili.',
-    startTrackBtn:'Avvia la registrazione GPS della Camminata.',
-    stopTrackBtn:'Termina e salva la Camminata registrata.',
-    centerTrackBtn:'Inquadra sulla mappa il percorso della Camminata.',
-    trackToCarBtn:'Aiuta a tornare alla posizione dell’auto durante la Camminata.',
-    exportJsonBtn:'Esporta un backup completo dei dati di CacciaTraccia.',
-    exportTxtBtn:'Esporta un file di testo con le coordinate dei punti salvati.',
-    makeSnapshotBtn:'Crea una copia locale dello stato attuale dei dati.',
-    persistBtn:'Chiede al telefono di conservare con maggiore priorità i dati locali dell’app.',
-    syncNowBtn:'Sincronizza i dati con il cloud quando il servizio cloud sarà attivo.',
-    accountBtn:'Apre le funzioni account e recupero quando il cloud sarà attivo.',
-    ctOfflineAreaBtn:'Salva nella cache l’area di mappa visualizzata per usarla con poca rete.',
-    ctAudioToggle:'Apre o chiude il lettore degli audio personali.',
-    ctAudioPrev:'Passa all’audio personale precedente.',
-    ctAudioPlay:'Avvia o mette in pausa l’audio personale.',
-    ctAudioNext:'Passa all’audio personale successivo.',
-    ctAudioLoop:'Attiva o disattiva la ripetizione continua dell’audio personale.'
-  };
+  const FINAL_VER='6.3.0';
+  let mushMode=false, mushAnalysis=null, mushPhotoData=null;
+  const sightChecks=new Map();
 
-  let timer=null,startX=0,startY=0,active=null,tip=null,suppressClickUntil=0;
-
-  function ensureTip(){
-    if(tip)return tip;
-    const style=document.createElement('style');
-    style.textContent=`
-      #ctLongHelp{position:fixed;left:50%;bottom:128px;transform:translateX(-50%);z-index:4000;width:min(88vw,430px);background:#173f2bf2;color:#fff;border:1px solid #ffffff30;border-radius:16px;padding:13px 15px;box-shadow:0 8px 28px #0007;font:700 14px/1.4 system-ui;text-align:left;opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}
-      #ctLongHelp.show{opacity:1;transform:translateX(-50%) translateY(-5px)}
-      #ctLongHelp b{display:block;font-size:15px;margin-bottom:4px}
-      #ctLongHelp small{display:block;opacity:.78;font-weight:600;margin-top:5px}
-    `;
-    document.head.appendChild(style);
-    tip=document.createElement('div');tip.id='ctLongHelp';tip.setAttribute('role','status');tip.setAttribute('aria-live','polite');
-    document.body.appendChild(tip);return tip;
+  // ---------- UI generale ----------
+  function addFinalStyles(){
+    if(document.getElementById('ctFinalStyles'))return;
+    const s=document.createElement('style');s.id='ctFinalStyles';
+    s.textContent=
+      '.quickAction.mushroom{background:#e7f0df;color:#31531c}.quickAction.identify{background:#e5eef8;color:#244f75}'+
+      '.ctMushPin{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid #4d7133;box-shadow:0 2px 7px #0005;font-size:23px}'+
+      '.ctCarOff{position:relative;display:inline-block}.ctCarOff:after{content:"";position:absolute;left:-3px;right:-3px;top:48%;height:4px;border-radius:3px;background:#b5362c;transform:rotate(-42deg);box-shadow:0 0 0 1px #fff8}'+
+      '.ctSightCheck{display:none;margin:10px 0 12px;padding:11px;border:1px solid #d7d8d0;border-radius:14px;background:#f7f8f4}.ctSightGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ctSightGrid input{margin-top:4px}.ctSightRun{width:100%;margin-top:8px}.ctSightSummary{font-size:12px;color:#657067;margin-top:7px}'+
+      '.ctSightStatus{margin:8px 0;padding:8px 10px;border-radius:11px;font-size:12px;font-weight:800}.ctSightStatus.good{background:#eef9f1;color:#166d3c;border:1px solid #b9dfc5}.ctSightStatus.bad{background:#fff3f1;color:#9c382f;border:1px solid #edc7c1}.ctSightStatus.missing{background:#f2f3f0;color:#667069;border:1px solid #d8dbd5}.ctSightStatus small{display:block;margin-top:3px;font-weight:650;opacity:.9}'+
+      '.ctMushBox{border:1px solid #d7d8d0;border-radius:14px;padding:11px;background:#fff}.ctMushHead{display:flex;gap:10px;align-items:flex-start}.ctMushHead .emoji{font-size:36px}.ctMushGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0}.ctMushGrid>div{padding:8px;background:#f4f6f1;border-radius:10px}.ctMushGrid span{display:block;font-size:11px;color:#657067}.ctMushDetails{font-size:12px;line-height:1.45}.ctMushWarn{margin-top:10px;padding:10px;border-radius:11px;background:#fff0ed;border:1px solid #e5b2aa;color:#85251d;font-size:12px;line-height:1.4}'+
+      '#ctMushPreview{width:100%;max-height:300px;object-fit:contain;border-radius:12px;background:#eef1eb;margin:8px 0}'+
+      '@media(max-width:520px){.mapQuickActions{grid-template-columns:repeat(3,1fr)!important}.quickAction{min-height:64px}.quickAction span{font-size:10px}}';
+    document.head.appendChild(s);
   }
 
-  function labelFor(el){
-    return (el.getAttribute('aria-label')||el.getAttribute('title')||el.querySelector?.('span')?.textContent||el.textContent||'Funzione').trim().replace(/\s+/g,' ');
-  }
-  function descriptionFor(el){
-    if(el.dataset?.ctHelp)return el.dataset.ctHelp;
-    if(el.id&&descriptions[el.id])return descriptions[el.id];
-    const title=el.getAttribute?.('title');
-    if(title&&title.trim())return title.trim();
-    const label=labelFor(el);
-    if(!label)return '';
-    return 'Questo comando serve per: '+label.toLowerCase()+'.';
-  }
-  function showHelp(el){
-    const desc=descriptionFor(el);if(!desc)return;
-    const box=ensureTip(),name=labelFor(el);
-    box.innerHTML='<b>'+esc(name)+'</b>'+esc(desc)+'<small>Rilascia per chiudere. Il tocco normale continua a eseguire il comando.</small>';
-    box.classList.add('show');suppressClickUntil=Date.now()+750;
-    try{navigator.vibrate?.(35)}catch{}
-  }
-  function hideHelp(){clearTimeout(timer);timer=null;active=null;tip?.classList.remove('show')}
-  function start(el,e){
-    if(e.button!=null&&e.button!==0)return;
-    active=el;startX=e.clientX??0;startY=e.clientY??0;
-    clearTimeout(timer);timer=setTimeout(()=>{if(active===el)showHelp(el)},HELP_DELAY);
-  }
-  function move(e){
-    if(!active)return;const x=e.clientX??0,y=e.clientY??0;
-    if(Math.hypot(x-startX,y-startY)>14)hideHelp();
-  }
-  function bindHelp(){
-    ensureTip();
-    const candidates=document.querySelectorAll('button,.mapBtn,.quickAction,nav button,.iconBtn');
-    candidates.forEach(el=>{
-      if(el.dataset.ctLongHelpBound==='1')return;
-      const desc=descriptionFor(el);if(!desc)return;
-      el.dataset.ctLongHelpBound='1';
-      el.addEventListener('pointerdown',e=>start(el,e),{passive:true});
-      el.addEventListener('pointermove',move,{passive:true});
-      el.addEventListener('pointerup',hideHelp,{passive:true});
-      el.addEventListener('pointercancel',hideHelp,{passive:true});
-      el.addEventListener('pointerleave',hideHelp,{passive:true});
-      el.addEventListener('contextmenu',e=>{e.preventDefault();showHelp(el);setTimeout(hideHelp,2200)});
-      el.addEventListener('click',e=>{if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
-    });
+  function renameApp(){
+    document.title='Passione Funghi e Caccia';
+    const h=document.querySelector('.brand h1');if(h)h.textContent='Passione Funghi e Caccia';
+    const sm=document.querySelector('.brand small');if(sm)sm.textContent='GPS • caccia • funghi • meteo • diario • offline';
+    const q=document.querySelector('#quickTrackBtn span');if(q)q.textContent='Camminata';
+    const bird=document.querySelector('#quickSightingBtn span');if(bird)bird.textContent='Avv. uccelli';
+    const label=document.querySelector('#pointSpecies')?.closest('div')?.querySelector('label');if(label&&!mushMode)label.textContent='Uccelli / funghi trovati';
   }
 
-  const observer=new MutationObserver(()=>bindHelp());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
+  // ---------- Seguimi verde/bianco ----------
+  function syncFollow(){
+    const b=$('followBtn');if(!b)return;
+    b.classList.toggle('active',!!follow);
+    b.style.background=follow?'#173f2b':'#fff';
+    b.style.color=follow?'#fff':'#173f2b';
+    b.title=follow?'Seguimi: ATTIVO':'Seguimi: DISATTIVO';
+    b.setAttribute('aria-pressed',follow?'true':'false');
+    b.dataset.ctHelp=follow?'Seguimi attivo: la mappa segue la tua posizione. Tocca per disattivare.':'Seguimi disattivato: la mappa resta ferma. Tocca per attivare.';
+  }
+  const baseToggleFollow=toggleFollow;
+  toggleFollow=function(){baseToggleFollow();syncFollow();};
 
-  const prevBind=bind;
-  bind=function(){prevBind();bindHelp();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.11'};
-})();
-
-
-
-// V6.1.12 - Avvistamenti: confronto per giorno/ora con durata; Auto: tieni premuto e trascina + rimozione dal simbolo
-(function(){
-  const CT_PATCH_VER='6.1.12';
-  const sightResults=new Map();
-
-  function ctPad(n){return String(n).padStart(2,'0')}
-  function ctLocalDate(d){return d.getFullYear()+'-'+ctPad(d.getMonth()+1)+'-'+ctPad(d.getDate())}
-  function ctHour(v){try{return new Date(v).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{return '-'}}
-  function ctAngle(a,b){return Math.abs((((+a||0)-(+b||0)+540)%360)-180)}
-  function ctWindLocal(name){return String(name||'')==='Libeccio'?'Libeccio (Favugna)':String(name||'')}
-  function ctBaseWind(p){
-    let deg=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;
-    if(deg==null){
-      const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];
-      const n=String(p.windName||p.weather?.windName||'').replace(' (Favugna)','');
-      const ix=names.indexOf(n);if(ix>=0)deg=ix*45;
+  // ---------- Auto: un solo pulsante, trascinamento con pressione lunga ----------
+  function syncCarButton(){
+    const b=$('quickCarBtn');if(!b)return;
+    const ic=b.querySelector('b'),tx=b.querySelector('span');
+    if(state.car){
+      if(ic){ic.className='ctCarOff';ic.textContent='🚗';}
+      if(tx)tx.textContent='Rimuovi auto';
+      b.dataset.ctHelp='Rimuove il punto auto. Per spostarlo tieni premuto il simbolo dell’auto sulla mappa e trascinalo.';
+    }else{
+      if(ic){ic.className='';ic.textContent='🚗';}
+      if(tx)tx.textContent='Segna auto';
+      b.dataset.ctHelp='Memorizza dove hai parcheggiato.';
     }
-    const speed=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;
-    return {deg:deg,speed:speed};
+    const r=$('ctReturnCarBtn');if(r)r.style.display=state.car?'':'none';
   }
-  function ctWet(code){return [51,53,55,61,63,65,80,81,82,95,96,99].includes(+code)}
-  function ctSimilarity(p,h,i){
-    const base=ctBaseWind(p);
-    if(base.deg==null||base.speed==null)return {good:false,missing:true,reason:'vento storico non registrato'};
-    const dir=+h.wind_direction_10m?.[i]||0,speed=+h.wind_speed_10m?.[i]||0,rain=+h.precipitation_probability?.[i]||0,code=h.weather_code?.[i];
-    const dd=ctAngle(base.deg,dir),ds=Math.abs(base.speed-speed);
-    let good=dd<=45&&ds<=10&&rain<=55;
-    const oldCond=String(p.weather?.condition||'').toLowerCase();
-    if(oldCond){
-      const oldWet=/piogg|rovesc|tempor|piovig/.test(oldCond),newWet=ctWet(code);
-      if(oldWet!==newWet&&(oldWet||newWet))good=false;
-    }
-    return {good:good,missing:false,dd:dd,ds:ds,dir:dir,speed:speed,rain:rain,code:code};
-  }
-  function ctNearest(times,target){
-    let best=-1,bd=Infinity;
-    (times||[]).forEach(function(t,i){const d=Math.abs(new Date(t).getTime()-target.getTime());if(d<bd){bd=d;best=i}});
-    return best;
-  }
-  async function ctCheckSighting(p,target){
-    const day=ctLocalDate(target),next=new Date(target);next.setDate(next.getDate()+1);
-    const u='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(p.lat)+'&longitude='+encodeURIComponent(p.lng)+'&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date='+day+'&end_date='+ctLocalDate(next);
-    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');
-    const j=await r.json(),h=j.hourly||{},idx=ctNearest(h.time,target);if(idx<0)throw Error('Orario non disponibile');
-    const first=ctSimilarity(p,h,idx);
-    if(first.missing)return {missing:true,good:false,reason:first.reason};
-    let until=null,atLeast=false;
-    if(first.good){
-      const limit=Math.min((h.time||[]).length,idx+13);
-      let jx=idx+1;
-      for(;jx<limit;jx++){if(!ctSimilarity(p,h,jx).good)break}
-      if(jx<limit)until=h.time[jx];
-      else{until=h.time[Math.max(idx,limit-1)]||h.time[idx];atLeast=true}
-    }
-    return {good:first.good,missing:false,until:until,atLeast:atLeast,dir:first.dir,speed:first.speed,rain:first.rain,code:first.code,dd:first.dd,ds:first.ds};
-  }
-
-  function ensureSightingCheckUI(){
-    if(document.getElementById('ctSightingCheck'))return;
-    const style=document.createElement('style');
-    style.textContent='.ctSightCheck{display:none;margin:10px 0 12px;padding:11px;border:1px solid #d7d8d0;border-radius:14px;background:#f7f8f4}.ctSightGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ctSightGrid label{font-size:12px;font-weight:800;color:#536057}.ctSightGrid input{width:100%;margin-top:4px}.ctSightRun{margin-top:9px;width:100%}.ctSightSummary{font-size:12px;margin-top:7px;color:#657067}.ctSightStatus{margin-top:8px;padding:8px 10px;border-radius:11px;font-size:12px;font-weight:800}.ctSightStatus.good{background:#eef9f1;color:#13713d;border:1px solid #b9dfc5}.ctSightStatus.bad{background:#fff3f1;color:#a03a31;border:1px solid #edc7c1}.ctSightStatus.missing{background:#f2f3f0;color:#667069;border:1px solid #d8dbd5}.ctSightStatus small{display:block;margin-top:3px;font-weight:650;color:inherit;opacity:.85}@media(max-width:520px){.ctSightGrid{grid-template-columns:1fr 1fr}}';
-    document.head.appendChild(style);
-    const tabs=document.querySelector('#page-diary .tabs');if(!tabs)return;
-    const now=new Date();now.setMinutes(0,0,0);now.setHours(now.getHours()+1);
-    const box=document.createElement('div');box.id='ctSightingCheck';box.className='ctSightCheck';
-    box.innerHTML='<b>🌦 Quando vuoi partire?</b><div class="muted" style="font-size:12px;margin:3px 0 8px">Confronto ogni avvistamento con vento e meteo registrati quel giorno.</div><div class="ctSightGrid"><label>Giorno<input id="ctSightingDate" type="date" value="'+ctLocalDate(now)+'"></label><label>Ora<input id="ctSightingTime" type="time" value="'+ctPad(now.getHours())+':00"></label></div><button id="ctSightingRun" class="primary ctSightRun" type="button">● Controlla avvistamenti</button><div id="ctSightingSummary" class="ctSightSummary">Il verde indica condizioni simili e mostra fino a che ora restano simili.</div>';
-    tabs.insertAdjacentElement('afterend',box);
-    $('ctSightingRun').onclick=runSightingChecks;
-    const reset=function(){sightResults.clear();decorateSightingResults();$('ctSightingSummary').textContent='Premi Controlla avvistamenti per aggiornare il confronto.'};
-    $('ctSightingDate').addEventListener('change',reset);$('ctSightingTime').addEventListener('change',reset);
-  }
-  function toggleSightingCheck(){
-    ensureSightingCheckUI();
-    const box=$('ctSightingCheck');if(box)box.style.display=historyFilter==='sightings'?'block':'none';
-  }
-  function decorateSightingResults(){
-    const host=$('historyList');if(!host)return;
-    host.querySelectorAll('.ctSightStatus').forEach(function(x){x.remove()});
-    host.querySelectorAll('button').forEach(function(btn){
-      const code=btn.getAttribute('onclick')||'',m=code.match(/CT\.openHistoryPoint\('([^']+)'\)/);if(!m)return;
-      const res=sightResults.get(m[1]);if(!res)return;
-      const item=btn.closest('.item');if(!item)return;
-      const d=document.createElement('div');
-      if(res.missing){d.className='ctSightStatus missing';d.innerHTML='● DATI INSUFFICIENTI<small>'+esc(res.reason||'Manca il vento salvato')+'</small>'}
-      else if(res.error){d.className='ctSightStatus missing';d.innerHTML='⚠️ '+esc(res.error)}
-      else if(res.good){
-        const till=res.until?(res.atLeast?'almeno fino alle ':'fino alle ')+ctHour(res.until):'per le ore successive';
-        d.className='ctSightStatus good';d.innerHTML='● CONDIZIONI SIMILI · '+esc(till)+'<small>💨 '+esc(ctWindLocal(wname(res.dir)))+' '+wdir(res.dir)+' · '+Math.round(res.speed)+' km/h · 🌧 '+Math.round(res.rain)+'%</small>';
-      }else{
-        d.className='ctSightStatus bad';d.innerHTML='● CONDIZIONI DIVERSE<small>💨 '+esc(ctWindLocal(wname(res.dir)))+' '+wdir(res.dir)+' · '+Math.round(res.speed)+' km/h · 🌧 '+Math.round(res.rain)+'%</small>';
-      }
-      const rows=item.querySelector('.rowBtns');if(rows)item.insertBefore(d,rows);else item.appendChild(d);
-    });
-  }
-  async function runSightingChecks(){
-    const date=$('ctSightingDate')?.value,time=$('ctSightingTime')?.value||'08:00';
-    if(!date)return toast('Scegli il giorno di partenza');
-    if(!navigator.onLine)return toast('Serve Internet per confrontare le previsioni');
-    const target=new Date(date+'T'+time+':00');if(Number.isNaN(target.getTime()))return toast('Data o ora non valida');
-    const pts=(state.points||[]).filter(function(p){return p.type==='Avvistamento'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)});
-    if(!pts.length){$('ctSightingSummary').textContent='Non ci sono avvistamenti salvati da confrontare.';return}
-    const run=$('ctSightingRun');run.disabled=true;sightResults.clear();decorateSightingResults();
-    let ok=0;
-    for(let i=0;i<pts.length;i++){
-      $('ctSightingSummary').textContent='Controllo '+(i+1)+' di '+pts.length+'…';
-      try{const res=await ctCheckSighting(pts[i],target);sightResults.set(pts[i].id,res);if(res.good)ok++}
-      catch(e){sightResults.set(pts[i].id,{error:e?.message||'Errore meteo'})}
-      decorateSightingResults();
-    }
-    $('ctSightingSummary').innerHTML='<b>'+ok+'</b> avvistamenti con condizioni simili su '+pts.length+' · partenza '+esc(date)+' alle '+esc(time)+'.';
-    run.disabled=false;
-  }
-
-  const previousRenderDiary=renderDiary;
-  renderDiary=function(){previousRenderDiary();toggleSightingCheck();decorateSightingResults()};
-
-  function hideOldCarControls(){
-    const b=$('parkHereBtn'),card=b?.closest('.card');if(card)card.style.display='none';
-    const quick=$('quickCarBtn');if(quick){quick.dataset.ctHelp='Tocca per fissare l’auto nella posizione GPS attuale. Sulla mappa tieni premuta l’auto e trascina per spostarla; toccala per rimuoverla.'}
-  }
-  function carIconHtml(){return '<div style="font-size:31px;line-height:34px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>'}
-  function removeCarFromMap(){
-    try{map.closePopup()}catch{}
-    if(returnLine){try{map.removeLayer(returnLine)}catch{}returnLine=null}
+  function removeCarFinal(){
+    try{if(returnLine){map.removeLayer(returnLine);returnLine=null}}catch{}
     state.car=null;save();renderCar();toast('Posizione auto rimossa');
   }
-  function showCarRemove(marker){
-    const ll=marker.getLatLng();
-    const html='<div style="text-align:center;min-width:170px"><b>🚗 Auto salvata</b><div style="font-size:12px;margin:5px 0 9px;color:#657067">Tieni premuta e trascina l’auto per spostarla.</div><button type="button" onclick="CT.removeCarFromMap()" style="border:0;border-radius:12px;background:#a9342a;color:#fff;padding:10px 13px;font-weight:900;font-size:14px">🚫🚗 Rimuovi auto</button></div>';
-    L.popup({closeButton:true,offset:[0,-12]}).setLatLng(ll).setContent(html).openOn(map);
+  async function carToggle(){
+    if(state.car){removeCarFinal();return}
+    await parkCar();syncCarButton();
   }
-  function bindCarGesture(marker){
-    const el=marker?.getElement?.();if(!el||el.dataset.ctCarGesture==='1')return;
-    el.dataset.ctCarGesture='1';el.style.touchAction='none';
-    try{L.DomEvent.disableClickPropagation(el)}catch{}
-    let timer=null,dragging=false,sx=0,sy=0,pid=null;
-    function cancelTimer(){if(timer){clearTimeout(timer);timer=null}}
-    function down(e){
+  function bindCarDrag(marker){
+    const el=marker&&marker.getElement&&marker.getElement();if(!el||el.dataset.ctDragFinal==='1')return;
+    el.dataset.ctDragFinal='1';el.style.touchAction='none';
+    let timer=null,drag=false,pid=null,sx=0,sy=0;
+    const stopTimer=()=>{if(timer){clearTimeout(timer);timer=null}};
+    el.addEventListener('pointerdown',e=>{
       if(e.button!=null&&e.button!==0)return;
-      sx=e.clientX||0;sy=e.clientY||0;pid=e.pointerId;dragging=false;cancelTimer();
-      timer=setTimeout(function(){
-        dragging=true;try{el.setPointerCapture(pid)}catch{};try{map.dragging.disable()}catch{};
-        el.style.transform+=' scale(1.18)';toast('Trascina l’auto nel nuovo punto');
-      },550);
+      pid=e.pointerId;sx=e.clientX||0;sy=e.clientY||0;drag=false;stopTimer();
+      timer=setTimeout(()=>{drag=true;try{el.setPointerCapture(pid)}catch{};try{map.dragging.disable()}catch{};toast('Trascina l’auto nel nuovo punto')},600);
       e.stopPropagation();
-    }
-    function move(e){
-      if(!dragging){if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)cancelTimer();return}
+    },{passive:true});
+    el.addEventListener('pointermove',e=>{
+      if(!drag){if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)stopTimer();return}
       e.preventDefault();e.stopPropagation();
-      try{const ll=map.mouseEventToLatLng(e);marker.setLatLng(ll)}catch{}
-    }
-    function up(e){
-      const wasDragging=dragging;cancelTimer();
-      if(wasDragging){
-        dragging=false;try{map.dragging.enable()}catch{};
-        const ll=marker.getLatLng();state.car={lat:ll.lat,lng:ll.lng,updatedAt:new Date().toISOString()};
-        save();toast('Posizione auto spostata');
-      }else{showCarRemove(marker)}
-      e?.stopPropagation?.();
-    }
-    el.addEventListener('pointerdown',down,{passive:true});
-    el.addEventListener('pointermove',move,{passive:false});
-    el.addEventListener('pointerup',up,{passive:true});
-    el.addEventListener('pointercancel',function(e){cancelTimer();if(dragging){dragging=false;try{map.dragging.enable()}catch{}}e?.stopPropagation?.()},{passive:true});
-    el.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation()});
-  }
-
-  renderCar=function(){
-    if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
-    if(state.car){
-      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:carIconHtml(),iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
-      setTimeout(function(){bindCarGesture(carMarker)},0);
-    }
-    updateCar();
-  };
-  window.CT.removeCarFromMap=removeCarFromMap;
-
-  const previousBind=bind;
-  bind=function(){
-    previousBind();ensureSightingCheckUI();toggleSightingCheck();hideOldCarControls();renderCar();
-    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
-  };
-})();
-
-
-
-// V6.1.13 - gestione auto semplificata: nessun popup; il pulsante Segna auto diventa Rimuovi auto con barra
-(function(){
-  const CT_PATCH_VER='6.1.14';
-
-  function refreshQuickCarButton(){
-    const b=$('quickCarBtn');if(!b)return;
-    const icon=b.querySelector('b'),label=b.querySelector('span');
-    if(state.car){
-      if(icon)icon.textContent='🚫🚗';
-      if(label)label.textContent='Rimuovi auto';
-      b.classList.add('danger');
-      b.dataset.ctHelp='Rimuove subito la posizione dell’auto salvata. Per spostarla, tieni premuto il simbolo dell’auto sulla mappa e trascinalo.';
-      b.setAttribute('aria-label','Rimuovi auto');
-      b.title='Rimuovi auto';
-    }else{
-      if(icon)icon.textContent='🚗';
-      if(label)label.textContent='Segna auto';
-      b.classList.remove('danger');
-      b.dataset.ctHelp='Memorizza la posizione GPS attuale dell’auto.';
-      b.setAttribute('aria-label','Segna auto');
-      b.title='Segna auto';
-    }
-  }
-
-  function removeCarSimple(){
-    try{map.closePopup()}catch{}
-    if(returnLine){try{map.removeLayer(returnLine)}catch{}returnLine=null}
-    state.car=null;save();renderCar();refreshQuickCarButton();toast('Posizione auto rimossa');
-  }
-
-  function bindQuickCarToggle(){
-    const b=$('quickCarBtn');if(!b)return;
-    b.onclick=async function(e){
-      e?.preventDefault?.();e?.stopPropagation?.();
-      if(state.car){removeCarSimple();return}
-      await parkCar();
-      refreshQuickCarButton();
-    };
-  }
-
-  function bindCarDragOnly(marker){
-    const el=marker?.getElement?.();if(!el||el.dataset.ctCarGestureV613==='1')return;
-    el.dataset.ctCarGestureV613='1';el.style.touchAction='none';
-    try{L.DomEvent.disableClickPropagation(el)}catch{}
-    let timer=null,dragging=false,sx=0,sy=0,pid=null,longReady=false;
-    function cancel(){if(timer){clearTimeout(timer);timer=null}}
-    function down(e){
-      if(e.button!=null&&e.button!==0)return;
-      sx=e.clientX||0;sy=e.clientY||0;pid=e.pointerId;dragging=false;longReady=false;cancel();
-      timer=setTimeout(function(){
-        longReady=true;dragging=true;
-        try{el.setPointerCapture(pid)}catch{}
-        try{map.dragging.disable()}catch{}
-        toast('Trascina l’auto nel nuovo punto');
-      },550);
-      e.stopPropagation();
-    }
-    function move(e){
-      if(!dragging){if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)cancel();return}
-      e.preventDefault();e.stopPropagation();
-      try{const ll=map.mouseEventToLatLng(e);marker.setLatLng(ll)}catch{}
-    }
-    function up(e){
-      const moved=dragging&&longReady;cancel();
+      try{marker.setLatLng(map.mouseEventToLatLng(e))}catch{}
+    },{passive:false});
+    const finish=e=>{
+      const moved=drag;stopTimer();
       if(moved){
-        dragging=false;longReady=false;try{map.dragging.enable()}catch{}
-        const ll=marker.getLatLng();state.car={lat:ll.lat,lng:ll.lng,updatedAt:new Date().toISOString()};
-        save();refreshQuickCarButton();toast('Posizione auto spostata');
+        drag=false;try{map.dragging.enable()}catch{}
+        const ll=marker.getLatLng();state.car={lat:ll.lat,lng:ll.lng,updatedAt:new Date().toISOString()};save();updateCar();toast('Posizione auto spostata');
       }
-      e?.stopPropagation?.();
-    }
-    el.addEventListener('pointerdown',down,{passive:true});
-    el.addEventListener('pointermove',move,{passive:false});
-    el.addEventListener('pointerup',up,{passive:true});
-    el.addEventListener('pointercancel',function(e){cancel();if(dragging){dragging=false;longReady=false;try{map.dragging.enable()}catch{}}e?.stopPropagation?.()},{passive:true});
-    el.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation()});
-    el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation()},{capture:true});
+      if(e)e.stopPropagation();
+    };
+    el.addEventListener('pointerup',finish,{passive:true});
+    el.addEventListener('pointercancel',finish,{passive:true});
+    el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()},{capture:true});
+    el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation()});
   }
-
+  function ensureReturnCarButton(){
+    if($('ctReturnCarBtn'))return;
+    const left=document.querySelector('.mapTools.left');if(!left)return;
+    const b=document.createElement('button');b.id='ctReturnCarBtn';b.className='mapBtn';b.title='Rientro auto';b.textContent='↩🚗';b.style.fontSize='14px';left.appendChild(b);
+    b.onclick=carReturn;b.dataset.ctHelp='Mostra la linea di rientro verso l’auto salvata.';
+  }
   renderCar=function(){
-    try{map.closePopup()}catch{}
     if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
     if(state.car){
-      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:31px;line-height:34px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
-      setTimeout(function(){bindCarDragOnly(carMarker)},0);
+      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:30px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
+      setTimeout(()=>bindCarDrag(carMarker),0);
     }
-    updateCar();refreshQuickCarButton();
+    updateCar();syncCarButton();
+  };
+  function hideOldAutoCard(){const p=$('parkHereBtn');const c=p&&p.closest('.card');if(c)c.style.display='none';}
+
+  // ---------- Avvistamenti: scegli giorno/ora e mostra verde/rosso + fino a ----------
+  const pad=n=>String(n).padStart(2,'0');
+  function localDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+  function hour(v){try{return new Date(v).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{return '-'}}
+  function windName(deg){const a=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];return a[Math.round((((+deg||0)%360)+360)%360/45)%8]}
+  function windDir(deg){const a=['N','NE','E','SE','S','SO','O','NO'];return a[Math.round((((+deg||0)%360)+360)%360/45)%8]}
+  function ang(a,b){return Math.abs((((+a||0)-(+b||0)+540)%360)-180)}
+  function baseWind(p){
+    let d=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;
+    if(d==null){
+      const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];
+      let n=String(p.windName||p.weather?.windName||'').replace(/\s*\(.*?\)\s*/g,'').trim();const i=names.indexOf(n);if(i>=0)d=i*45;
+    }
+    const s=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;
+    return {d,s};
+  }
+  function nearest(times,t){let ix=-1,bd=Infinity;(times||[]).forEach((x,i)=>{const q=Math.abs(new Date(x).getTime()-t.getTime());if(q<bd){bd=q;ix=i}});return ix}
+  function similar(p,h,i){
+    const b=baseWind(p);if(b.d==null||b.s==null)return {ok:false,missing:true};
+    const d=+h.wind_direction_10m?.[i]||0,s=+h.wind_speed_10m?.[i]||0,r=+h.precipitation_probability?.[i]||0;
+    return {ok:ang(b.d,d)<=45&&Math.abs(b.s-s)<=10&&r<=55,missing:false,d,s,r};
+  }
+  async function checkSighting(p,target){
+    const next=new Date(target);next.setDate(next.getDate()+1);
+    const url='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(p.lat)+'&longitude='+encodeURIComponent(p.lng)+'&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date='+localDate(target)+'&end_date='+localDate(next);
+    const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw Error('Meteo non disponibile');
+    const j=await res.json(),h=j.hourly||{},i=nearest(h.time,target);if(i<0)throw Error('Orario non disponibile');
+    const now=similar(p,h,i);if(now.missing)return {missing:true,ok:false};
+    let until=null;
+    if(now.ok){let k=i+1;for(;k<Math.min(h.time.length,i+13);k++)if(!similar(p,h,k).ok)break;until=h.time[Math.min(k,h.time.length-1)]||null}
+    let change=null;for(let k=i+1;k<Math.min(h.time.length,i+13);k++){if(ang(now.d,+h.wind_direction_10m[k]||0)>=45||Math.abs(now.s-(+h.wind_speed_10m[k]||0))>=12){change=h.time[k];break}}
+    return {ok:now.ok,missing:false,d:now.d,s:now.s,r:now.r,until,change};
+  }
+  function ensureSightCheck(){
+    if($('ctSightingCheck'))return;
+    const tabs=document.querySelector('#page-diary .tabs');if(!tabs)return;
+    const d=new Date();d.setHours(d.getHours()+1,0,0,0);
+    const box=document.createElement('div');box.id='ctSightingCheck';box.className='ctSightCheck';
+    box.innerHTML='<b>🌦 Quando vuoi partire?</b><div class="muted" style="margin:3px 0 8px">Confronto gli avvistamenti uccelli con vento e meteo registrati.</div><div class="ctSightGrid"><label>Giorno<input id="ctSightingDate" type="date" value="'+localDate(d)+'"></label><label>Ora<input id="ctSightingTime" type="time" value="'+pad(d.getHours())+':00"></label></div><button id="ctSightingRun" class="primary ctSightRun" type="button">● Controlla avvistamenti</button><div id="ctSightingSummary" class="ctSightSummary">Verde = condizioni simili; mostro anche fino a quando restano simili.</div>';
+    tabs.insertAdjacentElement('afterend',box);$('ctSightingRun').onclick=runSightChecks;
+  }
+  async function runSightChecks(){
+    const date=$('ctSightingDate')?.value,time=$('ctSightingTime')?.value||'08:00';if(!date)return toast('Scegli il giorno');
+    if(!navigator.onLine)return toast('Serve Internet per controllare le previsioni');
+    const target=new Date(date+'T'+time+':00'),pts=(state.points||[]).filter(p=>p.type==='Avvistamento'&&p.sightingKind!=='mushroom'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
+    if(!pts.length){$('ctSightingSummary').textContent='Nessun avvistamento uccelli salvato.';return}
+    sightChecks.clear();let good=0;$('ctSightingRun').disabled=true;
+    for(let i=0;i<pts.length;i++){
+      $('ctSightingSummary').textContent='Controllo '+(i+1)+' di '+pts.length+'…';
+      try{const z=await checkSighting(pts[i],target);sightChecks.set(pts[i].id,z);if(z.ok)good++}catch(e){sightChecks.set(pts[i].id,{error:e.message||'Errore'})}
+      decorateSightChecks();
+    }
+    $('ctSightingSummary').innerHTML='<b>'+good+'</b> avvistamenti con condizioni simili su '+pts.length+' · '+date+' alle '+time+'.';$('ctSightingRun').disabled=false;
+  }
+  function decorateSightChecks(){
+    const host=$('historyList');if(!host)return;
+    host.querySelectorAll('.ctSightStatus').forEach(x=>x.remove());
+    host.querySelectorAll('button').forEach(btn=>{
+      const code=btn.getAttribute('onclick')||'',m=code.match(/CT\.openHistoryPoint\('([^']+)'\)/);if(!m)return;
+      const z=sightChecks.get(m[1]);if(!z)return;
+      const item=btn.closest('.item');if(!item)return;const box=document.createElement('div');
+      if(z.error){box.className='ctSightStatus missing';box.textContent='⚠️ '+z.error}
+      else if(z.missing){box.className='ctSightStatus missing';box.innerHTML='● DATI INSUFFICIENTI<small>Manca il vento salvato per il confronto.</small>'}
+      else if(z.ok){box.className='ctSightStatus good';box.innerHTML='● CONDIZIONI SIMILI'+(z.until?' · fino alle '+hour(z.until):'')+'<small>💨 '+windName(z.d)+' '+windDir(z.d)+' · '+Math.round(z.s)+' km/h · 🌧 '+Math.round(z.r)+'%'+(z.change?' · cambio vento '+hour(z.change):'')+'</small>'}
+      else{box.className='ctSightStatus bad';box.innerHTML='● CONDIZIONI DIVERSE<small>💨 '+windName(z.d)+' '+windDir(z.d)+' · '+Math.round(z.s)+' km/h · 🌧 '+Math.round(z.r)+'%'+(z.change?' · cambio vento '+hour(z.change):'')+'</small>'}
+      const row=item.querySelector('.rowBtns');row?item.insertBefore(box,row):item.appendChild(box);
+    });
+  }
+
+  // ---------- Funghi: salvataggio e riconoscimento fotografico ----------
+  const MUSH={
+    'amanita muscaria':['Amanita muscaria (ovolo malefico)','Potenzialmente tossico','ALTO','Cappello rosso/arancio con verruche bianche.','Lamelle bianche e libere.','Gambo bianco con anello e base bulbosa.','Boschi di latifoglie e conifere.','Estate-autunno.'],
+    'amanita phalloides':['Amanita phalloides (tignosa verdognola)','Velenoso, potenzialmente mortale','MASSIMO','Cappello verdastro, giallo-oliva o quasi bianco.','Lamelle bianche e libere.','Gambo chiaro con anello e volva evidente.','Boschi di latifoglie.','Estate-autunno.'],
+    'armillaria mellea':['Armillaria mellea (chiodino)','Può causare disturbi; non considerarlo sicuro','MEDIO','Cappello color miele con piccole squame.','Lamelle chiare.','Gambo fibroso con anello.','Cespi su ceppaie, radici e legno.','Autunno.'],
+    'cerioporus squamosus':['Cerioporus squamosus (poliporo squamoso)','Non tipicamente segnalato come velenoso; non significa commestibile','INCERTO','Grande cappello a ventaglio con squame brune.','Pori chiari.','Gambo laterale o eccentrico.','Tronchi e ceppaie di latifoglie.','Primavera-estate.'],
+    'chlorophyllum brunneum':['Chlorophyllum brunneum','Può causare intossicazione gastrointestinale','MEDIO','Grande cappello con squame brune.','Lamelle bianche poi crema.','Gambo con anello e base spesso bulbosa.','Parchi, giardini e terreni ricchi.','Estate-autunno.'],
+    'clitocybe nuda':['Lepista nuda / Clitocybe nuda','Possibili disturbi; serve conferma esperta','MEDIO','Cappello lilla-violaceo.','Lamelle fitte color lilla.','Gambo robusto violaceo.','Boschi e lettiera ricca.','Autunno-inizio inverno.'],
+    'coprinellus micaceus':['Coprinellus micaceus','Non tipicamente segnalato come velenoso; non significa commestibile','INCERTO','Cappello campanulato bruno-miele.','Lamelle da chiare a nere.','Gambo bianco sottile e cavo.','Legno interrato, ceppaie e radici.','Primavera-autunno.'],
+    'coprinus comatus':['Coprinus comatus (coprino chiomato)','Non tipicamente segnalato come velenoso; non significa commestibile','INCERTO','Cappello cilindrico bianco con squame arruffate.','Lamelle da bianche a rosa e poi nere.','Gambo bianco con piccolo anello.','Prati e terreni disturbati.','Primavera-autunno.'],
+    'flammulina velutipes':['Flammulina velutipes','Rischio elevato di confusione con specie pericolose','ALTO','Cappello giallo-arancio, viscido con umidità.','Lamelle chiare.','Gambo sottile, più scuro alla base.','Tronchi e ceppaie.','Tardo autunno-inverno.'],
+    'gliophorus psittacinus':['Gliophorus psittacinus','Tossicità non determinabile in sicurezza dalla foto','INCERTO','Piccolo e viscido, verde-giallo.','Lamelle cerose e distanziate.','Gambo viscido giallo-verde.','Prati e pascoli.','Fine estate-autunno.'],
+    'hygrophoropsis aurantiaca':['Hygrophoropsis aurantiaca (falso finferlo)','Può causare disturbi gastrointestinali','MEDIO','Cappello arancio depresso al centro.','Lamelle fitte, forcate e decorrenti.','Gambo arancio.','Boschi di conifere.','Estate-autunno.'],
+    'hypholoma lateritium':['Hypholoma lateritium','Valutazione alimentare controversa; non usarlo per consumo','INCERTO','Cappello rosso mattone.','Lamelle grigiastre poi porpora-brune.','Gambo giallastro.','Ceppaie e legno morto.','Autunno.'],
+    'stereum hirsutum':['Stereum hirsutum','Non tipicamente segnalato come velenoso; non è fungo alimentare','BASSO','Mensole sottili giallo-arancio e pelose.','Superficie inferiore liscia.','Gambo assente.','Legno morto di latifoglie.','Tutto l’anno.'],
+    'suillus luteus':['Suillus luteus (pinarolo)','Può causare disturbi in alcune persone','MEDIO','Cappello bruno e molto viscido.','Pori gialli.','Gambo giallastro con anello.','Associato soprattutto ai pini.','Estate-autunno.'],
+    'tricholomopsis rutilans':['Tricholomopsis rutilans','Tossicità/commestibilità non determinabile in sicurezza','INCERTO','Cappello giallo con squame porpora-rossastre.','Lamelle gialle.','Gambo giallo con fibrille rossastre.','Legno di conifere.','Estate-autunno.'],
+    'tylopilus felleus':['Tylopilus felleus (porcino di fiele)','Non tipicamente velenoso, ma non considerarlo commestibile','BASSO','Cappello bruno simile ad alcuni porcini.','Pori chiari poi rosati.','Gambo con reticolo scuro.','Boschi di conifere e latifoglie.','Estate-autunno.']
+  };
+  function mushroomInfo(label){
+    const n=String(label||'').replace(/_/g,' ').trim().toLowerCase();let a=MUSH[n];
+    if(!a)for(const k of Object.keys(MUSH))if(n.includes(k)||k.includes(n)){a=MUSH[k];break}
+    if(!a)a=[String(label||'Specie non determinata').replace(/_/g,' '),'Non determinabile in sicurezza','SCONOSCIUTO','—','—','—','—','—'];
+    return {name:a[0],tox:a[1],risk:a[2],cap:a[3],hym:a[4],stem:a[5],hab:a[6],season:a[7]};
+  }
+  function mushWarning(){return '<div class="ctMushWarn"><b>⚠️ Riconoscimento indicativo.</b><br>La foto può essere sbagliata o appartenere a una specie che il modello non conosce. Non mangiare o assaggiare un fungo basandoti sull’app: per il consumo serve il controllo di un micologo / Ispettorato Micologico ASL.</div>'}
+  function mushCard(label,conf){
+    const d=mushroomInfo(label),pct=Number.isFinite(conf)?Math.round(conf*100):null;
+    return '<div class="ctMushBox"><div class="ctMushHead"><div class="emoji">🍄</div><div><b style="font-size:17px">'+esc(d.name)+'</b>'+(pct!=null?'<div class="muted">Corrispondenza fotografica indicativa: '+pct+'%</div>':'')+'</div></div><div class="ctMushGrid"><div><span>Tossicità indicativa</span><b>'+esc(d.tox)+'</b></div><div><span>Rischio</span><b>'+esc(d.risk)+'</b></div></div><div class="ctMushDetails"><b>Cappello</b><br>'+esc(d.cap)+'<br><b>Lamelle / pori</b><br>'+esc(d.hym)+'<br><b>Gambo</b><br>'+esc(d.stem)+'<br><b>Habitat</b><br>'+esc(d.hab)+'<br><b>Periodo</b><br>'+esc(d.season)+'</div>'+mushWarning()+'</div>';
+  }
+  function parsePrediction(v){
+    const seen=new Set();
+    function walk(x){
+      if(x==null)return null;if(typeof x==='string'&&x.length>2)return {label:x,confidence:null};
+      if(typeof x!=='object'||seen.has(x))return null;seen.add(x);
+      if(typeof x.label==='string')return {label:x.label,confidence:Number.isFinite(+x.confidence)?+x.confidence:null};
+      if(Array.isArray(x.confidences)&&x.confidences.length){const a=[...x.confidences].sort((a,b)=>(+b.confidence||0)-(+a.confidence||0))[0];if(a&&a.label)return {label:a.label,confidence:+a.confidence||null}}
+      const nums=Object.entries(x).filter(e=>typeof e[1]==='number'&&Number.isFinite(e[1]));if(nums.length>=2){nums.sort((a,b)=>b[1]-a[1]);return {label:nums[0][0],confidence:nums[0][1]}}
+      if(Array.isArray(x)){for(const z of x){const r=walk(z);if(r)return r}}else{for(const z of Object.values(x)){const r=walk(z);if(r)return r}}
+      return null;
+    }return walk(v);
+  }
+  async function identifyMushroom(file,target){
+    target.innerHTML='<div class="empty">🔎🍄 Analizzo la foto…</div>';
+    try{
+      const mod=await import('https://cdn.jsdelivr.net/npm/@gradio/client/+esm');
+      const client=await mod.Client.connect('gaglileoo/MushroomWiseAI');
+      const hf=await mod.handle_file(file);let out=null,err=null;
+      try{out=await client.predict('/predict',[hf])}catch(e){err=e}
+      if(!out){
+        try{const api=await client.view_api(),names=Object.keys(api&&api.named_endpoints||{});for(const ep of names){try{out=await client.predict(ep,[hf]);if(out)break}catch(e){err=e}}}catch(e){err=e}
+      }
+      if(!out)throw err||Error('Servizio di riconoscimento non disponibile');
+      const p=parsePrediction(out);if(!p||!p.label)throw Error('Risposta non interpretabile');
+      const d=mushroomInfo(p.label);mushAnalysis={raw:p.label,label:d.name,confidence:p.confidence,tox:d.tox,risk:d.risk,at:new Date().toISOString()};
+      target.innerHTML=mushCard(p.label,p.confidence);
+      if(mushMode&&$('pointSpecies'))$('pointSpecies').value=d.name;
+      if($('ctMushSave'))$('ctMushSave').hidden=false;
+    }catch(e){
+      console.warn('Mushroom identify',e);mushAnalysis=null;
+      target.innerHTML='<div class="ctMushBox"><b>Riconoscimento automatico non disponibile in questo momento.</b><div class="muted" style="margin-top:5px">La foto resta visibile e puoi riprovare con Internet attivo.</div><button id="ctMushExternal" class="secondary wide" type="button" style="margin-top:8px">🌐 Apri riconoscimento esterno</button>'+mushWarning()+'</div>';
+      setTimeout(()=>{const b=$('ctMushExternal');if(b)b.onclick=()=>window.open('https://huggingface.co/spaces/gaglileoo/MushroomWiseAI','_blank','noopener')},0);
+    }
+  }
+  const toData=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
+  function ensureMushModal(){
+    if($('ctMushModal'))return;
+    const m=document.createElement('div');m.id='ctMushModal';m.className='modal';
+    m.innerHTML='<div class="dialog" style="max-width:720px;max-height:94vh;overflow:auto"><div class="sectionHead"><div><h2>🔎🍄 Vedi specie</h2><div class="muted">Scatta o scegli una foto del fungo</div></div><button id="ctMushClose" class="iconBtn">✕</button></div><div class="field"><label>Foto fungo</label><input id="ctMushFile" type="file" accept="image/*" capture="environment"></div><img id="ctMushPreview" hidden alt="Foto fungo"><div id="ctMushResult">'+mushWarning()+'</div><div class="actionGrid"><button id="ctMushAgain" class="secondary" type="button">📷 Altra foto</button><button id="ctMushSave" class="primary" type="button" hidden>📍 Salva fungo qui</button></div></div>';
+    document.body.appendChild(m);$('ctMushClose').onclick=()=>m.classList.remove('open');m.onclick=e=>{if(e.target===m)m.classList.remove('open')};$('ctMushAgain').onclick=()=>$('ctMushFile').click();
+    $('ctMushFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;mushPhotoData=await toData(f);const im=$('ctMushPreview');im.src=mushPhotoData;im.hidden=false;$('ctMushSave').hidden=true;await identifyMushroom(f,$('ctMushResult'))};
+    $('ctMushSave').onclick=async()=>{const before=new Set(state.points.map(x=>x.id));await saveCurrent('Avvistamento',false);const p=state.points.find(x=>!before.has(x.id));if(!p)return;p.sightingKind='mushroom';p.name=mushAnalysis?.label||'Fungo trovato';p.species=mushAnalysis?.label||'Fungo da identificare';p.photo=mushPhotoData||null;p.mushroomAnalysis=mushAnalysis||null;save();renderMarkers();m.classList.remove('open');fillModal(p);toast('Fungo salvato sulla mappa')};
+  }
+  function openMushSpecies(){ensureMushModal();mushAnalysis=null;mushPhotoData=null;$('ctMushFile').value='';const im=$('ctMushPreview');im.hidden=true;im.removeAttribute('src');$('ctMushResult').innerHTML=mushWarning();$('ctMushSave').hidden=true;$('ctMushModal').classList.add('open')}
+  async function quickMush(){
+    const before=new Set(state.points.map(x=>x.id));await saveCurrent('Avvistamento',false);const p=state.points.find(x=>!before.has(x.id));if(!p)return;
+    p.sightingKind='mushroom';p.name='Fungo trovato';save();renderMarkers();fillModal(p);
+  }
+  function mushIcon(){return L.divIcon({className:'',html:'<div class="ctMushPin">🍄</div>',iconSize:[39,39],iconAnchor:[19,35]})}
+
+  // conserva il filtro giorno per postazioni, ma gli avvistamenti restano sempre visibili
+  renderMarkers=function(){
+    if(!markerLayer)return;markerLayer.clearLayers();
+    const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||new Date().toISOString().slice(0,10);
+    (state.points||[]).forEach(p=>{
+      if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
+      const ic=p.type==='Avvistamento'&&p.sightingKind==='mushroom'?mushIcon():icon(p.type);
+      const m=L.marker([p.lat,p.lng],{icon:ic}).addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
+    });
   };
 
-  const previousBind613=bind;
+  const baseFill=fillModal;
+  fillModal=function(p){
+    mushMode=!!(p&&p.sightingKind==='mushroom');mushAnalysis=p?.mushroomAnalysis||null;baseFill(p);
+    const lab=$('pointSpecies')?.closest('div')?.querySelector('label');if(lab)lab.textContent=mushMode?'🍄 Funghi trovati / specie':'Uccelli / funghi trovati';
+    if($('pointSpecies'))$('pointSpecies').placeholder=mushMode?'es. porcino, amanita, russula…':'es. tordi, colombacci, porcini…';
+    const dayLab=$('pointHuntDate')?.closest('div')?.querySelector('label');if(dayLab)dayLab.textContent=mushMode?'Giorno dell’uscita':'Giorno della caccia';
+    const photo=$('pointPhoto');if(!photo)return;
+    photo.onchange=null;
+    let extra=$('ctPointMush');if(!mushMode){extra&&extra.remove();photo.removeAttribute('capture');return}
+    photo.setAttribute('capture','environment');
+    if(!extra){extra=document.createElement('div');extra.id='ctPointMush';extra.className='full';photo.closest('.full')?.insertAdjacentElement('afterend',extra)}
+    extra.innerHTML=p?.mushroomAnalysis?mushCard(p.mushroomAnalysis.raw||p.species,p.mushroomAnalysis.confidence):'<button id="ctPointMushSearch" class="secondary wide" type="button">🔎🍄 Vedi specie dalla foto</button>'+mushWarning();
+    if($('ctPointMushSearch'))$('ctPointMushSearch').onclick=()=>photo.click();
+    photo.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;mushPhotoData=await toData(f);$('pointPhotoPreview').innerHTML='<img src="'+mushPhotoData+'" style="max-width:100%;border-radius:12px">';await identifyMushroom(f,extra)};
+  };
+  const baseSavePoint=savePoint;
+  savePoint=async function(){
+    const id=editing,was=mushMode,a=mushAnalysis;await baseSavePoint();
+    if(was&&id){const p=state.points.find(x=>x.id===id);if(p){p.sightingKind='mushroom';if(a)p.mushroomAnalysis=a;save();renderMarkers()}}
+  };
+
+  const baseRenderDiary=renderDiary;
+  renderDiary=function(){
+    baseRenderDiary();ensureSightCheck();const b=$('ctSightingCheck');if(b)b.style.display=historyFilter==='sightings'?'block':'none';
+    (state.points||[]).filter(p=>p.sightingKind==='mushroom').forEach(p=>{
+      const btn=[...document.querySelectorAll('#historyList button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+p.id+"'")),item=btn?.closest('.item');if(!item)return;
+      const title=item.querySelector('b');if(title)title.textContent='🍄 '+(p.species||p.name||'Fungo trovato');
+      [...item.querySelectorAll('div')].forEach(d=>{if(/Giorno caccia/.test(d.textContent||''))d.innerHTML=d.innerHTML.replace('Giorno caccia','Giorno uscita')});
+      if(p.mushroomAnalysis&&!item.querySelector('.ctMushMini')){const z=document.createElement('div');z.className='snap ctMushMini';z.innerHTML='🍄 <b>'+esc(p.mushroomAnalysis.label||p.species||'Specie proposta')+'</b> · rischio '+esc(p.mushroomAnalysis.risk||'sconosciuto');const row=item.querySelector('.rowBtns');row?item.insertBefore(z,row):item.appendChild(z)}
+    });
+    decorateSightChecks();
+  };
+
+  const basePointShare=pointShareText;
+  pointShareText=function(p){
+    if(!p||p.sightingKind!=='mushroom'){
+      const t=basePointShare(p);return String(t).replaceAll('CacciaTraccia Italia','Passione Funghi e Caccia');
+    }
+    const a=p.mushroomAnalysis;
+    return (p.species||p.name||'Fungo trovato')+'\nTipo: Fungo trovato\nData/ora: '+when(p.createdAt)+'\nGiorno uscita: '+(p.huntDate||'-')+'\nCoordinate: '+p.lat+', '+p.lng+'\nTossicità indicativa: '+(a?.tox||'non determinabile in sicurezza')+'\nRischio: '+(a?.risk||'sconosciuto')+'\nVento: '+(p.windName||p.weather?.windName||'-')+' '+(p.windSpeed??p.weather?.windSpeed??'-')+' km/h\nNote: '+(p.notes||'-')+'\nATTENZIONE: la foto non certifica specie o commestibilità.\nGoogle Maps: https://www.google.com/maps?q='+p.lat+','+p.lng;
+  };
+
+  const oldOpenHistory=window.CT&&window.CT.openHistoryPoint;
+  if(oldOpenHistory)window.CT.openHistoryPoint=async function(id){const r=await oldOpenHistory(id);const p=state.points.find(x=>x.id===id);if(p?.sightingKind==='mushroom'&&$('selectedTitle'))$('selectedTitle').textContent='🍄 '+(p.species||p.name||'Fungo trovato');return r};
+
+  // ---------- bind finale ----------
+  const baseBind=bind;
   bind=function(){
-    previousBind613();
-    bindQuickCarToggle();refreshQuickCarButton();renderCar();
-    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
+    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();hideOldAutoCard();ensureMushModal();ensureSightCheck();
+    const f=$('followBtn');if(f){f.onclick=()=>{toggleFollow();syncFollow()};syncFollow()}
+    const car=$('quickCarBtn');if(car)car.onclick=carToggle;
+    const mush=$('quickMushroomBtn');if(mush){mush.onclick=quickMush;mush.dataset.ctHelp='Salva un fungo trovato nella posizione GPS attuale.'}
+    const search=$('quickSpeciesBtn');if(search){search.onclick=openMushSpecies;search.dataset.ctHelp='Scatta o scegli una foto: l’app propone una specie e ne mostra le caratteristiche.'}
+    const backup=$('backupQuickBtn');if(backup)backup.onclick=()=>showPage('backup');
+    map?.on('dragstart',()=>{if(follow){follow=false;syncFollow()}});
+    syncCarButton();renderCar();
+    const v=$('ctVersionBadge');if(v)v.textContent='• V'+FINAL_VER;
   };
 
-  window.CT.removeCarFromMap=removeCarSimple;
+  const baseRenderAll=renderAll;
+  renderAll=function(){baseRenderAll();renameApp();syncFollow();syncCarButton()};
 })();
