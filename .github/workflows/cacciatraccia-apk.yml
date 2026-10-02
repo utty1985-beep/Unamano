@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia APK 6.3.4 FINAL
+name: Build Passione Funghi e Caccia APK 6.3.8 FINAL
 on:
   workflow_dispatch:
   push:
@@ -61,8 +61,8 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/cacciatraccia-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6304' versionName='6.3.4'" /tmp/cacciatraccia-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.4-FINAL-UNSIGNED.apk
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6308' versionName='6.3.8'" /tmp/cacciatraccia-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.8-FINAL-UNSIGNED.apk
       - name: Bundle signing tools
         run: |
           mkdir -p app/build/signing-tools/lib
@@ -70,9 +70,9 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.3.4-FINAL-build
+          name: Passione-Funghi-e-Caccia-v6.3.8-FINAL-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.4-FINAL-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.8-FINAL-UNSIGNED.apk
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
