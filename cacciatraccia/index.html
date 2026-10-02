@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link id="maplibreCss" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.11.2/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css'" />
-  <link rel="stylesheet" href="styles.css?v=4.1.2" />
+  <link rel="stylesheet" href="styles.css?v=4.1.3" />
   <title>Passione Funghi e Caccia</title>
 </head>
 <body>
@@ -124,12 +124,110 @@
     </div>
     <div class="card"><h3>📦 Uso con poco Internet</h3><ul class="plain"><li>L’app e i dati locali restano disponibili dopo il primo caricamento online.</li><li>Le porzioni di mappa già visualizzate vengono conservate nella cache del dispositivo quando il browser lo consente.</li><li>Il GPS e il salvataggio dei punti funzionano senza rete; il meteo nuovo richiede rete, ma resta visibile l’ultimo meteo già salvato.</li></ul><button id="persistBtn" class="secondary">Proteggi archiviazione locale</button></div>
   </section>
+
+  <section id="page-guide" class="page">
+    <div class="card guideHero">
+      <div class="guideHeroIcon">❓</div>
+      <div>
+        <h2>Guida / Promemoria</h2>
+        <p>Qui trovi le funzioni principali di Passione Funghi e Caccia. Le immagini riprendono i simboli dei tasti reali dell'app.</p>
+        <div class="notice">💡 <b>Promemoria rapido:</b> su molti tasti puoi fare una <b>pressione prolungata</b> per vedere una spiegazione contestuale.</div>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h2>🗺 Mappa e GPS</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">◎</div><div><b>Mia posizione</b><p>Centra la mappa sulla posizione GPS attuale.</p></div></div>
+        <div class="guideItem"><div class="guidePic">➤</div><div><b>Seguimi</b><p>Fa seguire alla mappa i tuoi spostamenti. Quando è attivo il comando resta evidenziato.</p></div></div>
+        <div class="guideItem"><div class="guidePic">N</div><div><b>Nord in alto</b><p>Riporta subito la mappa con il Nord verso l'alto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">↶ ↷</div><div><b>Ruota mappa</b><p>Ruota la visuale a sinistra o a destra senza perdere il punto GPS.</p></div></div>
+        <div class="guideItem"><div class="guidePic">◫</div><div><b>Livelli mappa</b><p>Passa tra mappa stradale, satellite e livelli disponibili come il vento.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🔎</div><div><b>Cerca luogo</b><p>Cerca località, indirizzi o inserisci direttamente coordinate GPS.</p></div></div>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h2>📌 Punti, avvistamenti e auto</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">📌</div><div><b>Salva punto</b><p>Memorizza la posizione attuale. Puoi poi rinominarla, scegliere il giorno, aggiungere note, vento e foto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🕊️</div><div><b>Avvistamento uccelli</b><p>Registra un avvistamento con posizione, specie, data/ora e condizioni meteo. Rimane nello storico.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🍄</div><div><b>Funghi trovati</b><p>Salva sulla mappa il ritrovamento di funghi con posizione, note e foto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🔎🍄</div><div><b>Vedi specie</b><p>Usa la foto per avere un'indicazione sulla possibile specie di fungo.</p><small>⚠️ Il riconoscimento fotografico è solo indicativo: non usare l'app per decidere se un fungo è commestibile.</small></div></div>
+        <div class="guideItem"><div class="guidePic">🚗</div><div><b>Segna auto</b><p>Memorizza dove hai parcheggiato. Puoi visualizzare il punto e avviare il rientro verso l'auto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🧭</div><div><b>Google Maps / partenza</b><p>Apre le indicazioni stradali verso il punto selezionato quando vuoi raggiungerlo.</p></div></div>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h2>🌦 Meteo, vento e appostamenti</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">🌦</div><div><b>Meteo del punto</b><p>Mostra previsioni, vento, raffiche e probabilità di pioggia sul punto scelto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🌬️</div><div><b>Vento</b><p>Mostra direzione e intensità. L'app usa anche i nomi tradizionali dei venti, compresa la dicitura locale quando prevista.</p></div></div>
+        <div class="guideItem"><div class="guidePic">?</div><div><b>Verifica condizioni</b><p>Confronta le condizioni previste con quelle salvate negli appostamenti e segnala se restano simili o cambiano.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🌧️</div><div><b>Pioggia / cambio vento</b><p>Indica la probabilità di pioggia e, quando disponibile, quando potrebbe cambiare il vento.</p></div></div>
+        <div class="guideItem"><div class="guidePic">📥</div><div><b>Area offline</b><p>Prepara una zona di mappa per l'uso con poca rete. GPS e dati già salvati restano utilizzabili offline.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🛰️</div><div><b>Satellite</b><p>Visualizza il terreno dall'alto per riconoscere strade, campi, boschi e riferimenti.</p></div></div>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h2>🥾 Camminata</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">▶</div><div><b>Inizia camminata</b><p>Avvia la registrazione GPS del percorso, distanza e durata.</p></div></div>
+        <div class="guideItem"><div class="guidePic">■</div><div><b>Termina e salva</b><p>Chiude la camminata e la conserva nello storico.</p></div></div>
+        <div class="guideItem"><div class="guidePic">⌖</div><div><b>Mostra percorso</b><p>Inquadra sulla mappa tutto il tracciato registrato.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🚗</div><div><b>Torna all'auto</b><p>Passa alla mappa e mostra il rientro verso il parcheggio salvato.</p></div></div>
+        <div class="guideItem"><div class="guidePic">📷</div><div><b>Foto e descrizione</b><p>Aggiunge alla camminata una foto e una descrizione facoltativa.</p></div></div>
+        <div class="guideItem"><div class="guidePic">↗</div><div><b>Condividi uscita</b><p>Crea una scheda leggibile con mappa, percorso, chilometri, descrizione e foto.</p></div></div>
+      </div>
+      <div class="notice">Se l'app viene chiusa durante una camminata, quando possibile viene proposto il <b>recupero del percorso interrotto</b>.</div>
+    </div>
+
+    <div class="guideSection">
+      <h2>📓 Diario e storico</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">📓</div><div><b>Diario</b><p>Salva note delle uscite con data, zona, specie, tipo di uscita, note e foto.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🔎</div><div><b>Cerca nello storico</b><p>Filtra rapidamente per specie, zona o parole presenti nelle note.</p></div></div>
+        <div class="guideItem"><div class="guidePic">📍</div><div><b>Apri sulla mappa</b><p>Da un avvistamento salvato puoi tornare direttamente al punto sulla mappa interna.</p></div></div>
+        <div class="guideItem"><div class="guidePic">↗</div><div><b>Condividi punto</b><p>Condivide coordinate, dati del punto e, quando presente, anche la foto.</p></div></div>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h2>🛡 Dati, backup e applicazione</h2>
+      <div class="guideGrid">
+        <div class="guideItem"><div class="guidePic">🛡</div><div><b>Dati e backup</b><p>Apre gli strumenti per proteggere, esportare e ripristinare i dati dell'app.</p></div></div>
+        <div class="guideItem"><div class="guidePic">💾</div><div><b>Esporta backup</b><p>Crea una copia completa dei tuoi punti, uscite, diario e impostazioni salvate.</p></div></div>
+        <div class="guideItem"><div class="guidePic">↩</div><div><b>Ripristina backup</b><p>Importa una copia precedente, scegliendo se unire i dati o sostituirli.</p></div></div>
+        <div class="guideItem"><div class="guidePic">📚</div><div><b>Crea versione</b><p>Crea una fotografia locale dei dati prima di fare modifiche importanti.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🔄</div><div><b>Aggiorna app</b><p>Controlla e carica la versione web più recente quando sei collegato a Internet.</p></div></div>
+        <div class="guideItem"><div class="guidePic">🩺</div><div><b>Diagnostica</b><p>Aiuta a controllare le funzioni principali se qualcosa non sembra funzionare.</p></div></div>
+        <div class="guideItem"><div class="guidePic">↗</div><div><b>Condividi applicazione</b><p>Apre il menu del telefono per inviare l'app tramite WhatsApp, Telegram, e-mail o altre applicazioni.</p></div></div>
+        <div class="guideItem"><div class="guidePic">📲</div><div><b>Installa</b><p>Installa Passione Funghi e Caccia sulla schermata Home quando il telefono/browser lo permette.</p></div></div>
+      </div>
+    </div>
+
+    <div class="card guideReminder">
+      <h2>✅ Promemoria prima di uscire</h2>
+      <div class="guideChecklist">
+        <span>📍 Controlla che il GPS sia attivo</span>
+        <span>🛰️ Apri prima la zona di mappa che userai</span>
+        <span>🚗 Segna dove lasci l'auto</span>
+        <span>🌦 Controlla meteo e vento</span>
+        <span>🛡 Fai periodicamente un backup</span>
+      </div>
+      <p class="note">Questa guida è integrata nell'app e resta disponibile anche quando la rete è assente, dopo che l'app è stata caricata almeno una volta.</p>
+    </div>
+  </section>
+
 </main>
 
 <nav>
   <button data-page="map" class="active"><b>🗺</b>Mappa</button>
   <button data-page="track"><b>🥾</b>Camminata</button>
   <button data-page="diary"><b>📓</b>Diario</button>
+  <button data-page="guide"><b>❓</b>Guida</button>
 </nav>
 
 <div id="pointModal" class="modal" aria-hidden="true"><div class="dialog">
