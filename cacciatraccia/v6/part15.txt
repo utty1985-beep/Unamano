@@ -32,7 +32,7 @@
   }
   async function diagnostic(){
     const lines=[];
-    lines.push('CacciaTraccia Italia V6.0.4');
+    lines.push('Passione Funghi e Caccia V6.0.4');
     lines.push('Rete: '+(navigator.onLine?'online':'offline'));
     lines.push('Mappa: '+(window.L&&map?'OK':'non pronta'));
     lines.push('Memoria locale: '+(()=>{try{localStorage.setItem('__ct_test','1');localStorage.removeItem('__ct_test');return 'OK'}catch{return 'errore'}})());
