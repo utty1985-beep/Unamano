@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia APK 6.3.3 FINAL
+name: Build Passione Funghi e Caccia APK 6.3.4 FINAL
 on:
   workflow_dispatch:
   push:
@@ -46,7 +46,12 @@ jobs:
           const bindFinal=p24.slice(p24.lastIndexOf('bind=function(){'));
           if (/syncCarButton\(\);\s*renderCar\(\)/.test(bindFinal)) throw new Error('car must not render before initMap');
           if (!p24.includes('if(!map){syncCarButton();return}')) throw new Error('renderCar guard missing');
-          console.log('Final web app syntax, controls and map startup invariants: OK');
+          const main=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/java/com/cacciatraccia/italia/MainActivity.java','utf8');
+          const manifest=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/AndroidManifest.xml','utf8');
+          if (!main.includes('MediaStore.ACTION_IMAGE_CAPTURE')) throw new Error('Instant camera intent missing');
+          if (!manifest.includes('androidx.core.content.FileProvider')) throw new Error('FileProvider missing');
+          if (!fs.existsSync('cacciatraccia/android-wrapper/app/src/main/res/xml/file_paths.xml')) throw new Error('file_paths.xml missing');
+          console.log('Final web app, map startup and camera invariants: OK');
           NODE
       - name: Build release
         run: gradle --no-daemon :app:assembleRelease
@@ -56,8 +61,8 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/cacciatraccia-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6303' versionName='6.3.3'" /tmp/cacciatraccia-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.3-FINAL-UNSIGNED.apk
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6304' versionName='6.3.4'" /tmp/cacciatraccia-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.4-FINAL-UNSIGNED.apk
       - name: Bundle signing tools
         run: |
           mkdir -p app/build/signing-tools/lib
@@ -65,9 +70,9 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.3.3-FINAL-build
+          name: Passione-Funghi-e-Caccia-v6.3.4-FINAL-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.3-FINAL-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.4-FINAL-UNSIGNED.apk
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
