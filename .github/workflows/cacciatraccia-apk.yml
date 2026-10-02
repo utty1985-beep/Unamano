@@ -41,11 +41,8 @@ jobs:
           }
           const p1=fs.readFileSync('cacciatraccia/v6/part01.txt','utf8');
           const p24=fs.readFileSync('cacciatraccia/v6/part24.txt','utf8');
-          if (p1.includes("leaflet-rotate")) throw new Error('Rotation plugin must not load during map startup');
-          if (p1.includes("markerLayer=L.layerGroup().addTo")) throw new Error('markerLayer chaining can become undefined');
-          if (/map\s*=\s*L\.map\([^\n]+\.setView/.test(p1)) throw new Error('Map chaining detected');
-          if (p24.includes("carMarker=L.marker") && p24.includes("}).addTo(map);")) console.log('Review car marker chaining manually');
-          const p24=fs.readFileSync('cacciatraccia/v6/part24.txt','utf8');
+          if (!p1.includes("leaflet-rotate@0.3.0")) throw new Error('Working V6.1.12 map core was not restored');
+          if (!p1.includes("map=L.map('map',opts).setView([41.5,14],6)")) throw new Error('Working V6.1.12 map initialization differs');
           const bindFinal=p24.slice(p24.lastIndexOf('bind=function(){'));
           if (/syncCarButton\(\);\s*renderCar\(\)/.test(bindFinal)) throw new Error('car must not render before initMap');
           if (!p24.includes('if(!map){syncCarButton();return}')) throw new Error('renderCar guard missing');
