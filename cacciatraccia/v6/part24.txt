@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.8';
+  const FINAL_VER='6.3.9';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -769,10 +769,171 @@
     setTimeout(()=>location.reload(),700);
   }
 
+  // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
+  let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
+
+  function ctAREligiblePoints(){
+    return (state.points||[]).filter(p=>
+      Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)&&
+      (p.sightingKind==='mushroom'||p.type==='Avvistamento')
+    );
+  }
+  function ctARPointName(p){
+    if(p.sightingKind==='mushroom')return '🍄 '+(p.species||p.name||'Fungo');
+    return '🕊️ '+(p.species||p.name||'Uccello');
+  }
+  function ctARDistanceM(p){
+    if(!lastPos)return null;
+    return hav([lastPos.lat,lastPos.lng],[+p.lat,+p.lng])*1000;
+  }
+  function ctARDistanceText(m){
+    if(!Number.isFinite(m))return 'GPS…';
+    return m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?2:1)+' km';
+  }
+  function ctARBearing(p){
+    if(!lastPos)return null;
+    const r=x=>x*Math.PI/180,d=x=>x*180/Math.PI;
+    const a1=r(lastPos.lat),a2=r(+p.lat),dl=r(+p.lng-lastPos.lng);
+    const y=Math.sin(dl)*Math.cos(a2);
+    const x=Math.cos(a1)*Math.sin(a2)-Math.sin(a1)*Math.cos(a2)*Math.cos(dl);
+    return (d(Math.atan2(y,x))+360)%360;
+  }
+  function ctARAngleDiff(target,heading){
+    return ((target-heading+540)%360)-180;
+  }
+  function ctEnsureARStyles(){
+    if($('ctARStyles'))return;
+    const s=document.createElement('style');s.id='ctARStyles';
+    s.textContent=
+      '.quickAction.ctARQuick{grid-column:1/-1;background:#173f2b;color:#fff;min-height:58px}'+
+      '#ctAROverlay{position:fixed;inset:0;z-index:99999;background:#000;display:none;overflow:hidden}'+
+      '#ctAROverlay.open{display:block}#ctARVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}'+
+      '#ctARShade{position:absolute;inset:0;background:linear-gradient(#0008 0,#0000 22%,#0000 70%,#0008 100%);pointer-events:none}'+
+      '#ctARMarkers{position:absolute;inset:0;pointer-events:none}'+
+      '.ctARMarker{position:absolute;transform:translate(-50%,-50%);max-width:44vw;padding:8px 10px;border-radius:13px;background:#173f2be8;color:#fff;border:2px solid #fff;box-shadow:0 3px 12px #0008;font:900 13px/1.2 system-ui;text-align:center;white-space:normal}'+
+      '.ctARMarker small{display:block;margin-top:3px;font-size:12px;color:#fff}'+
+      '#ctARTop{position:absolute;left:10px;right:10px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:9px;z-index:3}'+
+      '#ctARClose{width:48px;height:48px;border:0;border-radius:15px;background:#fff;color:#173f2b;font-size:24px;font-weight:900;box-shadow:0 3px 12px #0007}'+
+      '#ctARInfo{flex:1;min-width:0;padding:8px 11px;border-radius:14px;background:#0009;color:#fff;font:800 12px/1.3 system-ui}'+
+      '#ctARCenter{position:absolute;left:50%;top:50%;width:38px;height:38px;transform:translate(-50%,-50%);border:2px solid #fff9;border-radius:50%;box-shadow:0 0 0 1px #0007;pointer-events:none}'+
+      '#ctARCenter:before,#ctARCenter:after{content:"";position:absolute;background:#fff9}#ctARCenter:before{left:50%;top:-10px;bottom:-10px;width:1px}#ctARCenter:after{top:50%;left:-10px;right:-10px;height:1px}'+
+      '#ctAREmpty{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);width:min(88%,420px);padding:10px 12px;border-radius:14px;background:#000a;color:#fff;text-align:center;font:800 13px/1.35 system-ui;display:none}';
+    document.head.appendChild(s);
+  }
+  function ctEnsureAROverlay(){
+    ctEnsureARStyles();
+    let o=$('ctAROverlay');if(o)return o;
+    o=document.createElement('div');o.id='ctAROverlay';
+    o.innerHTML='<video id="ctARVideo" autoplay muted playsinline></video><div id="ctARShade"></div><div id="ctARMarkers"></div><div id="ctARCenter"></div><div id="ctARTop"><button id="ctARClose" type="button" aria-label="Chiudi vista punti">✕</button><div id="ctARInfo">📷 Vista punti · preparo GPS e bussola…</div></div><div id="ctAREmpty"></div>';
+    document.body.appendChild(o);
+    $('ctARClose').onclick=ctStopARView;
+    return o;
+  }
+  function ensureARButton(){
+    if($('quickARBtn'))return;
+    const host=document.querySelector('.mapQuickActions');if(!host)return;
+    const b=document.createElement('button');b.id='quickARBtn';b.type='button';b.className='quickAction ctARQuick';
+    b.innerHTML='<b>📷</b><span>Vista punti nella direzione</span>';
+    b.dataset.ctHelp='Apre la telecamera e mostra gli uccelli o funghi già segnati nella direzione in cui stai guardando, con la distanza.';
+    b.onclick=ctStartARView;host.appendChild(b);
+  }
+  function ctAROrientation(e){
+    let h=null;
+    if(Number.isFinite(+e.webkitCompassHeading))h=+e.webkitCompassHeading;
+    else if(Number.isFinite(+e.alpha))h=(360-(+e.alpha)+360)%360;
+    if(h!=null){
+      const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
+      ctARHeading=(h+a+360)%360;
+      ctRenderARMarkers();
+    }
+  }
+  function ctRenderARMarkers(){
+    if(!ctARActive)return;
+    const layer=$('ctARMarkers'),info=$('ctARInfo'),empty=$('ctAREmpty');if(!layer||!info||!empty)return;
+    const pts=ctAREligiblePoints();
+    if(!lastPos){
+      layer.innerHTML='';empty.style.display='block';empty.textContent='Attendo la posizione GPS…';return;
+    }
+    if(!Number.isFinite(ctARHeading)){
+      layer.innerHTML='';empty.style.display='block';empty.textContent='Muovi lentamente il telefono per calibrare la bussola.';
+      info.textContent='📷 Vista punti · GPS pronto · attendo bussola';
+      return;
+    }
+    const HALF=42;
+    const rows=pts.map(p=>({p,d:ctARDistanceM(p),b:ctARBearing(p)}))
+      .filter(x=>Number.isFinite(x.d)&&Number.isFinite(x.b))
+      .map(x=>({...x,delta:ctARAngleDiff(x.b,ctARHeading)}))
+      .filter(x=>Math.abs(x.delta)<=HALF)
+      .sort((a,b)=>a.d-b.d).slice(0,8);
+    layer.innerHTML='';
+    rows.forEach((x,i)=>{
+      const m=document.createElement('div');m.className='ctARMarker';
+      const xpos=50+(x.delta/HALF)*42;
+      const ypos=30+(i%5)*10;
+      m.style.left=Math.max(8,Math.min(92,xpos))+'%';
+      m.style.top=Math.min(72,ypos)+'%';
+      m.innerHTML=esc(ctARPointName(x.p))+'<small>📏 '+esc(ctARDistanceText(x.d))+'</small>';
+      layer.appendChild(m);
+    });
+    info.textContent='📷 Direzione '+Math.round(ctARHeading)+'° · '+rows.length+' punto'+(rows.length===1?'':'i')+' davanti';
+    if(rows.length){
+      empty.style.display='none';
+    }else{
+      empty.style.display='block';
+      empty.textContent='Nessun uccello o fungo già segnato in questa direzione.';
+    }
+  }
+  async function ctEnsureARPosition(){
+    if(lastPos)return true;
+    if(!navigator.geolocation)return false;
+    return await new Promise(ok=>{
+      navigator.geolocation.getCurrentPosition(p=>{
+        lastPos={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||99),heading:p.coords.heading,speed:p.coords.speed};
+        ok(true);
+      },()=>ok(false),{enableHighAccuracy:true,timeout:15000,maximumAge:1000});
+    });
+  }
+  async function ctStartARView(){
+    const pts=ctAREligiblePoints();
+    if(!pts.length)return toast('Prima salva almeno un avvistamento di uccello o un fungo.');
+    if(!navigator.mediaDevices?.getUserMedia)return toast('La telecamera live non è disponibile su questo dispositivo.');
+    ctEnsureAROverlay();
+    const gpsOk=await ctEnsureARPosition();
+    if(!gpsOk)return toast('Serve il GPS per calcolare le distanze dei punti.');
+    try{
+      if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+        const p=await DeviceOrientationEvent.requestPermission();if(p!=='granted')throw Error('Permesso bussola non concesso');
+      }
+      ctARStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      $('ctARVideo').srcObject=ctARStream;
+      $('ctAROverlay').classList.add('open');
+      document.body.style.overflow='hidden';
+      ctARActive=true;ctARHeading=null;
+      window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
+      window.addEventListener('deviceorientation',ctAROrientation,true);
+      ctARTimer=setInterval(ctRenderARMarkers,700);
+      ctRenderARMarkers();
+    }catch(e){
+      try{ctARStream?.getTracks?.().forEach(t=>t.stop())}catch{}ctARStream=null;
+      toast((e&&e.message)||'Impossibile aprire la telecamera.');
+    }
+  }
+  function ctStopARView(){
+    ctARActive=false;
+    if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
+    window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
+    window.removeEventListener('deviceorientation',ctAROrientation,true);
+    try{ctARStream?.getTracks?.().forEach(t=>t.stop())}catch{}ctARStream=null;
+    const v=$('ctARVideo');if(v)v.srcObject=null;
+    $('ctAROverlay')?.classList.remove('open');
+    document.body.style.overflow='';
+  }
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&ctARActive)ctStopARView()});
+
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
-    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();ctEnsureCarDistanceBadge();hideOldAutoCard();ensureMushModal();ensureSightCheck();ensureTotalResetButton();
+    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();ctEnsureCarDistanceBadge();hideOldAutoCard();ensureMushModal();ensureSightCheck();ensureTotalResetButton();ensureARButton();ctEnsureAROverlay();
     const f=$('followBtn');if(f){f.onclick=()=>{toggleFollow();syncFollow()};syncFollow()}
     const car=$('quickCarBtn');if(car)car.onclick=carToggle;
     const mush=$('quickMushroomBtn');if(mush){mush.onclick=quickMush;mush.dataset.ctHelp='Salva un fungo trovato nella posizione GPS attuale.'}
