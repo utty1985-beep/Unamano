@@ -5,7 +5,7 @@ function startGps(){
   gpsWatch=navigator.geolocation.watchPosition(p=>{
     lastPos={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),heading:p.coords.heading,speed:p.coords.speed};
     $('gpsBadge').textContent=`GPS ±${lastPos.acc} m`;
-    if(!userMarker){ userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}); userMarker.addTo(map); }
+    if(!userMarker) userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);
     else userMarker.setLatLng([lastPos.lat,lastPos.lng]);
     if(follow) map.setView([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});
     updateCar();
