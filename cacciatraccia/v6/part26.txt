@@ -1,7 +1,7 @@
 
 // V6.2.0 - modalità funghi: avvistamento funghi + Vedi specie da foto
 (function(){
-  const CT_PATCH_VER='6.2.1';
+  const CT_PATCH_VER='6.2.2';
   let mushroomMode=false, speciesPhotoData=null, speciesAnalysis=null;
 
   const DB={
@@ -116,12 +116,12 @@
     const bird=$('quickSightingBtn');if(bird&&bird.querySelector('span'))bird.querySelector('span').textContent='Avv. uccelli';
     if(!$('quickMushroomBtn')){
       const b=document.createElement('button');b.id='quickMushroomBtn';b.className='quickAction mushroom';b.innerHTML='<b>🍄</b><span>Funghi trovati</span>';bird&&bird.insertAdjacentElement('afterend',b);
-      b.onclick=saveMushroom;b.dataset.ctHelp='Salva rapidamente un fungo trovato nella posizione GPS attuale.';
     }
     if(!$('quickSpeciesBtn')){
       const b=document.createElement('button');b.id='quickSpeciesBtn';b.className='quickAction identify';b.innerHTML='<b>🔎🍄</b><span>Vedi specie</span>';$('quickMushroomBtn')&&$('quickMushroomBtn').insertAdjacentElement('afterend',b);
-      b.onclick=openSpecies;b.dataset.ctHelp='Scatta o scegli una foto per ottenere una possibile identificazione della specie e una scheda descrittiva.';
     }
+    const mb=$('quickMushroomBtn');if(mb){mb.onclick=saveMushroom;mb.dataset.ctHelp='Salva rapidamente un fungo trovato nella posizione GPS attuale.'}
+    const sb=$('quickSpeciesBtn');if(sb){sb.onclick=openSpecies;sb.dataset.ctHelp='Scatta o scegli una foto per ottenere una possibile identificazione della specie e una scheda descrittiva.'}
   }
   async function saveMushroom(){
     const before=new Set((state.points||[]).map(p=>p.id));await saveCurrent('Avvistamento',true);
