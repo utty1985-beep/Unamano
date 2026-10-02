@@ -380,6 +380,78 @@
     });
   };
 
+  // ---------- pressione prolungata sulla mappa ----------
+  let ctLongPressMarker=null;
+  function clearLongPressMarker(){
+    if(ctLongPressMarker&&map){try{map.removeLayer(ctLongPressMarker)}catch{}}
+    ctLongPressMarker=null;
+  }
+  function showLongPressMarker(lat,lng){
+    clearLongPressMarker();
+    if(!map||!window.L)return;
+    const ic=L.divIcon({
+      className:'',
+      html:'<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#f2b72b;border:3px solid #fff;box-shadow:0 3px 10px #0007;display:grid;place-items:center"><span style="transform:rotate(45deg);font-size:16px">📍</span></div>',
+      iconSize:[38,44],iconAnchor:[19,39]
+    });
+    ctLongPressMarker=L.marker([lat,lng],{icon:ic,interactive:false}).addTo(map);
+  }
+  async function selectLongPressPoint(lat,lng){
+    follow=false;syncFollow();
+    showLongPressMarker(lat,lng);
+    try{navigator.vibrate?.(45)}catch{}
+    await selectMapPoint(lat,lng);
+    if($('selectedTitle'))$('selectedTitle').textContent='📍 Punto scelto sulla mappa';
+    if($('selectedCoords'))$('selectedCoords').textContent=(+lat).toFixed(6)+', '+(+lng).toFixed(6)+' · meteo e vento del punto';
+    try{$('selectedCard')?.scrollIntoView({behavior:'smooth',block:'nearest'})}catch{}
+    toast('Punto selezionato · meteo e vento aggiornati');
+  }
+  function bindMapLongPress(){
+    const el=$('map');
+    if(!el||el.dataset.ctLongMapBound==='1')return;
+    el.dataset.ctLongMapBound='1';
+    let timer=null,sx=0,sy=0,pid=null,fired=false;
+    const stop=()=>{if(timer){clearTimeout(timer);timer=null}};
+    el.addEventListener('pointerdown',e=>{
+      if(e.button!=null&&e.button!==0)return;
+      if(e.target?.closest?.('.mapBtn,.leaflet-control,.leaflet-marker-icon,.leaflet-popup'))return;
+      pid=e.pointerId;sx=e.clientX||0;sy=e.clientY||0;fired=false;stop();
+      timer=setTimeout(async()=>{
+        timer=null;fired=true;
+        try{
+          const rect=el.getBoundingClientRect();
+          const pt=L.point((e.clientX||0)-rect.left,(e.clientY||0)-rect.top);
+          const ll=map.containerPointToLatLng(pt);
+          await selectLongPressPoint(ll.lat,ll.lng);
+        }catch(err){console.warn('Pressione lunga mappa',err)}
+      },700);
+    },{passive:true});
+    el.addEventListener('pointermove',e=>{
+      if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)stop();
+    },{passive:true});
+    el.addEventListener('pointerup',e=>{stop();if(fired){e.preventDefault?.();e.stopPropagation?.()}},{passive:false});
+    el.addEventListener('pointercancel',stop,{passive:true});
+    el.addEventListener('pointerleave',stop,{passive:true});
+    el.addEventListener('contextmenu',e=>{
+      if(e.target?.closest?.('.mapBtn,.leaflet-control,.leaflet-marker-icon,.leaflet-popup'))return;
+      e.preventDefault();
+      try{
+        const rect=el.getBoundingClientRect();
+        const pt=L.point((e.clientX||0)-rect.left,(e.clientY||0)-rect.top);
+        const ll=map.containerPointToLatLng(pt);
+        selectLongPressPoint(ll.lat,ll.lng);
+      }catch{}
+    });
+  }
+  const longPressInitMap=initMap;
+  initMap=function(){
+    const r=longPressInitMap();
+    setTimeout(bindMapLongPress,0);
+    return r;
+  };
+  const longPressClearSelected=clearSelected;
+  clearSelected=function(){clearLongPressMarker();return longPressClearSelected()};
+
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
