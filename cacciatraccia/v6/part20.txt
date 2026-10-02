@@ -58,16 +58,16 @@
     toast('Creo la slide con la mappa…');
     const W=1080,mapH=620,descH=o.note?190:0,photoH=o.photo?380:0,H=250+mapH+(descH?descH+25:0)+(photoH?photoH+25:0)+65;
     const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-    g.fillStyle='#f4f1e8';g.fillRect(0,0,W,H);g.fillStyle='#173f2b';g.fillRect(0,0,W,145);g.fillStyle='#fff';g.font='bold 50px sans-serif';g.fillText('CacciaTraccia Italia',44,88);g.font='25px sans-serif';g.fillText('Camminata',46,124);
+    g.fillStyle='#f4f1e8';g.fillRect(0,0,W,H);g.fillStyle='#173f2b';g.fillRect(0,0,W,145);g.fillStyle='#fff';g.font='bold 50px sans-serif';g.fillText('Passione Funghi e Caccia',44,88);g.font='25px sans-serif';g.fillText('Camminata',46,124);
     g.fillStyle='#17251d';g.font='bold 32px sans-serif';g.fillText(new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}),44,202);g.fillStyle='#173f2b';g.font='bold 40px sans-serif';g.textAlign='right';g.fillText(`${(+o.distanceKm||0).toFixed(2)} km`,W-44,202);g.textAlign='left';
     const mx=44,my=235,mw=W-88;await drawTileMap(g,o,mx,my,mw,mapH);
     let cy=my+mapH+25;
     if(o.note){g.fillStyle='#fff';rr(g,44,cy,W-88,descH,22);g.fillStyle='#173f2b';g.font='bold 27px sans-serif';g.fillText('Descrizione',72,cy+43);g.fillStyle='#26352c';g.font='25px sans-serif';wrap(g,o.note,72,cy+82,W-144,34,4);cy+=descH+25}
     if(o.photo){g.fillStyle='#fff';rr(g,44,cy,W-88,photoH,22);g.save();g.beginPath();g.rect(58,cy+14,W-116,photoH-28);g.clip();await drawDataPhoto(g,o.photo,58,cy+14,W-116,photoH-28);g.restore();cy+=photoH+25}
-    g.fillStyle='#68746b';g.font='21px sans-serif';g.fillText('Creato con CacciaTraccia Italia',44,H-24);
+    g.fillStyle='#68746b';g.font='21px sans-serif';g.fillText('Creato con Passione Funghi e Caccia',44,H-24);
     const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(!blob)return toast('Impossibile creare la slide');
     const file=new File([blob],`CacciaTraccia_Camminata_${new Date(o.start).toISOString().slice(0,10)}.jpg`,{type:'image/jpeg'});const text=`Camminata ${(+o.distanceKm||0).toFixed(2)} km · ${new Date(o.start).toLocaleDateString('it-IT')}${o.note?'\n'+o.note:''}`;
-    if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'CacciaTraccia Italia',text,files:[file]})}catch(e){if(e?.name==='AbortError')return}}
+    if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'Passione Funghi e Caccia',text,files:[file]})}catch(e){if(e?.name==='AbortError')return}}
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
   }
 
