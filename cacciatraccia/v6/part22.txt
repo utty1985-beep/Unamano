@@ -214,8 +214,8 @@
   async function sharePointFull(id){
     const p=(state.points||[]).find(x=>x.id===id);if(!p)return;
     const text=pointShareText(p).replace(/Libeccio/g,'Libeccio (Favugna)'),file=await dataUrlFile(p.photo,`CacciaTraccia_${String(p.name||p.type||'punto').replace(/[^a-z0-9_-]+/gi,'_')}.jpg`);
-    try{if(file&&navigator.share&&navigator.canShare?.({files:[file]}))return await navigator.share({title:p.name||'CacciaTraccia Italia',text,files:[file]});if(navigator.share)return await navigator.share({title:p.name||'CacciaTraccia Italia',text})}catch(e){if(e?.name==='AbortError')return}
-    await shareText(text,p.name||'CacciaTraccia Italia');
+    try{if(file&&navigator.share&&navigator.canShare?.({files:[file]}))return await navigator.share({title:p.name||'Passione Funghi e Caccia',text,files:[file]});if(navigator.share)return await navigator.share({title:p.name||'Passione Funghi e Caccia',text})}catch(e){if(e?.name==='AbortError')return}
+    await shareText(text,p.name||'Passione Funghi e Caccia');
   }
 
   // ---------- integrazione UI / comportamento manuale mappa ----------
