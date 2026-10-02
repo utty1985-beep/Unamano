@@ -2,7 +2,7 @@ window.CT={
   go:id=>{const p=state.points.find(x=>x.id===id);if(p){showPage('map');map.setView([p.lat,p.lng],16);selectMapPoint(p.lat,p.lng);}},
   edit:id=>{const p=state.points.find(x=>x.id===id);if(p)fillModal(p);},
   del:id=>{if(confirm('Eliminare punto?')){state.points=state.points.filter(x=>x.id!==id);save();}},
-  sharePoint:id=>{const p=state.points.find(x=>x.id===id);if(p)shareText(pointShareText(p),p.name||'CacciaTraccia Italia');},
+  sharePoint:id=>{const p=state.points.find(x=>x.id===id);if(p)shareText(pointShareText(p),p.name||'Passione Funghi e Caccia');},
   out:id=>{const o=state.outings.find(x=>x.id===id);if(o?.coords?.length){showPage('map');const l=L.polyline(o.coords,{color:'#7b4d19',weight:4}).addTo(map);map.fitBounds(l.getBounds());setTimeout(()=>map.removeLayer(l),20000);}},
   share:shareOut,
   delOut:id=>{if(confirm('Eliminare questa uscita?')){state.outings=state.outings.filter(x=>x.id!==id);save();}},
