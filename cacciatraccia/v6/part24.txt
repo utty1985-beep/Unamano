@@ -318,6 +318,68 @@
   const oldOpenHistory=window.CT&&window.CT.openHistoryPoint;
   if(oldOpenHistory)window.CT.openHistoryPoint=async function(id){const r=await oldOpenHistory(id);const p=state.points.find(x=>x.id===id);if(p?.sightingKind==='mushroom'&&$('selectedTitle'))$('selectedTitle').textContent='🍄 '+(p.species||p.name||'Fungo trovato');return r};
 
+  // ---------- cancellazione punti / avvistamenti ----------
+  function deleteSavedPoint(id){
+    const p=(state.points||[]).find(x=>x.id===id);
+    if(!p)return toast('Punto non trovato');
+    const label=p.sightingKind==='mushroom'?'fungo salvato':p.type==='Avvistamento'?'avvistamento':'punto';
+    const name=p.species||p.name||p.type||'elemento';
+    if(!confirm('Eliminare definitivamente questo '+label+'?\n\n'+name))return false;
+    state.points=(state.points||[]).filter(x=>x.id!==id);
+    if(editing===id){editing=null;$('pointModal')?.classList.remove('open')}
+    save();
+    try{renderMarkers()}catch{}
+    try{renderPoints()}catch{}
+    try{renderDiary()}catch{}
+    toast(label.charAt(0).toUpperCase()+label.slice(1)+' eliminato');
+    return true;
+  }
+
+  window.CT=window.CT||{};
+  window.CT.del=deleteSavedPoint;
+  window.CT.deleteSavedPoint=deleteSavedPoint;
+
+  function ensureDeleteInPointModal(p){
+    let b=$('ctDeleteSavedPointBtn');
+    const share=$('pointShareModalBtn');
+    const grid=share?.closest('.actionGrid');
+    if(!b&&grid){
+      b=document.createElement('button');
+      b.id='ctDeleteSavedPointBtn';
+      b.type='button';
+      b.className='danger';
+      b.textContent='🗑 Elimina';
+      grid.appendChild(b);
+    }
+    if(!b)return;
+    b.hidden=!p?.id;
+    b.onclick=()=>p?.id&&deleteSavedPoint(p.id);
+  }
+
+  const deleteFillBase=fillModal;
+  fillModal=function(p){
+    const r=deleteFillBase(p);
+    ensureDeleteInPointModal(p);
+    return r;
+  };
+
+  const deleteDiaryBase=renderDiary;
+  renderDiary=function(){
+    deleteDiaryBase();
+    (state.points||[]).forEach(p=>{
+      const btn=[...document.querySelectorAll('#historyList button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+p.id+"'"));
+      const row=btn?.closest('.item')?.querySelector('.rowBtns');
+      if(!row||row.querySelector('[data-delete-point="'+p.id+'"]'))return;
+      const d=document.createElement('button');
+      d.type='button';
+      d.className='mini red';
+      d.dataset.deletePoint=p.id;
+      d.textContent='🗑 Elimina';
+      d.onclick=()=>deleteSavedPoint(p.id);
+      row.appendChild(d);
+    });
+  };
+
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
