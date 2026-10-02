@@ -11,7 +11,7 @@
     modal.innerHTML=`<div class="dialog" style="max-width:760px;max-height:92vh;overflow:auto">
       <div class="sectionHead"><div><h2>🖼️ Prepara slide Camminata</h2><div class="muted">Modifica anche dopo aver salvato la camminata</div></div><button id="ctSlideClose" class="iconBtn" type="button">✕</button></div>
       <div id="ctSlideCard" style="background:#f4f1e8;border:1px solid #d6d8cf;border-radius:18px;overflow:hidden;margin:10px 0 16px">
-        <div style="background:#173f2b;color:#fff;padding:16px 18px"><b style="font-size:22px">CacciaTraccia Italia</b><div style="opacity:.82">Camminata</div></div>
+        <div style="background:#173f2b;color:#fff;padding:16px 18px"><b style="font-size:22px">Passione Funghi e Caccia</b><div style="opacity:.82">Camminata</div></div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:14px 16px 8px;font-weight:800"><span id="ctSlideDate">-</span><span id="ctSlideKm">0.00 km</span></div>
         <div id="ctSlideMap" style="height:300px;margin:8px 14px;border-radius:14px;overflow:hidden;background:#dce5d7"></div>
         <div id="ctSlideDescPreview" style="display:none;background:#fff;margin:12px 14px;padding:14px;border-radius:14px;white-space:pre-wrap"></div>
