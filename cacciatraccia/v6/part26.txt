@@ -1,7 +1,7 @@
 
 // V6.2.0 - modalità funghi: avvistamento funghi + Vedi specie da foto
 (function(){
-  const CT_PATCH_VER='6.2.0';
+  const CT_PATCH_VER='6.2.1';
   let mushroomMode=false, speciesPhotoData=null, speciesAnalysis=null;
 
   const DB={
