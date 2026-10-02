@@ -295,3 +295,104 @@
     const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
   };
 })();
+
+
+
+// V6.1.13 - gestione auto semplificata: nessun popup; il pulsante Segna auto diventa Rimuovi auto con barra
+(function(){
+  const CT_PATCH_VER='6.1.13';
+
+  function refreshQuickCarButton(){
+    const b=$('quickCarBtn');if(!b)return;
+    const icon=b.querySelector('b'),label=b.querySelector('span');
+    if(state.car){
+      if(icon)icon.textContent='🚫🚗';
+      if(label)label.textContent='Rimuovi auto';
+      b.classList.add('danger');
+      b.dataset.ctHelp='Rimuove subito la posizione dell’auto salvata. Per spostarla, tieni premuto il simbolo dell’auto sulla mappa e trascinalo.';
+      b.setAttribute('aria-label','Rimuovi auto');
+      b.title='Rimuovi auto';
+    }else{
+      if(icon)icon.textContent='🚗';
+      if(label)label.textContent='Segna auto';
+      b.classList.remove('danger');
+      b.dataset.ctHelp='Memorizza la posizione GPS attuale dell’auto.';
+      b.setAttribute('aria-label','Segna auto');
+      b.title='Segna auto';
+    }
+  }
+
+  function removeCarSimple(){
+    try{map.closePopup()}catch{}
+    if(returnLine){try{map.removeLayer(returnLine)}catch{}returnLine=null}
+    state.car=null;save();renderCar();refreshQuickCarButton();toast('Posizione auto rimossa');
+  }
+
+  function bindQuickCarToggle(){
+    const b=$('quickCarBtn');if(!b)return;
+    b.onclick=async function(e){
+      e?.preventDefault?.();e?.stopPropagation?.();
+      if(state.car){removeCarSimple();return}
+      await parkCar();
+      refreshQuickCarButton();
+    };
+  }
+
+  function bindCarDragOnly(marker){
+    const el=marker?.getElement?.();if(!el||el.dataset.ctCarGestureV613==='1')return;
+    el.dataset.ctCarGestureV613='1';el.style.touchAction='none';
+    try{L.DomEvent.disableClickPropagation(el)}catch{}
+    let timer=null,dragging=false,sx=0,sy=0,pid=null,longReady=false;
+    function cancel(){if(timer){clearTimeout(timer);timer=null}}
+    function down(e){
+      if(e.button!=null&&e.button!==0)return;
+      sx=e.clientX||0;sy=e.clientY||0;pid=e.pointerId;dragging=false;longReady=false;cancel();
+      timer=setTimeout(function(){
+        longReady=true;dragging=true;
+        try{el.setPointerCapture(pid)}catch{}
+        try{map.dragging.disable()}catch{}
+        toast('Trascina l’auto nel nuovo punto');
+      },550);
+      e.stopPropagation();
+    }
+    function move(e){
+      if(!dragging){if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)cancel();return}
+      e.preventDefault();e.stopPropagation();
+      try{const ll=map.mouseEventToLatLng(e);marker.setLatLng(ll)}catch{}
+    }
+    function up(e){
+      const moved=dragging&&longReady;cancel();
+      if(moved){
+        dragging=false;longReady=false;try{map.dragging.enable()}catch{}
+        const ll=marker.getLatLng();state.car={lat:ll.lat,lng:ll.lng,updatedAt:new Date().toISOString()};
+        save();refreshQuickCarButton();toast('Posizione auto spostata');
+      }
+      e?.stopPropagation?.();
+    }
+    el.addEventListener('pointerdown',down,{passive:true});
+    el.addEventListener('pointermove',move,{passive:false});
+    el.addEventListener('pointerup',up,{passive:true});
+    el.addEventListener('pointercancel',function(e){cancel();if(dragging){dragging=false;longReady=false;try{map.dragging.enable()}catch{}}e?.stopPropagation?.()},{passive:true});
+    el.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation()});
+    el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation()},{capture:true});
+  }
+
+  renderCar=function(){
+    try{map.closePopup()}catch{}
+    if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
+    if(state.car){
+      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:31px;line-height:34px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
+      setTimeout(function(){bindCarDragOnly(carMarker)},0);
+    }
+    updateCar();refreshQuickCarButton();
+  };
+
+  const previousBind613=bind;
+  bind=function(){
+    previousBind613();
+    bindQuickCarToggle();refreshQuickCarButton();renderCar();
+    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
+  };
+
+  window.CT.removeCarFromMap=removeCarSimple;
+})();
