@@ -1,7 +1,7 @@
 
 // V6.1.15 - mappa stabile + Seguimi attivo/disattivo ben visibile
 (function(){
-  const CT_PATCH_VER='6.1.15';
+  const CT_PATCH_VER='6.2.2';
 
   // Usa una versione stabile del plugin di rotazione. Se fallisce, la mappa parte comunque senza rotazione.
   ensureLeaflet=async function(){
@@ -10,14 +10,7 @@
       await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
     }
     if(!window.L) throw Error('Leaflet non disponibile');
-    try{
-      loadCss('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.css');
-      await loadScript('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.umd.min.js');
-    }catch(e){
-      console.warn('Rotazione non disponibile, avvio mappa standard',e);
-    }
   };
-
   function buildBaseMap(useRotate){
     const host=$('map');
     if(!host) throw Error('Contenitore mappa non trovato');
