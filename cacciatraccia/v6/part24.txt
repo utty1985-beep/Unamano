@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.1';
+  const FINAL_VER='6.3.2';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -104,7 +104,8 @@
   renderCar=function(){
     if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
     if(state.car){
-      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:30px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
+      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:30px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>',iconSize:[36,36],iconAnchor:[18,18]})});
+      carMarker.addTo(map);
       setTimeout(()=>bindCarDrag(carMarker),0);
     }
     updateCar();syncCarButton();
@@ -267,7 +268,7 @@
     (state.points||[]).forEach(p=>{
       if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
       const ic=p.type==='Avvistamento'&&p.sightingKind==='mushroom'?mushIcon():icon(p.type);
-      const m=L.marker([p.lat,p.lng],{icon:ic}).addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
+      const m=L.marker([p.lat,p.lng],{icon:ic});m.addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
     });
   };
 
