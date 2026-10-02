@@ -452,6 +452,151 @@
   const longPressClearSelected=clearSelected;
   clearSelected=function(){clearLongPressMarker();return longPressClearSelected()};
 
+  // ---------- numerazione progressiva punti + orario + GPS stabilizzato ----------
+  function pointClock(p){
+    try{return new Date(p?.createdAt||Date.now()).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{return '--:--'}
+  }
+  function ensurePointNumbers(){
+    const pts=state.points||[];
+    let max=pts.reduce((m,p)=>Number.isFinite(+p.seq)?Math.max(m,+p.seq):m,0);
+    pts.filter(p=>!Number.isFinite(+p.seq)||+p.seq<=0)
+      .sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0))
+      .forEach(p=>{p.seq=++max});
+    return max;
+  }
+  function pointLabel(p){
+    const n=Number.isFinite(+p?.seq)?'#'+p.seq:'';
+    const kind=p?.sightingKind==='mushroom'?'Fungo':p?.type==='Avvistamento'?'Avvistamento':'Punto';
+    return (n?n+' ':'')+kind;
+  }
+  ensurePointNumbers();
+  try{localStorage.setItem(STORE,JSON.stringify(state))}catch{}
+
+  function numberedPointIcon(p){
+    const n=Number.isFinite(+p?.seq)?p.seq:'';
+    if(p?.sightingKind==='mushroom'){
+      return L.divIcon({className:'',html:'<div style="position:relative;width:40px;height:40px"><div class="ctMushPin" style="position:absolute;inset:0">🍄</div><span style="position:absolute;right:-7px;top:-7px;min-width:22px;height:22px;padding:0 5px;border-radius:99px;background:#173f2b;color:#fff;border:2px solid #fff;display:grid;place-items:center;font:900 11px system-ui;box-shadow:0 2px 6px #0005">'+esc(n)+'</span></div>',iconSize:[42,42],iconAnchor:[21,37]});
+    }
+    const color=p?.type==='Avvistamento'?'#a9342a':p?.type==='Passaggio'?'#80582b':p?.type==='Parcheggio'?'#315d80':'#2f6c42';
+    return L.divIcon({className:'',html:'<div style="position:relative;width:34px;height:40px"><div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:'+color+';border:3px solid #fff;box-shadow:0 2px 6px #0006;display:grid;place-items:center"><span style="transform:rotate(45deg);color:#fff;font:900 11px system-ui">'+esc(n)+'</span></div></div>',iconSize:[34,40],iconAnchor:[17,35]});
+  }
+
+  const numberedRenderMarkers=renderMarkers;
+  renderMarkers=function(){
+    if(!markerLayer)return;
+    ensurePointNumbers();
+    markerLayer.clearLayers();
+    const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||new Date().toISOString().slice(0,10);
+    (state.points||[]).forEach(p=>{
+      if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
+      const m=L.marker([p.lat,p.lng],{icon:numberedPointIcon(p)}).addTo(markerLayer);
+      m.bindTooltip(pointLabel(p)+' · '+pointClock(p),{direction:'top',offset:[0,-30],opacity:.92});
+      m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
+    });
+  };
+
+  const numberedRenderPoints=renderPoints;
+  renderPoints=function(){
+    ensurePointNumbers();
+    numberedRenderPoints();
+    (state.points||[]).forEach(p=>{
+      const btn=[...document.querySelectorAll('#pointsList button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+p.id+"'"));
+      const item=btn?.closest('.item');if(!item)return;
+      const h=item.querySelector('h4');
+      if(h&&!h.dataset.ctNumbered){h.dataset.ctNumbered='1';h.innerHTML='<span style="display:inline-block;min-width:28px;padding:2px 6px;margin-right:6px;border-radius:999px;background:#173f2b;color:#fff;font-size:11px;text-align:center">#'+esc(p.seq)+'</span>'+h.innerHTML}
+      const meta=item.querySelector('.meta');
+      if(meta&&!meta.textContent.includes('ore '))meta.innerHTML=meta.innerHTML+' · <b>ore '+esc(pointClock(p))+'</b>';
+    });
+  };
+
+  const numberedFillModal=fillModal;
+  fillModal=function(p){
+    const r=numberedFillModal(p);
+    if(p?.id){
+      ensurePointNumbers();
+      if($('pointModalTitle'))$('pointModalTitle').textContent=pointLabel(p)+' · ore '+pointClock(p);
+    }
+    return r;
+  };
+
+  const numberedSaveCurrent=saveCurrent;
+  saveCurrent=async function(type='Postazione',open=false){
+    const before=new Set((state.points||[]).map(x=>x.id));
+    const r=await numberedSaveCurrent(type,open);
+    const p=(state.points||[]).find(x=>!before.has(x.id));
+    if(p){
+      ensurePointNumbers();
+      if(!p.name||p.name==='Punto GPS'||p.name==='Avvistamento')p.name=(p.type==='Avvistamento'?'Avvistamento ':'Punto ')+p.seq;
+      try{localStorage.setItem(STORE,JSON.stringify(state))}catch{}
+      renderAll();renderMarkers();
+      toast(pointLabel(p)+' salvato alle '+pointClock(p));
+    }
+    return r;
+  };
+
+  const numberedSavePoint=savePoint;
+  savePoint=async function(){
+    const before=new Set((state.points||[]).map(x=>x.id));
+    const r=await numberedSavePoint();
+    const p=(state.points||[]).find(x=>!before.has(x.id));
+    if(p){
+      ensurePointNumbers();
+      if(!p.name||p.name==='Punto GPS')p.name='Punto '+p.seq;
+      try{localStorage.setItem(STORE,JSON.stringify(state))}catch{}
+      renderAll();renderMarkers();
+      toast(pointLabel(p)+' salvato alle '+pointClock(p));
+    }
+    return r;
+  };
+
+  const basePointShareNumbered=pointShareText;
+  pointShareText=function(p){
+    const t=basePointShareNumbered(p);
+    if(!p)return t;
+    const prefix=pointLabel(p)+' · ore '+pointClock(p)+'\n';
+    return String(t).startsWith(prefix)?t:prefix+t;
+  };
+
+  // Il GPS può oscillare da fermo: filtra spostamenti compatibili con l'errore dichiarato.
+  let ctStablePos=null,ctStableAt=0,ctRawSamples=[];
+  function gpsDistanceM(a,b){return hav([a.lat,a.lng],[b.lat,b.lng])*1000}
+  function gpsQuality(acc){
+    if(acc<=8)return 'ottimo';
+    if(acc<=15)return 'buono';
+    if(acc<=30)return 'medio';
+    return 'debole';
+  }
+  function stableGpsCandidate(raw){
+    ctRawSamples.push(raw);if(ctRawSamples.length>5)ctRawSamples.shift();
+    if(!ctStablePos)return true;
+    const d=gpsDistanceM(ctStablePos,raw);
+    const acc=Math.max(3,raw.acc||99,ctStablePos.acc||99);
+    const speed=Number.isFinite(+raw.speed)?Math.max(0,+raw.speed):null;
+    const elapsed=Date.now()-ctStableAt;
+    // Da fermo ignora oscillazioni fino a una quota dell'errore GPS, minimo 4 m.
+    const stationaryLimit=Math.min(18,Math.max(4,acc*.55));
+    if(speed!=null&&speed<0.7&&d<=stationaryLimit)return false;
+    if(speed==null&&elapsed<12000&&d<=stationaryLimit)return false;
+    // Scarta anche salti improvvisi enormi quando la precisione è scarsa.
+    if(acc>35&&d>Math.max(80,acc*2.5)&&elapsed<6000)return false;
+    return true;
+  }
+  startGps=function(){
+    if(gpsWatch!=null||!navigator.geolocation)return;
+    gpsWatch=navigator.geolocation.watchPosition(p=>{
+      const raw={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||99),heading:p.coords.heading,speed:p.coords.speed};
+      const accept=stableGpsCandidate(raw);
+      $('gpsBadge').textContent='GPS ±'+raw.acc+' m · '+gpsQuality(raw.acc)+(accept?'':' · fermo');
+      $('gpsBadge').title='Precisione stimata dal telefono: ±'+raw.acc+' metri';
+      if(!accept){updateCar();return}
+      lastPos=raw;ctStablePos={...raw};ctStableAt=Date.now();
+      if(!userMarker)userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);
+      else userMarker.setLatLng([lastPos.lat,lastPos.lng]);
+      if(follow)map.setView([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});
+      updateCar();
+    },()=>{$('gpsBadge').textContent='GPS non disponibile'},{enableHighAccuracy:true,maximumAge:700,timeout:20000});
+  };
+
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
