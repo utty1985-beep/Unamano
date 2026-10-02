@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.13';
+  const FINAL_VER='6.3.14';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -771,7 +771,8 @@
 
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
-  let ctARRawHeading=null,ctARRenderAt=0;
+  let ctARRawHeading=null,ctARRenderAt=0,ctARMotionUntil=0,ctARHasMotionSensor=false;
+  let ctARCompassCandidate=null,ctARCompassCandidateAt=0;
   let ctARLockedId=null,ctARLockedAt=0,ctARLastVibeAt=0;
   let ctARRadarEnabled=true;try{ctARRadarEnabled=localStorage.getItem('ct-ar-radar')!=='0'}catch{}
   const ctARPrevDistance=new Map(),ctARMovingAway=new Map();
@@ -863,6 +864,14 @@
     b.dataset.ctHelp='Apre la telecamera e mostra gli uccelli o funghi già segnati nella direzione in cui stai guardando, con la distanza.';
     b.onclick=ctStartARView;host.appendChild(b);
   }
+  function ctARDeviceMotion(e){
+    ctARHasMotionSensor=true;
+    const r=e?.rotationRate||{};
+    const vals=[r.alpha,r.beta,r.gamma].map(Number).filter(Number.isFinite);
+    const spin=vals.length?Math.max(...vals.map(Math.abs)):0;
+    // Una rotazione vera del telefono mantiene il filtro AR libero per mezzo secondo.
+    if(spin>2.8)ctARMotionUntil=performance.now()+520;
+  }
   function ctAROrientation(e){
     let h=null;
     if(Number.isFinite(+e.webkitCompassHeading))h=+e.webkitCompassHeading;
@@ -871,16 +880,31 @@
     const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
     const target=(h+a+360)%360;
     ctARRawHeading=target;
-    if(!Number.isFinite(ctARHeading))ctARHeading=target;
+    const now=performance.now();
+    if(!Number.isFinite(ctARHeading)){ctARHeading=target;ctARCompassCandidate=target;ctARCompassCandidateAt=now}
     else{
       const delta=ctARAngleDiff(target,ctARHeading),ad=Math.abs(delta);
-      // Da fermo la bussola oscilla normalmente di qualche grado: ignora il micro-rumore.
-      if(ad<=1.6)return;
-      // Movimento reale = risposta rapida; piccola oscillazione = filtro molto più forte.
-      const alpha=ad>25?.58:ad>12?.40:ad>6?.27:ad>3?.18:.12;
-      ctARHeading=(ctARHeading+delta*alpha+360)%360;
+      const moving=now<ctARMotionUntil;
+      if(ctARHasMotionSensor&&!moving){
+        // Telefono fermo: non inseguire salti magnetici. Consenti solo una correzione lentissima entro 3°.
+        if(ad<=1.2)return;
+        if(ad<=3)ctARHeading=(ctARHeading+delta*.045+360)%360;
+        else return;
+      }else if(!ctARHasMotionSensor){
+        // Fallback senza giroscopio: un grande cambio deve restare coerente per almeno 320 ms.
+        const candDiff=Number.isFinite(ctARCompassCandidate)?Math.abs(ctARAngleDiff(target,ctARCompassCandidate)):999;
+        if(ad>4){
+          if(candDiff>4){ctARCompassCandidate=target;ctARCompassCandidateAt=now;return}
+          if(now-ctARCompassCandidateAt<320)return;
+        }else{ctARCompassCandidate=target;ctARCompassCandidateAt=now}
+        const alpha=ad>25?.34:ad>12?.26:ad>6?.19:.10;
+        ctARHeading=(ctARHeading+delta*alpha+360)%360;
+      }else{
+        // Rotazione reale rilevata dal giroscopio: risposta fluida ma rapida.
+        const alpha=ad>25?.52:ad>12?.40:ad>6?.30:.20;
+        ctARHeading=(ctARHeading+delta*alpha+360)%360;
+      }
     }
-    const now=performance.now();
     if(now-ctARRenderAt>=90){ctARRenderAt=now;ctRenderARMarkers()}
   }
   function ctSyncARRadarToggle(){
@@ -993,7 +1017,8 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      window.addEventListener('devicemotion',ctARDeviceMotion,true);
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
       ctARTimer=setInterval(ctRenderARMarkers,700);
@@ -1004,8 +1029,9 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
+    window.removeEventListener('devicemotion',ctARDeviceMotion,true);
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
     window.removeEventListener('deviceorientation',ctAROrientation,true);
     try{ctARStream?.getTracks?.().forEach(t=>t.stop())}catch{}ctARStream=null;
