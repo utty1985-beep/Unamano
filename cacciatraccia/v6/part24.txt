@@ -509,6 +509,18 @@
     });
   };
 
+  const numberedRenderDiary=renderDiary;
+  renderDiary=function(){
+    ensurePointNumbers();
+    numberedRenderDiary();
+    (state.points||[]).forEach(p=>{
+      const btn=[...document.querySelectorAll('#historyList button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+p.id+"'"));
+      const item=btn?.closest('.item');if(!item)return;
+      const title=item.querySelector('b');
+      if(title&&!title.dataset.ctNumbered){title.dataset.ctNumbered='1';title.innerHTML='<span style="display:inline-block;min-width:28px;padding:2px 6px;margin-right:6px;border-radius:999px;background:#173f2b;color:#fff;font-size:11px;text-align:center">#'+esc(p.seq)+'</span>'+title.innerHTML}
+    });
+  };
+
   const numberedFillModal=fillModal;
   fillModal=function(p){
     const r=numberedFillModal(p);
