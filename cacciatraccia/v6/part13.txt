@@ -19,7 +19,12 @@
     return cleanAppUrl()+'?join=1';
   }
   async function shareApp(){
-    await shareOrCopy('Passione Funghi e Caccia','Prova Passione Funghi e Caccia: GPS, appostamenti, meteo, diario e percorsi.',cleanAppUrl());
+    const url=cleanAppUrl()+'?install=1';
+    await shareOrCopy(
+      'Passione Funghi e Caccia',
+      'Passione Funghi e Caccia: GPS, appostamenti, meteo, diario e percorsi. Apri il link e installa l’app sul telefono.',
+      url
+    );
   }
   function whatsappInvite(){
     const url=cloudInviteUrl();
@@ -40,9 +45,9 @@
     box.id='ctShareInviteBox';
     box.className='card';
     box.innerHTML=`<div class="sectionHead"><h3>👥 Condividi e invita</h3><span class="pill soft">beta</span></div>
-      <p class="note">Condividi l'app per farla provare. Gli inviti al gruppo sono già predisposti per e-mail e WhatsApp; quando colleghiamo il cloud separato, ogni link sarà personale e collegherà l'invitato al tuo gruppo.</p>
+      <p class="note">Condividi l'app con WhatsApp, Telegram, e-mail o altre app. Chi riceve il link può aprire Passione Funghi e Caccia e installarla sul proprio telefono.</p>
       <div class="actionGrid">
-        <button id="ctShareAppBtn" class="primary">↗ Condividi app per test</button>
+        <button id="ctShareAppBtn" class="primary">↗ Condividi applicazione</button>
         <button id="ctInviteWhatsAppBtn" class="secondary">🟢 Invita su WhatsApp</button>
         <button id="ctInviteEmailBtn" class="secondary">✉️ Invita via e-mail</button>
         <button id="ctMembersBtn" class="secondary" disabled>👥 Membri del gruppo</button>
@@ -52,6 +57,27 @@
     $('ctInviteWhatsAppBtn').onclick=whatsappInvite;
     $('ctInviteEmailBtn').onclick=emailInvite;
   }
+  function initTopShareButton(){
+    if(document.getElementById('ctTopShareBtn'))return;
+    const actions=document.querySelector('.topActions');
+    if(!actions)return;
+    const b=document.createElement('button');
+    b.id='ctTopShareBtn';
+    b.className='ghost';
+    b.title='Condividi applicazione';
+    b.setAttribute('aria-label','Condividi applicazione');
+    b.textContent='↗';
+    const backup=document.getElementById('backupQuickBtn');
+    if(backup)actions.insertBefore(b,backup);else actions.appendChild(b);
+    b.onclick=shareApp;
+  }
+  function showInstallHint(){
+    try{
+      if(new URL(location.href).searchParams.get('install')==='1'){
+        setTimeout(()=>toast('Per installarla usa “Installa” oppure il menu del browser > Installa app / Aggiungi a schermata Home'),900);
+      }
+    }catch{}
+  }
   const prevBind=bind;
-  bind=function(){prevBind();initShareInviteUI()};
+  bind=function(){prevBind();initShareInviteUI();initTopShareButton();showInstallHint()};
 })();
