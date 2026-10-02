@@ -1,0 +1,182 @@
+
+// V6.2.0 - modalità funghi: avvistamento funghi + Vedi specie da foto
+(function(){
+  const CT_PATCH_VER='6.2.0';
+  let mushroomMode=false, speciesPhotoData=null, speciesAnalysis=null;
+
+  const DB={
+    'amanita muscaria':['Amanita muscaria (ovolo malefico)','ALTO','Sì','Cappello rosso o arancio con verruche bianche.','Lamelle bianche e libere.','Gambo bianco con anello e base bulbosa.','Boschi di latifoglie e conifere.','Estate-autunno.','Contiene sostanze neuroattive e tossiche; può provocare intossicazioni importanti.'],
+    'amanita phalloides':['Amanita phalloides (tignosa verdognola)','MASSIMO','Sì, potenzialmente mortale','Cappello verdastro, giallo-oliva o quasi bianco.','Lamelle bianche e libere.','Gambo chiaro con anello e volva evidente alla base.','Boschi di latifoglie, soprattutto querce, castagni e faggi.','Estate-autunno.','Specie responsabile di intossicazioni gravissime.'],
+    'armillaria mellea':['Armillaria mellea (chiodino)','MEDIO','Non tipicamente, ma può causare disturbi','Cappello color miele-bruno con piccole squame.','Lamelle chiare.','Gambo fibroso con anello.','A cespi su ceppaie, radici e legno.','Autunno.','Può provocare disturbi gastrointestinali; serve riconoscimento esperto.'],
+    'cerioporus squamosus':['Cerioporus squamosus (poliporo squamoso)','BASSO/INCERTO','Non tipicamente','Grande cappello a ventaglio con squame brune.','Pori chiari.','Gambo laterale o eccentrico.','Tronchi e ceppaie di latifoglie.','Primavera-estate.','L’identificazione fotografica non certifica commestibilità.'],
+    'chlorophyllum brunneum':['Chlorophyllum brunneum','MEDIO','Può causare disturbi gastrointestinali','Grande cappello con squame brune.','Lamelle bianche poi crema.','Gambo con anello e base spesso bulbosa.','Parchi, giardini e terreni ricchi.','Estate-autunno.','Può essere confuso con specie simili.'],
+    'clitocybe nuda':['Lepista nuda / Clitocybe nuda','MEDIO','Non tipicamente, ma possibili disturbi','Cappello lilla-violaceo.','Lamelle fitte color lilla.','Gambo robusto violaceo.','Boschi e lettiera ricca.','Autunno-inizio inverno.','Esistono specie violacee simili; serve conferma esperta.'],
+    'coprinellus micaceus':['Coprinellus micaceus (coprino micaceo)','BASSO/INCERTO','Non tipicamente','Cappello campanulato bruno-miele con granuli lucenti.','Lamelle da chiare a nere.','Gambo bianco, sottile e cavo.','Legno interrato, ceppaie e radici.','Primavera-autunno.','Diverse specie di coprini sono simili.'],
+    'coprinus comatus':['Coprinus comatus (coprino chiomato)','BASSO/INCERTO','Non tipicamente','Cappello cilindrico bianco con squame arruffate.','Lamelle da bianche a rosa e poi nere.','Gambo bianco con piccolo anello.','Prati, margini stradali e terreni disturbati.','Primavera-autunno.','L’aspetto cambia rapidamente con l’età.'],
+    'flammulina velutipes':['Flammulina velutipes','ALTO PER CONFUSIONE','Non tipicamente, ma rischio di confusione pericolosa','Cappello giallo-arancio, viscido con umidità.','Lamelle chiare.','Gambo sottile e scuro alla base.','Tronchi e ceppaie di latifoglie.','Tardo autunno-inverno.','Può essere confusa con piccoli funghi lignicoli molto tossici.'],
+    'gliophorus psittacinus':['Gliophorus psittacinus (igroforo pappagallo)','INCERTO','Non determinabile in sicurezza dall’app','Piccolo e viscido, verde-giallo.','Lamelle cerose e distanziate.','Gambo viscido giallo-verde.','Prati non concimati e pascoli.','Fine estate-autunno.','Non va usato per decisioni alimentari.'],
+    'hygrophoropsis aurantiaca':['Hygrophoropsis aurantiaca (falso finferlo)','MEDIO','Può causare disturbi','Cappello arancio depresso al centro.','Lamelle fitte, forcate e decorrenti.','Gambo arancio.','Boschi di conifere, lettiera e legno degradato.','Estate-autunno.','Può provocare disturbi gastrointestinali.'],
+    'hypholoma lateritium':['Hypholoma lateritium','MEDIO/INCERTO','Valutazione controversa; evitare decisioni alimentari','Cappello rosso mattone al centro.','Lamelle grigiastre poi porpora-brune.','Gambo giallastro.','A cespi su ceppaie e legno morto.','Autunno.','La commestibilità è riportata in modo diverso nelle fonti.'],
+    'stereum hirsutum':['Stereum hirsutum','BASSO','Non tipicamente, ma non è fungo alimentare','Mensole sottili giallo-arancio e pelose.','Superficie inferiore liscia.','Assente.','Legno morto di latifoglie.','Tutto l’anno.','Specie coriacea non destinata all’alimentazione.'],
+    'suillus luteus':['Suillus luteus (pinarolo)','MEDIO','Non tipicamente, ma possibili disturbi','Cappello bruno e molto viscido.','Pori gialli.','Gambo giallastro con anello.','Associato soprattutto ai pini.','Estate-autunno.','Può causare disturbi gastrointestinali in alcune persone.'],
+    'tricholomopsis rutilans':['Tricholomopsis rutilans','INCERTO','Non determinabile in sicurezza dall’app','Cappello giallo con squame porpora-rossastre.','Lamelle gialle.','Gambo giallo con fibrille rossastre.','Ceppaie e legno di conifere.','Estate-autunno.','Serve identificazione certa.'],
+    'tylopilus felleus':['Tylopilus felleus (porcino di fiele)','BASSO','Non tipicamente, ma non adatto al consumo','Cappello bruno simile ad alcuni porcini.','Pori chiari poi rosati.','Gambo con reticolo scuro.','Boschi di conifere e latifoglie.','Estate-autunno.','Sapore estremamente amaro; può essere confuso con boleti simili.']
+  };
+
+  const norm=s=>String(s||'').replace(/_/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+  function info(label){
+    const n=norm(label);
+    let a=DB[n];
+    if(!a){for(const k in DB){if(n.includes(k)||k.includes(n)){a=DB[k];break}}}
+    if(!a)a=[String(label||'Specie non determinata').replace(/_/g,' '),'SCONOSCIUTO','Non determinabile in sicurezza','Caratteristiche non disponibili.','—','—','—','—','Serve conferma di un micologo.'];
+    return {common:a[0],risk:a[1],poison:a[2],cap:a[3],hym:a[4],stem:a[5],habitat:a[6],season:a[7],note:a[8]};
+  }
+  function warning(){
+    return '<div style="margin-top:10px;padding:10px;border-radius:12px;background:#fff0ed;border:1px solid #e5b2aa;color:#8b251e;font-size:12px;line-height:1.4"><b>⚠️ Identificazione solo indicativa.</b><br>Non mangiare, assaggiare o somministrare un fungo basandoti su questa app o su una foto. Per il consumo fai controllare gli esemplari da un micologo / Ispettorato Micologico ASL.</div>';
+  }
+  function card(label,confidence){
+    const d=info(label),pct=Number.isFinite(confidence)?Math.round(confidence*100):null;
+    return '<div class="ctMushResult"><div style="display:flex;gap:10px;align-items:flex-start"><div style="font-size:34px">🍄</div><div><b style="font-size:17px">'+esc(d.common)+'</b>'+(pct!=null?'<div class="muted">Corrispondenza AI indicativa: '+pct+'%</div>':'')+'</div></div>'+
+    '<div class="ctMushGrid"><div><span>Velenoso?</span><b>'+esc(d.poison)+'</b></div><div><span>Rischio</span><b>'+esc(d.risk)+'</b></div></div>'+
+    '<div class="ctMushDetails"><b>Cappello</b><br>'+esc(d.cap)+'<br><b>Lamelle / pori</b><br>'+esc(d.hym)+'<br><b>Gambo</b><br>'+esc(d.stem)+'<br><b>Habitat</b><br>'+esc(d.habitat)+'<br><b>Periodo</b><br>'+esc(d.season)+'<br><b>Nota</b><br>'+esc(d.note)+'</div>'+warning()+'</div>';
+  }
+  function parse(x){
+    const seen=new Set();
+    function w(v){
+      if(v==null)return null;
+      if(typeof v==='string'&&v.length>2)return {label:v,confidence:null};
+      if(typeof v!=='object'||seen.has(v))return null;seen.add(v);
+      if(typeof v.label==='string'){
+        let c=Number(v.confidence);
+        if(!Number.isFinite(c)&&Array.isArray(v.confidences)&&v.confidences[0])c=Number(v.confidences[0].confidence);
+        return {label:v.label,confidence:Number.isFinite(c)?c:null};
+      }
+      if(Array.isArray(v.confidences)&&v.confidences.length){
+        const a=[...v.confidences].sort((a,b)=>(+b.confidence||0)-(+a.confidence||0))[0];
+        if(a&&a.label)return {label:a.label,confidence:Number(a.confidence)||null};
+      }
+      const nums=Object.entries(v).filter(e=>typeof e[1]==='number'&&Number.isFinite(e[1]));
+      if(nums.length>=2){nums.sort((a,b)=>b[1]-a[1]);return {label:nums[0][0],confidence:nums[0][1]}}
+      if(Array.isArray(v)){for(const z of v){const r=w(z);if(r)return r}}
+      else{
+        for(const k of ['data','value','prediction','result','output'])if(k in v){const r=w(v[k]);if(r)return r}
+        for(const z of Object.values(v)){const r=w(z);if(r)return r}
+      }
+      return null;
+    }
+    return w(x);
+  }
+  async function analyze(file,target){
+    if(!file)return;
+    target.innerHTML='<div class="empty">🍄 Analizzo la foto… la prima analisi può richiedere più tempo.</div>';
+    try{
+      const mod=await import('https://cdn.jsdelivr.net/npm/@gradio/client/+esm');
+      const client=await mod.Client.connect('gaglileoo/MushroomWiseAI');
+      const hf=await mod.handle_file(file);
+      let result=null,lastErr=null;
+      for(const ep of ['/predict','/classify']){
+        try{result=await client.predict(ep,[hf]);if(result)break}catch(e){lastErr=e}
+      }
+      if(!result){
+        try{
+          const api=await client.view_api(),names=Object.keys(api&&api.named_endpoints||{});
+          for(const ep of names){try{result=await client.predict(ep,[hf]);if(result)break}catch(e){lastErr=e}}
+        }catch(e){lastErr=e}
+      }
+      if(!result)throw lastErr||Error('Servizio non disponibile');
+      const p=parse(result);if(!p||!p.label)throw Error('Risposta AI non interpretabile');
+      const d=info(p.label);
+      speciesAnalysis={rawLabel:p.label,label:d.common,confidence:p.confidence,risk:d.risk,poison:d.poison,checkedAt:new Date().toISOString()};
+      target.innerHTML=card(p.label,p.confidence);
+      if(mushroomMode&&$('pointSpecies'))$('pointSpecies').value=d.common;
+      if($('ctMushSavePoint'))$('ctMushSavePoint').hidden=false;
+    }catch(e){
+      console.warn('Mushroom AI',e);speciesAnalysis=null;
+      target.innerHTML='<div class="ctMushResult"><b>Analisi automatica non disponibile in questo momento.</b><div class="muted" style="margin-top:5px">La foto può comunque essere salvata. Puoi riprovare con Internet attivo.</div><button id="ctMushOnline" class="secondary wide" type="button" style="margin-top:8px">🌐 Apri riconoscimento online</button>'+warning()+'</div>';
+      setTimeout(()=>{const b=$('ctMushOnline');if(b)b.onclick=()=>window.open('https://huggingface.co/spaces/gaglileoo/MushroomWiseAI','_blank','noopener')},0);
+    }
+  }
+  const dataUrl=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
+
+  function styles(){
+    if($('ctMushroomStyle'))return;
+    const s=document.createElement('style');s.id='ctMushroomStyle';s.textContent=`
+      .mapQuickActions{grid-template-columns:repeat(3,1fr)!important}
+      .quickAction.mushroom{background:#e8f0dd;color:#37511f}.quickAction.identify{background:#e7eef7;color:#234d72}
+      .ctMushResult{padding:11px;border:1px solid #d7d8d0;border-radius:14px;background:#fff}
+      .ctMushGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0}.ctMushGrid>div{padding:8px;border-radius:10px;background:#f4f6f1}
+      .ctMushGrid span{display:block;font-size:11px;color:#647068}.ctMushGrid b{display:block;margin-top:2px}.ctMushDetails{font-size:12px;line-height:1.45}.ctMushDetails b{color:#173f2b}
+      #ctMushPreview{width:100%;max-height:280px;object-fit:contain;border-radius:12px;background:#eef1eb;margin:8px 0}
+      .ctMushPin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid #4c7130;box-shadow:0 2px 7px #0005;font-size:23px}
+      @media(max-width:520px){.mapQuickActions{grid-template-columns:repeat(3,1fr)!important}.quickAction{min-height:64px}.quickAction span{font-size:10px}}
+    `;document.head.appendChild(s);
+  }
+  function quick(){
+    styles();const bar=document.querySelector('.mapQuickActions');if(!bar)return;
+    const bird=$('quickSightingBtn');if(bird&&bird.querySelector('span'))bird.querySelector('span').textContent='Avv. uccelli';
+    if(!$('quickMushroomBtn')){
+      const b=document.createElement('button');b.id='quickMushroomBtn';b.className='quickAction mushroom';b.innerHTML='<b>🍄</b><span>Funghi trovati</span>';bird&&bird.insertAdjacentElement('afterend',b);
+      b.onclick=saveMushroom;b.dataset.ctHelp='Salva rapidamente un fungo trovato nella posizione GPS attuale.';
+    }
+    if(!$('quickSpeciesBtn')){
+      const b=document.createElement('button');b.id='quickSpeciesBtn';b.className='quickAction identify';b.innerHTML='<b>🔎🍄</b><span>Vedi specie</span>';$('quickMushroomBtn')&&$('quickMushroomBtn').insertAdjacentElement('afterend',b);
+      b.onclick=openSpecies;b.dataset.ctHelp='Scatta o scegli una foto per ottenere una possibile identificazione della specie e una scheda descrittiva.';
+    }
+  }
+  async function saveMushroom(){
+    const before=new Set((state.points||[]).map(p=>p.id));await saveCurrent('Avvistamento',true);
+    const p=(state.points||[]).find(x=>!before.has(x.id));if(!p)return;
+    p.sightingKind='mushroom';p.name='Fungo trovato';save();renderMarkers();fillModal(p);
+  }
+  function speciesModal(){
+    if($('ctSpeciesModal'))return;
+    const m=document.createElement('div');m.id='ctSpeciesModal';m.className='modal';
+    m.innerHTML='<div class="dialog" style="max-width:720px;max-height:94vh;overflow:auto"><div class="sectionHead"><div><h2>🔎🍄 Vedi specie</h2><div class="muted">Foto del fungo → possibile specie + caratteristiche</div></div><button id="ctMushClose" class="iconBtn" type="button">✕</button></div><div class="field"><label>Scatta una foto o sceglila dalla galleria</label><input id="ctMushPhoto" type="file" accept="image/*" capture="environment"></div><img id="ctMushPreview" hidden alt="Foto fungo"><div id="ctMushResult">'+warning()+'</div><div class="actionGrid"><button id="ctMushAgain" class="secondary" type="button">📷 Altra foto</button><button id="ctMushSavePoint" class="primary" type="button" hidden>📍 Salva come fungo trovato qui</button></div></div>';
+    document.body.appendChild(m);
+    $('ctMushClose').onclick=()=>m.classList.remove('open');m.onclick=e=>{if(e.target===m)m.classList.remove('open')};$('ctMushAgain').onclick=()=>$('ctMushPhoto').click();
+    $('ctMushPhoto').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;speciesPhotoData=await dataUrl(f);const im=$('ctMushPreview');im.src=speciesPhotoData;im.hidden=false;$('ctMushSavePoint').hidden=true;await analyze(f,$('ctMushResult'))};
+    $('ctMushSavePoint').onclick=async()=>{const before=new Set((state.points||[]).map(p=>p.id));await saveCurrent('Avvistamento',false);const p=(state.points||[]).find(x=>!before.has(x.id));if(!p)return;p.sightingKind='mushroom';p.name=speciesAnalysis&&speciesAnalysis.label||'Fungo trovato';p.species=speciesAnalysis&&speciesAnalysis.label||'Fungo da identificare';p.photo=speciesPhotoData;p.mushroomAnalysis=speciesAnalysis;save();renderMarkers();m.classList.remove('open');fillModal(p);toast('Fungo salvato sulla mappa')};
+  }
+  function openSpecies(){speciesModal();speciesPhotoData=null;speciesAnalysis=null;const m=$('ctSpeciesModal');m.classList.add('open');const im=$('ctMushPreview');im.hidden=true;im.removeAttribute('src');$('ctMushResult').innerHTML=warning();$('ctMushSavePoint').hidden=true;$('ctMushPhoto').value=''}
+
+  const oldFill=fillModal;
+  fillModal=function(p){
+    mushroomMode=!!(p&&p.sightingKind==='mushroom');speciesAnalysis=p&&p.mushroomAnalysis||null;oldFill(p);
+    const lab=$('pointSpecies')&&$('pointSpecies').closest('div').querySelector('label');if(lab)lab.textContent=mushroomMode?'🍄 Funghi trovati / specie':'Uccelli / funghi trovati';
+    if($('pointSpecies'))$('pointSpecies').placeholder=mushroomMode?'es. porcino, amanita, russula…':'es. tordi, colombacci, porcini…';
+    if($('pointHuntDate')){const dl=$('pointHuntDate').closest('div').querySelector('label');if(dl)dl.textContent=mushroomMode?'Giorno dell’uscita':'Giorno della caccia'}
+    const photo=$('pointPhoto');
+    if(photo){
+      if(photo._ctMushHandler)photo.removeEventListener('change',photo._ctMushHandler);
+      if(mushroomMode){
+        photo.setAttribute('capture','environment');
+        let result=$('ctPointMushResult');if(!result){result=document.createElement('div');result.id='ctPointMushResult';result.className='full';photo.closest('.full').insertAdjacentElement('afterend',result)}
+        result.innerHTML=p&&p.mushroomAnalysis?card(p.mushroomAnalysis.rawLabel||p.species,p.mushroomAnalysis.confidence):'<button id="ctPointIdentifyBtn" class="secondary wide" type="button">🔎🍄 Vedi specie dalla foto</button>'+warning();
+        if($('ctPointIdentifyBtn'))$('ctPointIdentifyBtn').onclick=()=>photo.click();
+        photo._ctMushHandler=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;speciesPhotoData=await dataUrl(f);$('pointPhotoPreview').innerHTML='<img src="'+speciesPhotoData+'" style="max-width:100%;border-radius:12px">';await analyze(f,result)};
+        photo.addEventListener('change',photo._ctMushHandler);
+      }else{photo.removeAttribute('capture');$('ctPointMushResult')&&$('ctPointMushResult').remove()}
+    }
+  };
+
+  const oldSavePoint=savePoint;
+  savePoint=async function(){const id=editing,was=mushroomMode,a=speciesAnalysis;await oldSavePoint();if(was&&id){const p=(state.points||[]).find(x=>x.id===id);if(p){p.sightingKind='mushroom';if(a)p.mushroomAnalysis=a;save();renderMarkers()}}};
+
+  function mushIcon(){return L.divIcon({className:'',html:'<div class="ctMushPin">🍄</div>',iconSize:[38,38],iconAnchor:[19,34]})}
+  renderMarkers=function(){
+    if(!markerLayer)return;markerLayer.clearLayers();
+    const day=$('ctHuntDay')&&$('ctHuntDay').value||localStorage.getItem('cacciatraccia-hunt-day-v1')||new Date().toISOString().slice(0,10);
+    (state.points||[]).forEach(p=>{if(p.type!=='Avvistamento'&&p.huntDate!==day)return;const ic=p.type==='Avvistamento'&&p.sightingKind==='mushroom'?mushIcon():icon(p.type);const m=L.marker([p.lat,p.lng],{icon:ic}).addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)})});
+  };
+
+  const oldRenderDiary=renderDiary;
+  renderDiary=function(){oldRenderDiary();(state.points||[]).filter(p=>p.sightingKind==='mushroom').forEach(p=>{const btn=[...document.querySelectorAll('#historyList button')].find(b=>(b.getAttribute('onclick')||'').includes("'"+p.id+"'"));const item=btn&&btn.closest('.item');if(!item)return;const title=item.querySelector('b');if(title)title.textContent='🍄 '+(p.species||p.name||'Fungo trovato');[...item.querySelectorAll('div')].forEach(d=>{if(/Giorno caccia/.test(d.textContent||''))d.innerHTML=d.innerHTML.replace('Giorno caccia','Giorno uscita')});if(p.mushroomAnalysis&&!item.querySelector('.ctMushMini')){const z=document.createElement('div');z.className='snap ctMushMini';z.innerHTML='🍄 <b>'+esc(p.mushroomAnalysis.label||p.species||'Specie proposta')+'</b> · rischio '+esc(p.mushroomAnalysis.risk||'sconosciuto');const rows=item.querySelector('.rowBtns');rows?item.insertBefore(z,rows):item.appendChild(z)}})};
+
+  const oldOpen=window.CT&&window.CT.openHistoryPoint;if(oldOpen)window.CT.openHistoryPoint=async function(id){const r=await oldOpen(id);const p=(state.points||[]).find(x=>x.id===id);if(p&&p.sightingKind==='mushroom'&&$('selectedTitle'))$('selectedTitle').textContent='🍄 '+(p.species||p.name||'Fungo trovato');return r};
+
+  const oldShare=pointShareText;
+  pointShareText=function(p){if(!p||p.sightingKind!=='mushroom')return oldShare(p);const a=p.mushroomAnalysis;return (p.species||p.name||'Fungo trovato')+'\nTipo: Fungo trovato\nData/ora: '+when(p.createdAt)+'\nGiorno uscita: '+(p.huntDate||'-')+'\nCoordinate: '+p.lat+', '+p.lng+'\nRischio indicativo: '+(a&&a.risk||'non determinato')+'\nVelenoso?: '+(a&&a.poison||'non determinabile in sicurezza')+'\nVento: '+(p.windName||p.weather&&p.weather.windName||'-')+' '+(p.windSpeed!=null?p.windSpeed:p.weather&&p.weather.windSpeed||'-')+' km/h\nNote: '+(p.notes||'-')+'\nATTENZIONE: identificazione fotografica non valida per decidere il consumo.\nGoogle Maps: https://www.google.com/maps?q='+p.lat+','+p.lng};
+
+  const oldBind=bind;
+  bind=function(){oldBind();quick();speciesModal();const lab=$('pointSpecies')&&$('pointSpecies').closest('div').querySelector('label');if(lab&&!mushroomMode)lab.textContent='Uccelli / funghi trovati';const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER};
+})();
