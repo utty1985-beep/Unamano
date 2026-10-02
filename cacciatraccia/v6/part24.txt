@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.5';
+  const FINAL_VER='6.3.6';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -660,10 +660,61 @@
     },()=>{$('gpsBadge').textContent='GPS non disponibile'},{enableHighAccuracy:true,maximumAge:700,timeout:20000});
   };
 
+  // ---------- Reset totale dati app ----------
+  function ensureTotalResetButton(){
+    if($('ctTotalResetBtn'))return;
+    const host=$('exportJsonBtn')?.closest('.actionGrid')||document.querySelector('#page-backup .actionGrid');
+    if(!host)return;
+    const b=document.createElement('button');
+    b.id='ctTotalResetBtn';
+    b.type='button';
+    b.className='danger';
+    b.textContent='⚠️ Reset totale';
+    b.dataset.ctHelp='Cancella tutti i dati di Passione Funghi e Caccia sul telefono e riporta l’app allo stato iniziale.';
+    host.appendChild(b);
+    const note=document.createElement('div');
+    note.id='ctTotalResetNote';
+    note.className='note';
+    note.style.gridColumn='1 / -1';
+    note.innerHTML='<b>Reset totale:</b> cancella punti, avvistamenti, funghi, camminate, diario, posizione auto, versioni locali, preferenze e mappe offline. L’app resta installata.';
+    host.appendChild(note);
+    b.onclick=totalReset;
+  }
+  async function totalReset(){
+    if(!confirm('RESET TOTALE\n\nCancellerà tutti i dati salvati in Passione Funghi e Caccia su questo telefono. Continuare?'))return;
+    if(!confirm('Ultima conferma: punti, avvistamenti, funghi, camminate, diario, auto, backup/versioni locali e preferenze verranno eliminati. Procedere davvero?'))return;
+    try{
+      if(gpsWatch!=null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null}
+      if(track?.watch!=null&&navigator.geolocation){navigator.geolocation.clearWatch(track.watch)}
+      if(track?.timer)clearInterval(track.timer);
+    }catch{}
+    try{
+      const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&(/cacciatraccia/i.test(k)||/passione[-_ ]?funghi/i.test(k)))keys.push(k)}
+      keys.forEach(k=>localStorage.removeItem(k));
+    }catch{}
+    try{
+      const keys=[];for(let i=0;i<sessionStorage.length;i++){const k=sessionStorage.key(i);if(k&&(/cacciatraccia/i.test(k)||/passione[-_ ]?funghi/i.test(k)))keys.push(k)}
+      keys.forEach(k=>sessionStorage.removeItem(k));
+    }catch{}
+    try{
+      if('caches' in window){
+        const names=await caches.keys();
+        await Promise.all(names.filter(n=>/cacciatraccia-offline|offline-tiles/i.test(n)).map(n=>caches.delete(n)));
+      }
+    }catch{}
+    state={points:[],outings:[],diary:[],car:null};
+    selected=null;editing=null;lastPos=null;follow=true;sightChecks.clear();
+    try{if(returnLine){map.removeLayer(returnLine);returnLine=null}}catch{}
+    try{if(carMarker){map.removeLayer(carMarker);carMarker=null}}catch{}
+    try{if(markerLayer)markerLayer.clearLayers()}catch{}
+    toast('Reset totale completato');
+    setTimeout(()=>location.reload(),700);
+  }
+
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
-    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();hideOldAutoCard();ensureMushModal();ensureSightCheck();
+    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();hideOldAutoCard();ensureMushModal();ensureSightCheck();ensureTotalResetButton();
     const f=$('followBtn');if(f){f.onclick=()=>{toggleFollow();syncFollow()};syncFollow()}
     const car=$('quickCarBtn');if(car)car.onclick=carToggle;
     const mush=$('quickMushroomBtn');if(mush){mush.onclick=quickMush;mush.dataset.ctHelp='Salva un fungo trovato nella posizione GPS attuale.'}
