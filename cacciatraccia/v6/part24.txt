@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.9';
+  const FINAL_VER='6.3.10';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -771,6 +771,8 @@
 
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
+  const ctARPrevDistance=new Map(),ctARMovingAway=new Map();
+  let ctARLastGpsSig='';
 
   function ctAREligiblePoints(){
     return (state.points||[]).filter(p=>
@@ -859,12 +861,27 @@
       info.textContent='📷 Vista punti · GPS pronto · attendo bussola';
       return;
     }
-    const HALF=42;
-    const rows=pts.map(p=>({p,d:ctARDistanceM(p),b:ctARBearing(p)}))
-      .filter(x=>Number.isFinite(x.d)&&Number.isFinite(x.b))
+    const HALF=28,MAX_DISTANCE=10000;
+    const gpsSig=lastPos?lastPos.lat.toFixed(6)+','+lastPos.lng.toFixed(6):'';
+    const gpsChanged=gpsSig&&gpsSig!==ctARLastGpsSig;
+    const rows=pts.map(p=>{
+        const d=ctARDistanceM(p),b=ctARBearing(p);
+        if(gpsChanged&&Number.isFinite(d)){
+          const prev=ctARPrevDistance.get(p.id);
+          const tol=Math.max(10,(lastPos?.acc||8)*1.2);
+          if(Number.isFinite(prev)){
+            if(d>prev+tol)ctARMovingAway.set(p.id,true);
+            else if(d<prev-tol)ctARMovingAway.set(p.id,false);
+          }
+          ctARPrevDistance.set(p.id,d);
+        }
+        return {p,d,b};
+      })
+      .filter(x=>Number.isFinite(x.d)&&Number.isFinite(x.b)&&x.d<=MAX_DISTANCE&&!ctARMovingAway.get(x.p.id))
       .map(x=>({...x,delta:ctARAngleDiff(x.b,ctARHeading)}))
       .filter(x=>Math.abs(x.delta)<=HALF)
-      .sort((a,b)=>a.d-b.d).slice(0,8);
+      .sort((a,b)=>a.d-b.d).slice(0,6);
+    if(gpsChanged)ctARLastGpsSig=gpsSig;
     layer.innerHTML='';
     rows.forEach((x,i)=>{
       const m=document.createElement('div');m.className='ctARMarker';
@@ -880,7 +897,7 @@
       empty.style.display='none';
     }else{
       empty.style.display='block';
-      empty.textContent='Nessun uccello o fungo già segnato in questa direzione.';
+      empty.textContent='Nessun punto entro 10 km in questa direzione mentre ti stai avvicinando.';
     }
   }
   async function ctEnsureARPosition(){
@@ -908,7 +925,7 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;
+      ctARActive=true;ctARHeading=null;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
       ctARTimer=setInterval(ctRenderARMarkers,700);
@@ -919,7 +936,7 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;
+    ctARActive=false;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
     window.removeEventListener('deviceorientation',ctAROrientation,true);
