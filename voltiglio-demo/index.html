@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#07131a">
+<title>Voltiglio AR Demo</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07131a;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{position:fixed;inset:0;background:radial-gradient(circle at 50% 35%,#18343e,#07131a 68%)}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#000}
+#shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(#0008 0,#0000 20%,#0000 70%,#0009 100%)}
+#start{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;z-index:20}
+.panel{width:min(92vw,430px);padding:24px;border:1px solid #ffffff2e;border-radius:24px;background:#07131adb;backdrop-filter:blur(12px);box-shadow:0 18px 50px #0008}
+.panel h1{margin:0 0 8px;font-size:30px}.panel p{margin:0 0 18px;color:#c9d6dc}.btn{border:0;border-radius:16px;font-weight:900;font-size:17px;padding:15px 18px;background:#0bd4e8;color:#06232b;box-shadow:0 0 26px #0bd4e855}
+#hud{position:absolute;inset:0;display:none;z-index:5;pointer-events:none}
+#topCard{position:absolute;left:50%;top:max(18px,env(safe-area-inset-top));transform:translateX(-50%);width:min(88vw,560px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid #9fefff88;border-radius:20px;background:#07131ab5;backdrop-filter:blur(10px);box-shadow:0 6px 24px #0006}
+#topCard b{font-size:25px}#topCard small{display:block;color:#8feaff;font-weight:800}.power{font-weight:900;font-size:22px;color:#ffd15c}
+#radar{position:absolute;right:14px;top:108px;width:92px;height:92px;border-radius:50%;border:1px solid #9fefff;background:radial-gradient(circle,#123d43 0 33%,#0a2830 34% 66%,#071d25 67%);box-shadow:0 0 18px #13dce755}
+#radar:before,#radar:after{content:"";position:absolute;background:#9fefff55}#radar:before{left:50%;top:6px;bottom:6px;width:1px}#radar:after{top:50%;left:6px;right:6px;height:1px}.dot{position:absolute;width:9px;height:9px;border-radius:50%;background:#ffc63f;left:64%;top:31%;box-shadow:0 0 10px #ffc63f}
+#creatureWrap{position:absolute;left:50%;top:54%;width:min(47vw,270px);aspect-ratio:1/1.08;transform:translate(-50%,-50%);filter:drop-shadow(0 18px 22px #0008);animation:idle 2.6s ease-in-out infinite;transform-origin:50% 85%;pointer-events:none}
+@keyframes idle{0%,100%{transform:translate(-50%,-50%) translateY(0) rotate(-1deg)}50%{transform:translate(-50%,-50%) translateY(-9px) rotate(1deg)}}
+#creature{width:100%;height:100%;overflow:visible}
+.glow{filter:drop-shadow(0 0 8px #11e7ff) drop-shadow(0 0 8px #ffbe32)}
+#reticle{position:absolute;left:50%;top:54%;width:170px;height:170px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #c7fbff88;box-shadow:0 0 0 1px #0005}
+#reticle:before,#reticle:after{content:"";position:absolute;background:#d8ffffcc}#reticle:before{left:50%;top:-14px;bottom:-14px;width:1px}#reticle:after{top:50%;left:-14px;right:-14px;height:1px}
+#bottom{position:absolute;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;justify-content:center;gap:18px;padding:0 16px;pointer-events:auto}
+#netBtn{width:124px;height:124px;border-radius:50%;border:3px solid #aefaff;background:#062a33dd;color:#fff;font-weight:950;font-size:16px;box-shadow:0 0 0 7px #12ddef33,0 0 28px #12ddef99;display:grid;place-items:center;line-height:1.05}
+#netBtn span{font-size:43px;display:block}
+#count{min-width:86px;padding:12px;border-radius:18px;border:1px solid #8fefff88;background:#07131ac9;text-align:center;font-weight:900}#count b{font-size:24px;display:block}
+#msg{position:absolute;left:50%;bottom:170px;transform:translateX(-50%);max-width:86vw;padding:10px 14px;border-radius:999px;background:#07131ad9;border:1px solid #ffffff38;font-weight:900;text-align:center;opacity:0;transition:.2s}
+#msg.show{opacity:1}
+#net{position:absolute;left:50%;bottom:95px;width:86px;height:86px;border:4px solid #e8ffff;border-radius:50% 50% 45% 45%;transform:translateX(-50%) scale(.3);opacity:0;z-index:12;pointer-events:none}
+#net:after{content:"";position:absolute;inset:6px;border-radius:50%;background:repeating-linear-gradient(45deg,transparent 0 8px,#d9ffffbb 8px 10px),repeating-linear-gradient(-45deg,transparent 0 8px,#d9ffffbb 8px 10px)}
+#net.throw{animation:throwNet .8s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes throwNet{0%{bottom:95px;opacity:1;transform:translateX(-50%) scale(.35) rotate(0)}72%{bottom:48%;opacity:1;transform:translateX(-50%) scale(1.6) rotate(35deg)}100%{bottom:47%;opacity:0;transform:translateX(-50%) scale(1.8) rotate(48deg)}}
+#creatureWrap.caught{animation:caught .55s ease forwards}
+@keyframes caught{to{opacity:0;transform:translate(-50%,-50%) scale(.15) rotate(12deg)}}
+#close{position:absolute;left:14px;top:max(18px,env(safe-area-inset-top));z-index:15;width:46px;height:46px;border-radius:14px;border:1px solid #ffffff55;background:#07131ac9;color:#fff;font-size:22px;font-weight:900;display:none}
+#again{display:none;position:absolute;left:50%;bottom:105px;transform:translateX(-50%);z-index:16;border:0;border-radius:15px;padding:13px 18px;font-weight:900;background:#ffd05d;color:#3c2a00}
+</style>
+</head>
+<body>
+<div id="app">
+  <video id="cam" autoplay muted playsinline></video>
+  <div id="shade"></div>
+  <button id="close">✕</button>
+  <div id="start">
+    <div class="panel">
+      <h1>⚡ Voltiglio AR</h1>
+      <p>Demo vera: attiva la telecamera del telefono e prova a catturare Voltiglio con la rete.</p>
+      <button class="btn" id="startBtn">📷 Attiva telecamera</button>
+      <div id="err" style="margin-top:12px;color:#ffb2a8;font-size:13px"></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="topCard"><div><b>Voltiglio</b><small>RARO</small></div><div class="power">⚡ 87</div></div>
+    <div id="radar"><span class="dot"></span></div>
+    <div id="reticle"></div>
+
+    <div id="creatureWrap">
+      <svg id="creature" viewBox="0 0 300 330" aria-label="Voltiglio">
+        <defs>
+          <radialGradient id="fur" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#59616b"/><stop offset=".72" stop-color="#252b32"/><stop offset="1" stop-color="#15191e"/></radialGradient>
+          <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff194"/><stop offset=".45" stop-color="#ffbd38"/><stop offset="1" stop-color="#ff7d11"/></linearGradient>
+          <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b8ffff"/><stop offset=".45" stop-color="#19e9f2"/><stop offset="1" stop-color="#00a9c7"/></linearGradient>
+        </defs>
+        <g class="glow">
+          <path d="M87 88 L64 18 Q100 40 112 78Z" fill="url(#gold)"/>
+          <path d="M213 88 L236 18 Q200 40 188 78Z" fill="url(#gold)"/>
+          <path d="M222 226 Q289 185 277 103 Q247 139 238 164 Q263 139 260 111 Q287 180 249 234Z" fill="url(#cyan)" stroke="url(#gold)" stroke-width="8"/>
+        </g>
+        <ellipse cx="150" cy="185" rx="79" ry="91" fill="url(#fur)"/>
+        <circle cx="150" cy="113" r="72" fill="url(#fur)"/>
+        <path d="M89 93 Q60 43 72 18 Q116 53 119 90Z" fill="#252b32"/>
+        <path d="M211 93 Q240 43 228 18 Q184 53 181 90Z" fill="#252b32"/>
+        <path d="M81 68 L72 27 L107 76Z" fill="url(#gold)"/><path d="M219 68 L228 27 L193 76Z" fill="url(#gold)"/>
+        <path d="M117 129 Q130 145 150 146 Q170 145 183 129 Q177 167 150 171 Q123 167 117 129Z" fill="#f3eee4"/>
+        <ellipse cx="117" cy="111" rx="25" ry="20" fill="#111"/><ellipse cx="183" cy="111" rx="25" ry="20" fill="#111"/>
+        <ellipse cx="119" cy="110" rx="13" ry="16" fill="url(#gold)"/><ellipse cx="181" cy="110" rx="13" ry="16" fill="url(#gold)"/>
+        <circle cx="123" cy="105" r="4" fill="#fff"/><circle cx="185" cy="105" r="4" fill="#fff"/>
+        <path d="M145 137 Q150 132 155 137 Q150 144 145 137Z" fill="#f0b7a2"/>
+        <path d="M150 144 Q138 154 128 149 M150 144 Q162 154 172 149" stroke="#17191c" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M150 57 L135 83 L150 101 L165 83Z" fill="url(#cyan)"/>
+        <path d="M107 177 L126 190 L116 218 L97 198Z" fill="url(#gold)"/>
+        <path d="M193 177 L174 190 L184 218 L203 198Z" fill="url(#cyan)"/>
+        <path d="M145 178 L128 208 L150 235 L172 208 L155 178Z" fill="url(#cyan)"/>
+        <ellipse cx="111" cy="257" rx="28" ry="48" fill="#252b32"/><ellipse cx="189" cy="257" rx="28" ry="48" fill="#252b32"/>
+        <ellipse cx="107" cy="302" rx="31" ry="16" fill="#eee8dd"/><ellipse cx="193" cy="302" rx="31" ry="16" fill="#eee8dd"/>
+        <circle cx="213" cy="202" r="19" fill="none" stroke="url(#cyan)" stroke-width="7"/>
+        <circle cx="213" cy="202" r="7" fill="url(#gold)"/>
+      </svg>
+    </div>
+
+    <div id="msg"></div>
+    <div id="net"></div>
+    <div id="bottom">
+      <button id="netBtn"><div><span>🕸️</span>Lancia rete</div></button>
+      <div id="count"><b id="nets">5</b>Reti</div>
+    </div>
+    <button id="again">🔄 Fai ricomparire Voltiglio</button>
+  </div>
+</div>
+
+<script>
+const cam=document.getElementById('cam'),start=document.getElementById('start'),hud=document.getElementById('hud');
+const err=document.getElementById('err'),net=document.getElementById('net'),creature=document.getElementById('creatureWrap');
+const msg=document.getElementById('msg'),netBtn=document.getElementById('netBtn'),again=document.getElementById('again'),close=document.getElementById('close');
+let stream=null,nets=5,caught=false;
+
+function flash(t){msg.textContent=t;msg.classList.add('show');clearTimeout(flash.t);flash.t=setTimeout(()=>msg.classList.remove('show'),1700)}
+async function openCamera(){
+  err.textContent='';
+  if(!navigator.mediaDevices?.getUserMedia){err.textContent='Telecamera non disponibile in questo browser.';return}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    cam.srcObject=stream;cam.style.display='block';start.style.display='none';hud.style.display='block';close.style.display='block';
+    setTimeout(()=>flash('⚡ Una creatura rara è comparsa!'),600);
+  }catch(e){err.textContent='Permesso telecamera non concesso oppure telecamera occupata.'}
+}
+function stopCamera(){try{stream?.getTracks().forEach(t=>t.stop())}catch{}stream=null;cam.srcObject=null;cam.style.display='none';hud.style.display='none';close.style.display='none';start.style.display='grid'}
+function resetCreature(){caught=false;creature.classList.remove('caught');creature.style.display='block';again.style.display='none';netBtn.disabled=false;flash('Voltiglio è ricomparso')}
+function throwNet(){
+  if(caught||nets<=0)return;
+  nets--;document.getElementById('nets').textContent=nets;net.classList.remove('throw');void net.offsetWidth;net.classList.add('throw');netBtn.disabled=true;
+  setTimeout(()=>{
+    caught=true;creature.classList.add('caught');navigator.vibrate?.([100,70,180]);
+    flash('✅ Voltiglio catturato! · Raro · Potenza 87');
+    setTimeout(()=>{creature.style.display='none';again.style.display='block'},520);
+  },630);
+}
+document.getElementById('startBtn').onclick=openCamera;netBtn.onclick=throwNet;again.onclick=resetCreature;close.onclick=stopCamera;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)stopCamera()});
+</script>
+</body>
+</html>
