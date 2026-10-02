@@ -42,9 +42,11 @@
       </div>
     </div>
     <div class="mapQuickActions" aria-label="Azioni rapide sulla mappa">
-      <button id="quickSightingBtn" class="quickAction sighting"><b>🕊️</b><span>Avvistamento</span></button>
+      <button id="quickSightingBtn" class="quickAction sighting"><b>🕊️</b><span>Avv. uccelli</span></button>
+      <button id="quickMushroomBtn" class="quickAction mushroom"><b>🍄</b><span>Funghi trovati</span></button>
+      <button id="quickSpeciesBtn" class="quickAction identify"><b>🔎🍄</b><span>Vedi specie</span></button>
       <button id="quickSaveHereBtn" class="quickAction"><b>📌</b><span>Salva punto</span></button>
-      <button id="quickTrackBtn" class="quickAction"><b>🔴</b><span>Uscita GPS</span></button>
+      <button id="quickTrackBtn" class="quickAction"><b>🔴</b><span>Camminata</span></button>
       <button id="quickCarBtn" class="quickAction"><b>🚗</b><span>Segna auto</span></button>
     </div>
     <div class="hint">“Salva punto” registra subito la posizione GPS attuale. Poi tocca il punto salvato sulla mappa per aggiungere uccelli trovati, vento, giorno di caccia, note e foto. Puoi ruotare la mappa con due dita oppure con ↶ ↷.</div>
@@ -138,7 +140,7 @@
     <div><label>Tipo</label><select id="pointType"><option>Postazione</option><option>Passaggio</option><option>Avvistamento</option><option>Parcheggio</option></select></div>
     <div><label>Nome / zona</label><input id="pointName" placeholder="es. Vallone nord" /></div>
     <div><label>Giorno della caccia</label><input id="pointHuntDate" type="date" /></div>
-    <div><label>Uccelli trovati / avvistati</label><input id="pointSpecies" placeholder="es. tordi, colombacci" /></div>
+    <div><label>Uccelli / funghi trovati</label><input id="pointSpecies" placeholder="es. tordi, colombacci, porcini" /></div>
     <div><label>Quantità (facoltativa)</label><input id="pointQuantity" type="number" min="0" step="1" /></div>
     <div><label>Vento</label><input id="pointWindName" placeholder="es. Maestrale" /></div>
     <div><label>Direzione vento</label><input id="pointWindDir" placeholder="es. NO" /></div>
@@ -154,6 +156,6 @@
 </div></div>
 
 <div id="toast" class="toast" role="status"></div>
-<script type="module" src="app-loader.js?v=6.2.1"></script>
+<script type="module" src="app-loader.js?v=6.2.2"></script>
 </body>
 </html>
