@@ -18,7 +18,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
     private static final int REQ_FILE = 4102;
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6202";
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6300";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingGeoOrigin;
@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.2.2");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.3.0");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -80,8 +80,8 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (state == null) { webView.clearCache(true); webView.loadUrl(START_URL); }
-        else webView.restoreState(state);
+        webView.clearCache(true);
+        webView.loadUrl(START_URL + "&t=" + System.currentTimeMillis());
     }
 
     @Override
