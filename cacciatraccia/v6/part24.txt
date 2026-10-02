@@ -300,7 +300,7 @@
 
 // V6.1.13 - gestione auto semplificata: nessun popup; il pulsante Segna auto diventa Rimuovi auto con barra
 (function(){
-  const CT_PATCH_VER='6.1.13';
+  const CT_PATCH_VER='6.1.14';
 
   function refreshQuickCarButton(){
     const b=$('quickCarBtn');if(!b)return;
