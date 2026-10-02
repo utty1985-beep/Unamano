@@ -1,11 +1,11 @@
 async function shareOut(id){
   const o=state.outings.find(x=>x.id===id); if(!o)return;
-  const c=document.createElement('canvas'); c.width=900;c.height=1100; const x=c.getContext('2d'); x.fillStyle='#f4f1e8';x.fillRect(0,0,900,1100);x.fillStyle='#173f2b';x.fillRect(0,0,900,130);x.fillStyle='#fff';x.font='bold 44px sans-serif';x.fillText('CacciaTraccia Italia',40,82);x.fillStyle='#182018';x.font='bold 34px sans-serif';x.fillText(`${new Date(o.start).toLocaleDateString('it-IT')} • ${(+o.distanceKm||0).toFixed(2)} km`,40,190);
+  const c=document.createElement('canvas'); c.width=900;c.height=1100; const x=c.getContext('2d'); x.fillStyle='#f4f1e8';x.fillRect(0,0,900,1100);x.fillStyle='#173f2b';x.fillRect(0,0,900,130);x.fillStyle='#fff';x.font='bold 44px sans-serif';x.fillText('Passione Funghi e Caccia',40,82);x.fillStyle='#182018';x.font='bold 34px sans-serif';x.fillText(`${new Date(o.start).toLocaleDateString('it-IT')} • ${(+o.distanceKm||0).toFixed(2)} km`,40,190);
   const b={x:50,y:240,w:800,h:500};x.fillStyle='#dfe7d8';x.fillRect(b.x,b.y,b.w,b.h);
   if(o.coords?.length>1){ const a=o.coords,minLa=Math.min(...a.map(p=>p[0])),maxLa0=Math.max(...a.map(p=>p[0])),minLo=Math.min(...a.map(p=>p[1])),maxLo0=Math.max(...a.map(p=>p[1])); const maxLa=maxLa0===minLa?maxLa0+.0001:maxLa0,maxLo=maxLo0===minLo?maxLo0+.0001:maxLo0; x.strokeStyle='#173f2b';x.lineWidth=10;x.beginPath(); a.forEach((p,i)=>{const px=b.x+30+(p[1]-minLo)/(maxLo-minLo)*(b.w-60),py=b.y+b.h-30-(p[0]-minLa)/(maxLa-minLa)*(b.h-60);i?x.lineTo(px,py):x.moveTo(px,py);});x.stroke(); }
   if(o.photo) await new Promise(res=>{const im=new Image();im.onload=()=>{const r=Math.min(800/im.width,280/im.height),w=im.width*r,h=im.height*r;x.drawImage(im,50+(800-w)/2,780+(280-h)/2,w,h);res();};im.onerror=res;im.src=o.photo;});
   x.fillStyle='#182018';x.font='26px sans-serif'; if(o.note)x.fillText(o.note.slice(0,60),50,1070);
   const blob=await new Promise(r=>c.toBlob(r,'image/png')), file=new File([blob],'CacciaTraccia.png',{type:'image/png'});
-  if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'CacciaTraccia Italia',text:`Percorso: ${(+o.distanceKm||0).toFixed(2)} km`,files:[file]});}catch(e){if(e.name==='AbortError')return;}}
+  if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'Passione Funghi e Caccia',text:`Percorso: ${(+o.distanceKm||0).toFixed(2)} km`,files:[file]});}catch(e){if(e.name==='AbortError')return;}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CacciaTraccia.png';a.click();
 }
