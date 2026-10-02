@@ -1,5 +1,5 @@
-const CACHE='passione-funghi-caccia-v6-3-10-ar-approach-10km';
-const SHELL=['./','./index.html','./styles.css?v=4.1.3','./app-loader.js?v=6.3.10','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.3.10`)];
+const CACHE='passione-funghi-caccia-v6-3-11-ar-radar-10km';
+const SHELL=['./','./index.html','./styles.css?v=4.1.3','./app-loader.js?v=6.3.11','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.3.11`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
