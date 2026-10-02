@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.6';
+  const FINAL_VER='6.3.7';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -60,7 +60,7 @@
   }
   function removeCarFinal(){
     try{if(returnLine){map.removeLayer(returnLine);returnLine=null}}catch{}
-    state.car=null;save();renderCar();toast('Posizione auto rimossa');
+    state.car=null;ctReturnCarActive=false;ctSyncReturnCarDistance();save();renderCar();toast('Posizione auto rimossa');
   }
   async function carToggle(){
     if(state.car){removeCarFinal();return}
@@ -95,28 +95,35 @@
     el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()},{capture:true});
     el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation()});
   }
-  // ---------- Rientro auto: distanza live nel badge GPS ----------
+  // ---------- Rientro auto: distanza live separata dal badge GPS ----------
   let ctReturnCarActive=false;
   function ctFormatCarDistance(){
     if(!state.car||!lastPos)return '';
     const d=hav([lastPos.lat,lastPos.lng],[state.car.lat,state.car.lng]);
     return d<1?Math.round(d*1000)+' m':d.toFixed(d<10?2:1)+' km';
   }
+  function ctEnsureCarDistanceBadge(){
+    let b=$('ctCarDistanceBadge');
+    if(b)return b;
+    const wrap=document.querySelector('.mapWrap');if(!wrap)return null;
+    b=document.createElement('div');
+    b.id='ctCarDistanceBadge';
+    b.style.cssText='display:none;position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:1140;background:#173f2b;color:#fff;border:2px solid #fff;border-radius:999px;padding:8px 13px;font:900 14px/1 system-ui;box-shadow:0 3px 12px #0006;white-space:nowrap;pointer-events:none';
+    wrap.appendChild(b);
+    return b;
+  }
   function ctSyncReturnCarDistance(){
-    const badge=$('gpsBadge');if(!badge)return;
-    const parts=String(badge.textContent||'').split(' · ').filter(x=>!/^🚗 Auto\b/.test(x));
-    if(!state.car){
-      ctReturnCarActive=false;
-      badge.textContent=parts.join(' · ');
+    const b=ctEnsureCarDistanceBadge();if(!b)return;
+    if(!state.car||!ctReturnCarActive||!lastPos){
+      b.style.display='none';
+      b.textContent='';
+      if(!state.car)ctReturnCarActive=false;
       return;
     }
-    if(!ctReturnCarActive||!lastPos){
-      badge.textContent=parts.join(' · ');
-      return;
-    }
-    const dist=ctFormatCarDistance();if(!dist)return;
-    badge.textContent=[parts[0]||'GPS','🚗 Auto '+dist,...parts.slice(1)].join(' · ');
-    badge.title='Distanza dalla macchina: '+dist+(lastPos?.acc?' · precisione GPS ±'+lastPos.acc+' m':'');
+    const dist=ctFormatCarDistance();if(!dist){b.style.display='none';return}
+    b.textContent='🚗 Macchina a '+dist;
+    b.style.display='block';
+    b.title='Distanza in linea d’aria dalla posizione GPS attuale alla macchina';
   }
   const ctBaseUpdateCar=updateCar;
   updateCar=function(){const r=ctBaseUpdateCar();ctSyncReturnCarDistance();return r;};
@@ -714,7 +721,7 @@
   // ---------- bind finale ----------
   const baseBind=bind;
   bind=function(){
-    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();hideOldAutoCard();ensureMushModal();ensureSightCheck();ensureTotalResetButton();
+    baseBind();addFinalStyles();renameApp();ensureReturnCarButton();ctEnsureCarDistanceBadge();hideOldAutoCard();ensureMushModal();ensureSightCheck();ensureTotalResetButton();
     const f=$('followBtn');if(f){f.onclick=()=>{toggleFollow();syncFollow()};syncFollow()}
     const car=$('quickCarBtn');if(car)car.onclick=carToggle;
     const mush=$('quickMushroomBtn');if(mush){mush.onclick=quickMush;mush.dataset.ctHelp='Salva un fungo trovato nella posizione GPS attuale.'}
