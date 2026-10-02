@@ -1,0 +1,111 @@
+
+// V6.1.11 - aiuto contestuale: pressione prolungata sui simboli/tasti
+(function(){
+  const HELP_DELAY=650;
+  const descriptions={
+    locateBtn:'Centra la mappa sulla tua posizione GPS attuale.',
+    followBtn:'Attiva o disattiva il seguimento: la mappa si sposta insieme a te.',
+    northBtn:'Riporta la mappa con il Nord in alto.',
+    rotateLeftBtn:'Ruota la mappa verso sinistra.',
+    rotateRightBtn:'Ruota la mappa verso destra.',
+    layersBtn:'Apre la scelta tra mappa satellitare, stradale e livello Venti.',
+    ctConditionBtn:'Controlla le condizioni previste sui tuoi appostamenti e le confronta con quelle salvate.',
+    quickSightingBtn:'Salva rapidamente un avvistamento nella posizione in cui ti trovi.',
+    quickSaveHereBtn:'Salva un punto nella posizione GPS attuale.',
+    quickTrackBtn:'Apre la Camminata per registrare il percorso GPS della giornata.',
+    quickCarBtn:'Memorizza dove hai lasciato l’auto.',
+    savePointBtn:'Salva la posizione selezionata tra i tuoi punti.',
+    navigateBtn:'Apre Google Maps per raggiungere il punto selezionato.',
+    shareSelectedBtn:'Condivide il punto selezionato con le informazioni disponibili.',
+    weatherRefreshBtn:'Aggiorna meteo e vento del punto selezionato.',
+    parkHereBtn:'Fissa la posizione attuale dell’auto sulla mappa.',
+    moveCarBtn:'Permette di aggiornare la posizione salvata dell’auto.',
+    returnCarBtn:'Mostra il percorso per ritornare alla posizione dell’auto.',
+    clearCarBtn:'Rimuove la posizione dell’auto salvata.',
+    fitPointsBtn:'Inquadra sulla mappa tutti i punti salvati visibili.',
+    startTrackBtn:'Avvia la registrazione GPS della Camminata.',
+    stopTrackBtn:'Termina e salva la Camminata registrata.',
+    centerTrackBtn:'Inquadra sulla mappa il percorso della Camminata.',
+    trackToCarBtn:'Aiuta a tornare alla posizione dell’auto durante la Camminata.',
+    exportJsonBtn:'Esporta un backup completo dei dati di CacciaTraccia.',
+    exportTxtBtn:'Esporta un file di testo con le coordinate dei punti salvati.',
+    makeSnapshotBtn:'Crea una copia locale dello stato attuale dei dati.',
+    persistBtn:'Chiede al telefono di conservare con maggiore priorità i dati locali dell’app.',
+    syncNowBtn:'Sincronizza i dati con il cloud quando il servizio cloud sarà attivo.',
+    accountBtn:'Apre le funzioni account e recupero quando il cloud sarà attivo.',
+    ctOfflineAreaBtn:'Salva nella cache l’area di mappa visualizzata per usarla con poca rete.',
+    ctAudioToggle:'Apre o chiude il lettore degli audio personali.',
+    ctAudioPrev:'Passa all’audio personale precedente.',
+    ctAudioPlay:'Avvia o mette in pausa l’audio personale.',
+    ctAudioNext:'Passa all’audio personale successivo.',
+    ctAudioLoop:'Attiva o disattiva la ripetizione continua dell’audio personale.'
+  };
+
+  let timer=null,startX=0,startY=0,active=null,tip=null,suppressClickUntil=0;
+
+  function ensureTip(){
+    if(tip)return tip;
+    const style=document.createElement('style');
+    style.textContent=`
+      #ctLongHelp{position:fixed;left:50%;bottom:128px;transform:translateX(-50%);z-index:4000;width:min(88vw,430px);background:#173f2bf2;color:#fff;border:1px solid #ffffff30;border-radius:16px;padding:13px 15px;box-shadow:0 8px 28px #0007;font:700 14px/1.4 system-ui;text-align:left;opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}
+      #ctLongHelp.show{opacity:1;transform:translateX(-50%) translateY(-5px)}
+      #ctLongHelp b{display:block;font-size:15px;margin-bottom:4px}
+      #ctLongHelp small{display:block;opacity:.78;font-weight:600;margin-top:5px}
+    `;
+    document.head.appendChild(style);
+    tip=document.createElement('div');tip.id='ctLongHelp';tip.setAttribute('role','status');tip.setAttribute('aria-live','polite');
+    document.body.appendChild(tip);return tip;
+  }
+
+  function labelFor(el){
+    return (el.getAttribute('aria-label')||el.getAttribute('title')||el.querySelector?.('span')?.textContent||el.textContent||'Funzione').trim().replace(/\s+/g,' ');
+  }
+  function descriptionFor(el){
+    if(el.dataset?.ctHelp)return el.dataset.ctHelp;
+    if(el.id&&descriptions[el.id])return descriptions[el.id];
+    const title=el.getAttribute?.('title');
+    if(title&&title.trim())return title.trim();
+    const label=labelFor(el);
+    if(!label)return '';
+    return 'Questo comando serve per: '+label.toLowerCase()+'.';
+  }
+  function showHelp(el){
+    const desc=descriptionFor(el);if(!desc)return;
+    const box=ensureTip(),name=labelFor(el);
+    box.innerHTML='<b>'+esc(name)+'</b>'+esc(desc)+'<small>Rilascia per chiudere. Il tocco normale continua a eseguire il comando.</small>';
+    box.classList.add('show');suppressClickUntil=Date.now()+750;
+    try{navigator.vibrate?.(35)}catch{}
+  }
+  function hideHelp(){clearTimeout(timer);timer=null;active=null;tip?.classList.remove('show')}
+  function start(el,e){
+    if(e.button!=null&&e.button!==0)return;
+    active=el;startX=e.clientX??0;startY=e.clientY??0;
+    clearTimeout(timer);timer=setTimeout(()=>{if(active===el)showHelp(el)},HELP_DELAY);
+  }
+  function move(e){
+    if(!active)return;const x=e.clientX??0,y=e.clientY??0;
+    if(Math.hypot(x-startX,y-startY)>14)hideHelp();
+  }
+  function bindHelp(){
+    ensureTip();
+    const candidates=document.querySelectorAll('button,.mapBtn,.quickAction,nav button,.iconBtn');
+    candidates.forEach(el=>{
+      if(el.dataset.ctLongHelpBound==='1')return;
+      const desc=descriptionFor(el);if(!desc)return;
+      el.dataset.ctLongHelpBound='1';
+      el.addEventListener('pointerdown',e=>start(el,e),{passive:true});
+      el.addEventListener('pointermove',move,{passive:true});
+      el.addEventListener('pointerup',hideHelp,{passive:true});
+      el.addEventListener('pointercancel',hideHelp,{passive:true});
+      el.addEventListener('pointerleave',hideHelp,{passive:true});
+      el.addEventListener('contextmenu',e=>{e.preventDefault();showHelp(el);setTimeout(hideHelp,2200)});
+      el.addEventListener('click',e=>{if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
+    });
+  }
+
+  const observer=new MutationObserver(()=>bindHelp());
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+
+  const prevBind=bind;
+  bind=function(){prevBind();bindHelp();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.11'};
+})();
