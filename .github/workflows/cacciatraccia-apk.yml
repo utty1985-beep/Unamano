@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia APK 6.3.8 FINAL
+name: Build Passione Funghi e Caccia APK 6.3.9 FINAL
 on:
   workflow_dispatch:
   push:
@@ -50,6 +50,9 @@ jobs:
           const manifest=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/AndroidManifest.xml','utf8');
           if (!main.includes('MediaStore.ACTION_IMAGE_CAPTURE')) throw new Error('Instant camera intent missing');
           if (!manifest.includes('androidx.core.content.FileProvider')) throw new Error('FileProvider missing');
+          if (!manifest.includes('android.permission.CAMERA')) throw new Error('Camera permission missing');
+          if (!main.includes('onPermissionRequest(PermissionRequest request)')) throw new Error('Web camera permission bridge missing');
+          if (!p24.includes('ensureARButton')) throw new Error('Vista punti camera missing');
           if (!fs.existsSync('cacciatraccia/android-wrapper/app/src/main/res/xml/file_paths.xml')) throw new Error('file_paths.xml missing');
           console.log('Final web app, map startup and camera invariants: OK');
           NODE
@@ -61,8 +64,8 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/cacciatraccia-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6308' versionName='6.3.8'" /tmp/cacciatraccia-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.8-FINAL-UNSIGNED.apk
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6309' versionName='6.3.9'" /tmp/cacciatraccia-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.9-FINAL-UNSIGNED.apk
       - name: Bundle signing tools
         run: |
           mkdir -p app/build/signing-tools/lib
@@ -70,9 +73,9 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.3.8-FINAL-build
+          name: Passione-Funghi-e-Caccia-v6.3.9-FINAL-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.8-FINAL-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.9-FINAL-UNSIGNED.apk
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
