@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.12';
+  const FINAL_VER='6.3.13';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -771,6 +771,7 @@
 
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
+  let ctARRawHeading=null,ctARRenderAt=0;
   let ctARLockedId=null,ctARLockedAt=0,ctARLastVibeAt=0;
   let ctARRadarEnabled=true;try{ctARRadarEnabled=localStorage.getItem('ct-ar-radar')!=='0'}catch{}
   const ctARPrevDistance=new Map(),ctARMovingAway=new Map();
@@ -819,7 +820,7 @@
       '#ctAROverlay.open{display:block}#ctARVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}'+
       '#ctARShade{position:absolute;inset:0;background:linear-gradient(#0008 0,#0000 22%,#0000 70%,#0008 100%);pointer-events:none}'+
       '#ctARMarkers{position:absolute;inset:0;pointer-events:none}'+
-      '.ctARMarker{position:absolute;transform:translate(-50%,-50%);max-width:44vw;padding:8px 10px;border-radius:13px;background:#173f2be8;color:#fff;border:2px solid #fff;box-shadow:0 3px 12px #0008;font:900 13px/1.2 system-ui;text-align:center;white-space:normal}'+
+      '.ctARMarker{position:absolute;transform:translate(-50%,-50%);max-width:44vw;padding:8px 10px;border-radius:13px;background:#173f2be8;color:#fff;border:2px solid #fff;box-shadow:0 3px 12px #0008;font:900 13px/1.2 system-ui;text-align:center;white-space:normal;transition:left .14s linear,top .14s linear,transform .14s ease}'+
       '.ctARMarker small{display:block;margin-top:3px;font-size:12px;color:#fff}'+
       '.ctARMarker.locked{background:#176b2ae8;border-color:#9dffab;transform:translate(-50%,-50%) scale(1.08);box-shadow:0 0 0 3px #2dcf4c55,0 4px 16px #0009}'+
       '.ctARMarker.car{background:#214d7fe8;border-color:#b8dcff}'+
@@ -866,11 +867,21 @@
     let h=null;
     if(Number.isFinite(+e.webkitCompassHeading))h=+e.webkitCompassHeading;
     else if(Number.isFinite(+e.alpha))h=(360-(+e.alpha)+360)%360;
-    if(h!=null){
-      const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
-      ctARHeading=(h+a+360)%360;
-      ctRenderARMarkers();
+    if(h==null)return;
+    const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
+    const target=(h+a+360)%360;
+    ctARRawHeading=target;
+    if(!Number.isFinite(ctARHeading))ctARHeading=target;
+    else{
+      const delta=ctARAngleDiff(target,ctARHeading),ad=Math.abs(delta);
+      // Da fermo la bussola oscilla normalmente di qualche grado: ignora il micro-rumore.
+      if(ad<=1.6)return;
+      // Movimento reale = risposta rapida; piccola oscillazione = filtro molto più forte.
+      const alpha=ad>25?.58:ad>12?.40:ad>6?.27:ad>3?.18:.12;
+      ctARHeading=(ctARHeading+delta*alpha+360)%360;
     }
+    const now=performance.now();
+    if(now-ctARRenderAt>=90){ctARRenderAt=now;ctRenderARMarkers()}
   }
   function ctSyncARRadarToggle(){
     const w=$('ctARRadarWrap'),b=$('ctARRadarToggle');
@@ -930,7 +941,10 @@
       .sort((a,b)=>a.d-b.d).slice(0,6);
     if(gpsChanged)ctARLastGpsSig=gpsSig;
     layer.innerHTML='';
-    const lockCandidate=rows.filter(x=>Math.abs(x.delta)<=4).sort((a,b)=>a.d-b.d)[0]||null;
+    // Isteresi sul puntamento: una volta agganciato non sgancia per una piccola oscillazione del sensore.
+    let lockCandidate=null;
+    if(ctARLockedId)lockCandidate=rows.find(x=>x.p.id===ctARLockedId&&Math.abs(x.delta)<=7)||null;
+    if(!lockCandidate)lockCandidate=rows.filter(x=>Math.abs(x.delta)<=3.5).sort((a,b)=>a.d-b.d)[0]||null;
     const lockId=lockCandidate?.p?.id||null;
     const now=Date.now();
     const changed=lockId&&lockId!==ctARLockedId;
@@ -979,7 +993,7 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
       ctARTimer=setInterval(ctRenderARMarkers,700);
@@ -990,7 +1004,7 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
     window.removeEventListener('deviceorientation',ctAROrientation,true);
