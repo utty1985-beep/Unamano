@@ -109,3 +109,189 @@
   const prevBind=bind;
   bind=function(){prevBind();bindHelp();const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.11'};
 })();
+
+
+
+// V6.1.12 - Avvistamenti: confronto per giorno/ora con durata; Auto: tieni premuto e trascina + rimozione dal simbolo
+(function(){
+  const CT_PATCH_VER='6.1.12';
+  const sightResults=new Map();
+
+  function ctPad(n){return String(n).padStart(2,'0')}
+  function ctLocalDate(d){return d.getFullYear()+'-'+ctPad(d.getMonth()+1)+'-'+ctPad(d.getDate())}
+  function ctHour(v){try{return new Date(v).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{return '-'}}
+  function ctAngle(a,b){return Math.abs((((+a||0)-(+b||0)+540)%360)-180)}
+  function ctWindLocal(name){return String(name||'')==='Libeccio'?'Libeccio (Favugna)':String(name||'')}
+  function ctBaseWind(p){
+    let deg=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;
+    if(deg==null){
+      const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];
+      const n=String(p.windName||p.weather?.windName||'').replace(' (Favugna)','');
+      const ix=names.indexOf(n);if(ix>=0)deg=ix*45;
+    }
+    const speed=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;
+    return {deg:deg,speed:speed};
+  }
+  function ctWet(code){return [51,53,55,61,63,65,80,81,82,95,96,99].includes(+code)}
+  function ctSimilarity(p,h,i){
+    const base=ctBaseWind(p);
+    if(base.deg==null||base.speed==null)return {good:false,missing:true,reason:'vento storico non registrato'};
+    const dir=+h.wind_direction_10m?.[i]||0,speed=+h.wind_speed_10m?.[i]||0,rain=+h.precipitation_probability?.[i]||0,code=h.weather_code?.[i];
+    const dd=ctAngle(base.deg,dir),ds=Math.abs(base.speed-speed);
+    let good=dd<=45&&ds<=10&&rain<=55;
+    const oldCond=String(p.weather?.condition||'').toLowerCase();
+    if(oldCond){
+      const oldWet=/piogg|rovesc|tempor|piovig/.test(oldCond),newWet=ctWet(code);
+      if(oldWet!==newWet&&(oldWet||newWet))good=false;
+    }
+    return {good:good,missing:false,dd:dd,ds:ds,dir:dir,speed:speed,rain:rain,code:code};
+  }
+  function ctNearest(times,target){
+    let best=-1,bd=Infinity;
+    (times||[]).forEach(function(t,i){const d=Math.abs(new Date(t).getTime()-target.getTime());if(d<bd){bd=d;best=i}});
+    return best;
+  }
+  async function ctCheckSighting(p,target){
+    const day=ctLocalDate(target),next=new Date(target);next.setDate(next.getDate()+1);
+    const u='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(p.lat)+'&longitude='+encodeURIComponent(p.lng)+'&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date='+day+'&end_date='+ctLocalDate(next);
+    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');
+    const j=await r.json(),h=j.hourly||{},idx=ctNearest(h.time,target);if(idx<0)throw Error('Orario non disponibile');
+    const first=ctSimilarity(p,h,idx);
+    if(first.missing)return {missing:true,good:false,reason:first.reason};
+    let until=null,atLeast=false;
+    if(first.good){
+      const limit=Math.min((h.time||[]).length,idx+13);
+      let jx=idx+1;
+      for(;jx<limit;jx++){if(!ctSimilarity(p,h,jx).good)break}
+      if(jx<limit)until=h.time[jx];
+      else{until=h.time[Math.max(idx,limit-1)]||h.time[idx];atLeast=true}
+    }
+    return {good:first.good,missing:false,until:until,atLeast:atLeast,dir:first.dir,speed:first.speed,rain:first.rain,code:first.code,dd:first.dd,ds:first.ds};
+  }
+
+  function ensureSightingCheckUI(){
+    if(document.getElementById('ctSightingCheck'))return;
+    const style=document.createElement('style');
+    style.textContent='.ctSightCheck{display:none;margin:10px 0 12px;padding:11px;border:1px solid #d7d8d0;border-radius:14px;background:#f7f8f4}.ctSightGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ctSightGrid label{font-size:12px;font-weight:800;color:#536057}.ctSightGrid input{width:100%;margin-top:4px}.ctSightRun{margin-top:9px;width:100%}.ctSightSummary{font-size:12px;margin-top:7px;color:#657067}.ctSightStatus{margin-top:8px;padding:8px 10px;border-radius:11px;font-size:12px;font-weight:800}.ctSightStatus.good{background:#eef9f1;color:#13713d;border:1px solid #b9dfc5}.ctSightStatus.bad{background:#fff3f1;color:#a03a31;border:1px solid #edc7c1}.ctSightStatus.missing{background:#f2f3f0;color:#667069;border:1px solid #d8dbd5}.ctSightStatus small{display:block;margin-top:3px;font-weight:650;color:inherit;opacity:.85}@media(max-width:520px){.ctSightGrid{grid-template-columns:1fr 1fr}}';
+    document.head.appendChild(style);
+    const tabs=document.querySelector('#page-diary .tabs');if(!tabs)return;
+    const now=new Date();now.setMinutes(0,0,0);now.setHours(now.getHours()+1);
+    const box=document.createElement('div');box.id='ctSightingCheck';box.className='ctSightCheck';
+    box.innerHTML='<b>🌦 Quando vuoi partire?</b><div class="muted" style="font-size:12px;margin:3px 0 8px">Confronto ogni avvistamento con vento e meteo registrati quel giorno.</div><div class="ctSightGrid"><label>Giorno<input id="ctSightingDate" type="date" value="'+ctLocalDate(now)+'"></label><label>Ora<input id="ctSightingTime" type="time" value="'+ctPad(now.getHours())+':00"></label></div><button id="ctSightingRun" class="primary ctSightRun" type="button">● Controlla avvistamenti</button><div id="ctSightingSummary" class="ctSightSummary">Il verde indica condizioni simili e mostra fino a che ora restano simili.</div>';
+    tabs.insertAdjacentElement('afterend',box);
+    $('ctSightingRun').onclick=runSightingChecks;
+    const reset=function(){sightResults.clear();decorateSightingResults();$('ctSightingSummary').textContent='Premi Controlla avvistamenti per aggiornare il confronto.'};
+    $('ctSightingDate').addEventListener('change',reset);$('ctSightingTime').addEventListener('change',reset);
+  }
+  function toggleSightingCheck(){
+    ensureSightingCheckUI();
+    const box=$('ctSightingCheck');if(box)box.style.display=historyFilter==='sightings'?'block':'none';
+  }
+  function decorateSightingResults(){
+    const host=$('historyList');if(!host)return;
+    host.querySelectorAll('.ctSightStatus').forEach(function(x){x.remove()});
+    host.querySelectorAll('button').forEach(function(btn){
+      const code=btn.getAttribute('onclick')||'',m=code.match(/CT\.openHistoryPoint\('([^']+)'\)/);if(!m)return;
+      const res=sightResults.get(m[1]);if(!res)return;
+      const item=btn.closest('.item');if(!item)return;
+      const d=document.createElement('div');
+      if(res.missing){d.className='ctSightStatus missing';d.innerHTML='● DATI INSUFFICIENTI<small>'+esc(res.reason||'Manca il vento salvato')+'</small>'}
+      else if(res.error){d.className='ctSightStatus missing';d.innerHTML='⚠️ '+esc(res.error)}
+      else if(res.good){
+        const till=res.until?(res.atLeast?'almeno fino alle ':'fino alle ')+ctHour(res.until):'per le ore successive';
+        d.className='ctSightStatus good';d.innerHTML='● CONDIZIONI SIMILI · '+esc(till)+'<small>💨 '+esc(ctWindLocal(wname(res.dir)))+' '+wdir(res.dir)+' · '+Math.round(res.speed)+' km/h · 🌧 '+Math.round(res.rain)+'%</small>';
+      }else{
+        d.className='ctSightStatus bad';d.innerHTML='● CONDIZIONI DIVERSE<small>💨 '+esc(ctWindLocal(wname(res.dir)))+' '+wdir(res.dir)+' · '+Math.round(res.speed)+' km/h · 🌧 '+Math.round(res.rain)+'%</small>';
+      }
+      const rows=item.querySelector('.rowBtns');if(rows)item.insertBefore(d,rows);else item.appendChild(d);
+    });
+  }
+  async function runSightingChecks(){
+    const date=$('ctSightingDate')?.value,time=$('ctSightingTime')?.value||'08:00';
+    if(!date)return toast('Scegli il giorno di partenza');
+    if(!navigator.onLine)return toast('Serve Internet per confrontare le previsioni');
+    const target=new Date(date+'T'+time+':00');if(Number.isNaN(target.getTime()))return toast('Data o ora non valida');
+    const pts=(state.points||[]).filter(function(p){return p.type==='Avvistamento'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)});
+    if(!pts.length){$('ctSightingSummary').textContent='Non ci sono avvistamenti salvati da confrontare.';return}
+    const run=$('ctSightingRun');run.disabled=true;sightResults.clear();decorateSightingResults();
+    let ok=0;
+    for(let i=0;i<pts.length;i++){
+      $('ctSightingSummary').textContent='Controllo '+(i+1)+' di '+pts.length+'…';
+      try{const res=await ctCheckSighting(pts[i],target);sightResults.set(pts[i].id,res);if(res.good)ok++}
+      catch(e){sightResults.set(pts[i].id,{error:e?.message||'Errore meteo'})}
+      decorateSightingResults();
+    }
+    $('ctSightingSummary').innerHTML='<b>'+ok+'</b> avvistamenti con condizioni simili su '+pts.length+' · partenza '+esc(date)+' alle '+esc(time)+'.';
+    run.disabled=false;
+  }
+
+  const previousRenderDiary=renderDiary;
+  renderDiary=function(){previousRenderDiary();toggleSightingCheck();decorateSightingResults()};
+
+  function hideOldCarControls(){
+    const b=$('parkHereBtn'),card=b?.closest('.card');if(card)card.style.display='none';
+    const quick=$('quickCarBtn');if(quick){quick.dataset.ctHelp='Tocca per fissare l’auto nella posizione GPS attuale. Sulla mappa tieni premuta l’auto e trascina per spostarla; toccala per rimuoverla.'}
+  }
+  function carIconHtml(){return '<div style="font-size:31px;line-height:34px;filter:drop-shadow(0 2px 2px #0005)">🚗</div>'}
+  function removeCarFromMap(){
+    try{map.closePopup()}catch{}
+    if(returnLine){try{map.removeLayer(returnLine)}catch{}returnLine=null}
+    state.car=null;save();renderCar();toast('Posizione auto rimossa');
+  }
+  function showCarRemove(marker){
+    const ll=marker.getLatLng();
+    const html='<div style="text-align:center;min-width:170px"><b>🚗 Auto salvata</b><div style="font-size:12px;margin:5px 0 9px;color:#657067">Tieni premuta e trascina l’auto per spostarla.</div><button type="button" onclick="CT.removeCarFromMap()" style="border:0;border-radius:12px;background:#a9342a;color:#fff;padding:10px 13px;font-weight:900;font-size:14px">🚫🚗 Rimuovi auto</button></div>';
+    L.popup({closeButton:true,offset:[0,-12]}).setLatLng(ll).setContent(html).openOn(map);
+  }
+  function bindCarGesture(marker){
+    const el=marker?.getElement?.();if(!el||el.dataset.ctCarGesture==='1')return;
+    el.dataset.ctCarGesture='1';el.style.touchAction='none';
+    try{L.DomEvent.disableClickPropagation(el)}catch{}
+    let timer=null,dragging=false,sx=0,sy=0,pid=null;
+    function cancelTimer(){if(timer){clearTimeout(timer);timer=null}}
+    function down(e){
+      if(e.button!=null&&e.button!==0)return;
+      sx=e.clientX||0;sy=e.clientY||0;pid=e.pointerId;dragging=false;cancelTimer();
+      timer=setTimeout(function(){
+        dragging=true;try{el.setPointerCapture(pid)}catch{};try{map.dragging.disable()}catch{};
+        el.style.transform+=' scale(1.18)';toast('Trascina l’auto nel nuovo punto');
+      },550);
+      e.stopPropagation();
+    }
+    function move(e){
+      if(!dragging){if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>14)cancelTimer();return}
+      e.preventDefault();e.stopPropagation();
+      try{const ll=map.mouseEventToLatLng(e);marker.setLatLng(ll)}catch{}
+    }
+    function up(e){
+      const wasDragging=dragging;cancelTimer();
+      if(wasDragging){
+        dragging=false;try{map.dragging.enable()}catch{};
+        const ll=marker.getLatLng();state.car={lat:ll.lat,lng:ll.lng,updatedAt:new Date().toISOString()};
+        save();toast('Posizione auto spostata');
+      }else{showCarRemove(marker)}
+      e?.stopPropagation?.();
+    }
+    el.addEventListener('pointerdown',down,{passive:true});
+    el.addEventListener('pointermove',move,{passive:false});
+    el.addEventListener('pointerup',up,{passive:true});
+    el.addEventListener('pointercancel',function(e){cancelTimer();if(dragging){dragging=false;try{map.dragging.enable()}catch{}}e?.stopPropagation?.()},{passive:true});
+    el.addEventListener('contextmenu',function(e){e.preventDefault();e.stopPropagation()});
+  }
+
+  renderCar=function(){
+    if(carMarker){try{map.removeLayer(carMarker)}catch{}carMarker=null}
+    if(state.car){
+      carMarker=L.marker([state.car.lat,state.car.lng],{icon:L.divIcon({className:'',html:carIconHtml(),iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
+      setTimeout(function(){bindCarGesture(carMarker)},0);
+    }
+    updateCar();
+  };
+  window.CT.removeCarFromMap=removeCarFromMap;
+
+  const previousBind=bind;
+  bind=function(){
+    previousBind();ensureSightingCheckUI();toggleSightingCheck();hideOldCarControls();renderCar();
+    const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_PATCH_VER;
+  };
+})();
