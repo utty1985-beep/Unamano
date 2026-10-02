@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -25,13 +26,15 @@ import java.io.IOException;
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
     private static final int REQ_FILE = 4102;
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6308";
+    private static final int REQ_CAMERA = 4103;
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6309";
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraUri;
     private String pendingGeoOrigin;
     private GeolocationPermissions.Callback pendingGeoCallback;
+    private PermissionRequest pendingWebPermissionRequest;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -48,7 +51,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.3.8");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.3.9");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -74,6 +77,29 @@ public class MainActivity extends Activity {
                             Manifest.permission.ACCESS_COARSE_LOCATION
                     }, REQ_LOCATION);
                 }
+            }
+
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    boolean wantsVideo = false;
+                    for (String resource : request.getResources()) {
+                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                            wantsVideo = true;
+                            break;
+                        }
+                    }
+                    if (!wantsVideo) {
+                        request.deny();
+                        return;
+                    }
+                    if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(request.getResources());
+                    } else {
+                        pendingWebPermissionRequest = request;
+                        requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_CAMERA);
+                    }
+                });
             }
 
             @Override
@@ -163,6 +189,12 @@ public class MainActivity extends Activity {
             pendingGeoCallback.invoke(pendingGeoOrigin, ok, false);
             pendingGeoCallback = null;
             pendingGeoOrigin = null;
+        }
+        if (requestCode == REQ_CAMERA && pendingWebPermissionRequest != null) {
+            boolean ok = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+            if (ok) pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+            else pendingWebPermissionRequest.deny();
+            pendingWebPermissionRequest = null;
         }
     }
 
