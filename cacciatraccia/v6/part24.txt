@@ -558,7 +558,7 @@
   };
 
   // Il GPS può oscillare da fermo: filtra spostamenti compatibili con l'errore dichiarato.
-  let ctStablePos=null,ctStableAt=0,ctRawSamples=[];
+  let ctStablePos=null,ctStableAt=0,ctRawSamples=[],ctMoveCandidate=null,ctMoveVotes=0;
   function gpsDistanceM(a,b){return hav([a.lat,a.lng],[b.lat,b.lng])*1000}
   function gpsQuality(acc){
     if(acc<=8)return 'ottimo';
@@ -568,17 +568,32 @@
   }
   function stableGpsCandidate(raw){
     ctRawSamples.push(raw);if(ctRawSamples.length>5)ctRawSamples.shift();
-    if(!ctStablePos)return true;
+    if(!ctStablePos){ctMoveCandidate=null;ctMoveVotes=0;return true}
     const d=gpsDistanceM(ctStablePos,raw);
     const acc=Math.max(3,raw.acc||99,ctStablePos.acc||99);
     const speed=Number.isFinite(+raw.speed)?Math.max(0,+raw.speed):null;
     const elapsed=Date.now()-ctStableAt;
-    // Da fermo ignora oscillazioni fino a una quota dell'errore GPS, minimo 4 m.
-    const stationaryLimit=Math.min(18,Math.max(4,acc*.55));
-    if(speed!=null&&speed<0.7&&d<=stationaryLimit)return false;
-    if(speed==null&&elapsed<12000&&d<=stationaryLimit)return false;
-    // Scarta anche salti improvvisi enormi quando la precisione è scarsa.
-    if(acc>35&&d>Math.max(80,acc*2.5)&&elapsed<6000)return false;
+    const stationary=(speed==null||speed<0.8);
+    const stationaryLimit=Math.min(30,Math.max(6,acc*.9));
+
+    // Se il telefono dice che sei fermo, non inseguire la normale deriva del GPS.
+    if(stationary&&d<=stationaryLimit){ctMoveCandidate=null;ctMoveVotes=0;return false}
+
+    // Un salto singolo da fermo non basta: servono 2 letture coerenti nello stesso nuovo punto.
+    if(stationary){
+      if(acc>45&&elapsed<10000){ctMoveCandidate=null;ctMoveVotes=0;return false}
+      if(!ctMoveCandidate||gpsDistanceM(ctMoveCandidate,raw)>Math.max(12,acc*.75)){
+        ctMoveCandidate={...raw};ctMoveVotes=1;return false;
+      }
+      ctMoveVotes++;
+      if(ctMoveVotes<2)return false;
+      ctMoveCandidate=null;ctMoveVotes=0;
+      return true;
+    }
+
+    ctMoveCandidate=null;ctMoveVotes=0;
+    // In movimento, scarta solo salti evidentemente incompatibili con la precisione.
+    if(acc>35&&d>Math.max(100,acc*3)&&elapsed<5000)return false;
     return true;
   }
   startGps=function(){
