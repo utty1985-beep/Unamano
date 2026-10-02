@@ -838,7 +838,7 @@
       '#ctARRadarFace:before{content:"";position:absolute;left:50%;top:0;bottom:50%;width:1px;background:#ffffff88}'+
       '#ctARRadarFace:after{content:"";position:absolute;left:9%;right:9%;top:50%;height:1px;background:#ffffff55}'+
       '#ctARRadarDots{position:absolute;inset:0}.ctARRadarDot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid #fff;background:#e9a742;box-shadow:0 0 0 2px #0005}'+
-      '.ctARRadarDot.mush{background:#80c060}.ctARRadarDot.bird{background:#e9a742}'+
+      '.ctARRadarDot.mush{background:#80c060}.ctARRadarDot.bird{background:#e9a742}.ctARRadarDot.car{background:#67aef2}'+
       '#ctARRadarYou{position:absolute;left:50%;top:50%;transform:translate(-50%,-55%);font-size:18px;color:#fff;text-shadow:0 2px 3px #000}'+
       '#ctARRadarToggle{position:absolute;right:-2px;bottom:2px;pointer-events:auto;border:1px solid #fff8;border-radius:9px;background:#000a;color:#fff;padding:5px 7px;font:800 10px/1 system-ui}';
     document.head.appendChild(s);
@@ -889,7 +889,7 @@
     const front=all.filter(x=>Math.abs(x.delta)<=90).slice(0,20);
     front.forEach(x=>{
       const rr=Math.max(8,Math.min(R,R*(x.d/MAX))),a=x.delta*Math.PI/180;
-      const dot=document.createElement('span');dot.className='ctARRadarDot '+(x.p.sightingKind==='mushroom'?'mush':'bird');
+      const dot=document.createElement('span');dot.className='ctARRadarDot '+((x.p._ctCar||x.p.sightingKind==='car')?'car':(x.p.sightingKind==='mushroom'?'mush':'bird'));
       dot.style.left=(CX+Math.sin(a)*rr)+'px';dot.style.top=(CY-Math.cos(a)*rr)+'px';
       dot.title=ctARPointName(x.p)+' · '+ctARDistanceText(x.d);dots.appendChild(dot);
     });
@@ -979,7 +979,7 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      ctARActive=true;ctARHeading=null;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
       ctARTimer=setInterval(ctRenderARMarkers,700);
