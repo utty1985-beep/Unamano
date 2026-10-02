@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.7';
+  const FINAL_VER='6.3.8';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -525,16 +525,67 @@
   }
 
   const numberedRenderMarkers=renderMarkers;
+  let ctSelectedSavedPointId=null,ctSavedPointPopup=null;
+
+  function ctSavedPointDistance(p){
+    if(!p||!lastPos)return null;
+    const d=hav([lastPos.lat,lastPos.lng],[+p.lat,+p.lng]);
+    if(!Number.isFinite(d))return null;
+    return d<1?Math.round(d*1000)+' m':d.toFixed(d<10?2:1)+' km';
+  }
+  function ctSavedPointPopupHtml(p){
+    const dist=ctSavedPointDistance(p);
+    const title=(Number.isFinite(+p.seq)?'#'+p.seq+' ':'')+(p.sightingKind==='mushroom'?'🍄 Fungo':p.type==='Avvistamento'?'🕊️ Avvistamento':'📍 '+(p.type||'Punto'));
+    const name=p.species||p.name||p.type||'Punto salvato';
+    const id=String(p.id||'').replace(/'/g,'');
+    return '<div style="min-width:210px;max-width:260px;font:13px/1.35 system-ui;color:#17251d">'+
+      '<b style="font-size:15px">'+esc(title)+'</b>'+
+      '<div style="margin-top:3px;font-weight:800">'+esc(name)+'</div>'+
+      '<div style="margin-top:4px;color:#667069">'+esc(when(p.createdAt||p.huntDate))+'</div>'+
+      '<div style="margin-top:8px;padding:8px 9px;border-radius:10px;background:#eef5ef"><b>📏 Distanza da te: '+esc(dist||'attendo GPS…')+'</b></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px">'+
+      '<button type="button" onclick="CT.editSavedPoint(\''+id+'\')" style="min-height:40px;border:0;border-radius:10px;background:#eef0ec;color:#173f2b;font-weight:800">Dettagli</button>'+
+      '<button type="button" onclick="CT.mapsSavedPoint(\''+id+'\')" style="min-height:40px;border:0;border-radius:10px;background:#173f2b;color:#fff;font-weight:800">🗺 Maps</button>'+
+      '</div></div>';
+  }
+  function ctShowSavedPoint(p){
+    if(!p||!map)return;
+    ctSelectedSavedPointId=p.id;
+    if(ctSavedPointPopup){try{map.closePopup(ctSavedPointPopup)}catch{}}
+    ctSavedPointPopup=L.popup({closeButton:true,maxWidth:280,offset:[0,-22]})
+      .setLatLng([+p.lat,+p.lng])
+      .setContent(ctSavedPointPopupHtml(p))
+      .openOn(map);
+  }
+  function ctRefreshSavedPointPopup(){
+    if(!ctSelectedSavedPointId||!ctSavedPointPopup)return;
+    const p=(state.points||[]).find(x=>x.id===ctSelectedSavedPointId);
+    if(!p){ctSelectedSavedPointId=null;return}
+    try{ctSavedPointPopup.setContent(ctSavedPointPopupHtml(p))}catch{}
+  }
+  window.CT=window.CT||{};
+  window.CT.mapsSavedPoint=function(id){
+    const p=(state.points||[]).find(x=>x.id===id);
+    if(!p)return toast('Punto non trovato');
+    navigateTo(+p.lat,+p.lng,'walking');
+  };
+  window.CT.editSavedPoint=function(id){
+    const p=(state.points||[]).find(x=>x.id===id);
+    if(!p)return toast('Punto non trovato');
+    fillModal(p);
+  };
+  const ctSavedPointBaseUpdateCar=updateCar;
+  updateCar=function(){const r=ctSavedPointBaseUpdateCar();ctRefreshSavedPointPopup();return r;};
+
   renderMarkers=function(){
     if(!markerLayer)return;
     ensurePointNumbers();
     markerLayer.clearLayers();
-    const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||new Date().toISOString().slice(0,10);
     (state.points||[]).forEach(p=>{
-      if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
-      const m=L.marker([p.lat,p.lng],{icon:numberedPointIcon(p)}).addTo(markerLayer);
+      if(!Number.isFinite(+p.lat)||!Number.isFinite(+p.lng))return;
+      const m=L.marker([+p.lat,+p.lng],{icon:numberedPointIcon(p)}).addTo(markerLayer);
       m.bindTooltip(pointLabel(p)+' · '+pointClock(p),{direction:'top',offset:[0,-30],opacity:.92});
-      m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
+      m.on('click',e=>{L.DomEvent.stopPropagation(e);ctShowSavedPoint(p)});
     });
   };
 
