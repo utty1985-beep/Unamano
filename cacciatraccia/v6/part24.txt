@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.4';
+  const FINAL_VER='6.3.5';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -95,6 +95,42 @@
     el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()},{capture:true});
     el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation()});
   }
+  // ---------- Rientro auto: distanza live nel badge GPS ----------
+  let ctReturnCarActive=false;
+  function ctFormatCarDistance(){
+    if(!state.car||!lastPos)return '';
+    const d=hav([lastPos.lat,lastPos.lng],[state.car.lat,state.car.lng]);
+    return d<1?Math.round(d*1000)+' m':d.toFixed(d<10?2:1)+' km';
+  }
+  function ctSyncReturnCarDistance(){
+    const badge=$('gpsBadge');if(!badge)return;
+    const parts=String(badge.textContent||'').split(' · ').filter(x=>!/^🚗 Auto\b/.test(x));
+    if(!state.car){
+      ctReturnCarActive=false;
+      badge.textContent=parts.join(' · ');
+      return;
+    }
+    if(!ctReturnCarActive||!lastPos){
+      badge.textContent=parts.join(' · ');
+      return;
+    }
+    const dist=ctFormatCarDistance();if(!dist)return;
+    badge.textContent=[parts[0]||'GPS','🚗 Auto '+dist,...parts.slice(1)].join(' · ');
+    badge.title='Distanza dalla macchina: '+dist+(lastPos?.acc?' · precisione GPS ±'+lastPos.acc+' m':'');
+  }
+  const ctBaseUpdateCar=updateCar;
+  updateCar=function(){const r=ctBaseUpdateCar();ctSyncReturnCarDistance();return r;};
+  const ctBaseCarReturn=carReturn;
+  carReturn=function(){
+    if(!state.car||!lastPos)return ctBaseCarReturn();
+    ctReturnCarActive=true;
+    const r=ctBaseCarReturn();
+    ctSyncReturnCarDistance();
+    const dist=ctFormatCarDistance();
+    if(dist)toast('Macchina a '+dist);
+    return r;
+  };
+
   function ensureReturnCarButton(){
     if($('ctReturnCarBtn'))return;
     const left=document.querySelector('.mapTools.left');if(!left)return;
