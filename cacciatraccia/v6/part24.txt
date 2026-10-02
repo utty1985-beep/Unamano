@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.16';
+  const FINAL_VER='6.3.17';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -820,6 +820,7 @@
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
   let ctARRawHeading=null,ctARRenderAt=0,ctARMotionUntil=0,ctARHasMotionSensor=false;
+  let ctARTiltBeta=null,ctARTiltGamma=null,ctARTiltStableAt=0;
   let ctARCompassCandidate=null,ctARCompassCandidateAt=0;
   let ctARLockedId=null,ctARLockedAt=0,ctARLastVibeAt=0;
   let ctARRadarEnabled=true;try{ctARRadarEnabled=localStorage.getItem('ct-ar-radar')!=='0'}catch{}
@@ -916,9 +917,12 @@
     ctARHasMotionSensor=true;
     const r=e?.rotationRate||{};
     const yaw=Math.abs(Number(r.alpha)||0);
-    // Solo la rotazione orizzontale sinistra/destra sblocca l'AR.
-    // Inclinare il telefono in alto/basso o lateralmente non muove i punti.
-    if(yaw>5.5)ctARMotionUntil=performance.now()+650;
+    const pitch=Math.abs(Number(r.beta)||0);
+    const roll=Math.abs(Number(r.gamma)||0);
+    const other=Math.max(pitch,roll);
+    // Considera svolta solo se l'asse orizzontale è nettamente dominante.
+    // Su/giù e inclinazione laterale non devono mai sbloccare i punti AR.
+    if(yaw>6.5&&yaw>other*1.45)ctARMotionUntil=performance.now()+520;
   }
   function ctTiltCompensatedHeading(e){
     const alpha=Number(e?.alpha),beta=Number(e?.beta),gamma=Number(e?.gamma);
@@ -940,13 +944,30 @@
     const target=(h+a+360)%360;
     ctARRawHeading=target;
     const now=performance.now();
+    const beta=Number(e?.beta),gamma=Number(e?.gamma);
+    if(Number.isFinite(beta)&&Number.isFinite(gamma)){
+      if(ctARTiltBeta==null||ctARTiltGamma==null){ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now}
+      else{
+        const tiltChange=Math.max(Math.abs(beta-ctARTiltBeta),Math.abs(gamma-ctARTiltGamma));
+        if(tiltChange>2.2){
+          // Stai inclinando il telefono: ignora completamente il cambio di direzione.
+          ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now;
+          return;
+        }
+        // Dopo un breve periodo stabile, il nuovo angolo verticale diventa la nuova base.
+        if(now-ctARTiltStableAt>350){ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now}
+      }
+    }
     if(!Number.isFinite(ctARHeading)){ctARHeading=target;ctARCompassCandidate=target;ctARCompassCandidateAt=now}
     else{
       const delta=ctARAngleDiff(target,ctARHeading),ad=Math.abs(delta);
       const moving=now<ctARMotionUntil;
       if(ctARHasMotionSensor&&!moving){
-        // Telefono fermo: congela l'orientamento. I salti del magnetometro non muovono più etichette e radar.
         return;
+      }else if(ctARHasMotionSensor&&moving){
+        // Anche durante la svolta, accetta solo heading con telefono verticalmente stabile.
+        const alpha=ad>25?.34:ad>12?.27:ad>6?.20:.12;
+        ctARHeading=(ctARHeading+delta*alpha+360)%360;
       }else if(!ctARHasMotionSensor){
         // Fallback senza giroscopio: un grande cambio deve restare coerente per almeno 320 ms.
         const candDiff=Number.isFinite(ctARCompassCandidate)?Math.abs(ctARAngleDiff(target,ctARCompassCandidate)):999;
@@ -955,10 +976,6 @@
           if(now-ctARCompassCandidateAt<500)return;
         }else{ctARCompassCandidate=target;ctARCompassCandidateAt=now}
         const alpha=ad>25?.26:ad>12?.20:ad>6?.15:.08;
-        ctARHeading=(ctARHeading+delta*alpha+360)%360;
-      }else{
-        // Rotazione reale rilevata dal giroscopio: risposta fluida ma rapida.
-        const alpha=ad>25?.40:ad>12?.32:ad>6?.24:.14;
         ctARHeading=(ctARHeading+delta*alpha+360)%360;
       }
     }
@@ -1074,7 +1091,7 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
       window.addEventListener('devicemotion',ctARDeviceMotion,true);
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
@@ -1086,7 +1103,7 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
     window.removeEventListener('devicemotion',ctARDeviceMotion,true);
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
