@@ -1,4 +1,4 @@
-const CACHE='passione-funghi-caccia-v6-2-1';
+const CACHE='passione-funghi-caccia-v6-2-1-r2';
 const SHELL=['./','./index.html','./styles.css?v=4.1.4','./app-loader.js?v=6.2.1','./manifest.webmanifest','./icon.svg',...Array.from({length:27},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.2.1`)];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
