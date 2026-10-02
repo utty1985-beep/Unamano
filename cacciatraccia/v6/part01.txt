@@ -8,7 +8,7 @@
 function icon(type){ const color=type==='Avvistamento'?'#a9342a':type==='Passaggio'?'#80582b':type==='Parcheggio'?'#315d80':'#2f6c42'; return L.divIcon({className:'',html:`<div style="width:25px;height:25px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:3px solid #fff;box-shadow:0 2px 6px #0006"></div>`,iconSize:[28,34],iconAnchor:[14,30]}); }
 function initMap(){
   const opts={zoomControl:true,rotate:true,touchRotate:true,bearing:0};
-  map=L.map('map',opts).setView([41.5,14],6);
+  map=L.map('map',opts);\n  map.setView([41.5,14],6);
   sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(map);
   street=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
   markerLayer=L.layerGroup().addTo(map);
