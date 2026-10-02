@@ -1,7 +1,7 @@
 
 // V6.3.0 FINAL - base 6.1.11 funzionante + correzioni richieste + funghi
 (function(){
-  const FINAL_VER='6.3.11';
+  const FINAL_VER='6.3.12';
   let mushMode=false, mushAnalysis=null, mushPhotoData=null;
   const sightChecks=new Map();
 
@@ -771,17 +771,23 @@
 
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
+  let ctARLockedId=null,ctARLockedAt=0,ctARLastVibeAt=0;
   let ctARRadarEnabled=true;try{ctARRadarEnabled=localStorage.getItem('ct-ar-radar')!=='0'}catch{}
   const ctARPrevDistance=new Map(),ctARMovingAway=new Map();
   let ctARLastGpsSig='';
 
   function ctAREligiblePoints(){
-    return (state.points||[]).filter(p=>
+    const pts=(state.points||[]).filter(p=>
       Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)&&
       (p.sightingKind==='mushroom'||p.type==='Avvistamento')
     );
+    if(state.car&&Number.isFinite(+state.car.lat)&&Number.isFinite(+state.car.lng)){
+      pts.push({id:'__car__',lat:+state.car.lat,lng:+state.car.lng,type:'Parcheggio',name:'Auto',species:'',sightingKind:'car',_ctCar:true});
+    }
+    return pts;
   }
   function ctARPointName(p){
+    if(p._ctCar||p.sightingKind==='car')return '🚗 Auto';
     if(p.sightingKind==='mushroom')return '🍄 '+(p.species||p.name||'Fungo');
     return '🕊️ '+(p.species||p.name||'Uccello');
   }
@@ -815,11 +821,14 @@
       '#ctARMarkers{position:absolute;inset:0;pointer-events:none}'+
       '.ctARMarker{position:absolute;transform:translate(-50%,-50%);max-width:44vw;padding:8px 10px;border-radius:13px;background:#173f2be8;color:#fff;border:2px solid #fff;box-shadow:0 3px 12px #0008;font:900 13px/1.2 system-ui;text-align:center;white-space:normal}'+
       '.ctARMarker small{display:block;margin-top:3px;font-size:12px;color:#fff}'+
+      '.ctARMarker.locked{background:#176b2ae8;border-color:#9dffab;transform:translate(-50%,-50%) scale(1.08);box-shadow:0 0 0 3px #2dcf4c55,0 4px 16px #0009}'+
+      '.ctARMarker.car{background:#214d7fe8;border-color:#b8dcff}'+
       '#ctARTop{position:absolute;left:10px;right:10px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:9px;z-index:3}'+
       '#ctARClose{width:48px;height:48px;border:0;border-radius:15px;background:#fff;color:#173f2b;font-size:24px;font-weight:900;box-shadow:0 3px 12px #0007}'+
       '#ctARInfo{flex:1;min-width:0;padding:8px 11px;border-radius:14px;background:#0009;color:#fff;font:800 12px/1.3 system-ui}'+
-      '#ctARCenter{position:absolute;left:50%;top:50%;width:38px;height:38px;transform:translate(-50%,-50%);border:2px solid #fff9;border-radius:50%;box-shadow:0 0 0 1px #0007;pointer-events:none}'+
-      '#ctARCenter:before,#ctARCenter:after{content:"";position:absolute;background:#fff9}#ctARCenter:before{left:50%;top:-10px;bottom:-10px;width:1px}#ctARCenter:after{top:50%;left:-10px;right:-10px;height:1px}'+
+      '#ctARCenter{position:absolute;left:50%;top:50%;width:38px;height:38px;transform:translate(-50%,-50%);border:2px solid #fff9;border-radius:50%;box-shadow:0 0 0 1px #0007;pointer-events:none;transition:.16s}'+
+      '#ctARCenter.locked{width:48px;height:48px;border-color:#8dff98;box-shadow:0 0 0 3px #1d7d2faa,0 0 18px #46ff68aa}'+
+      '#ctARCenter:before,#ctARCenter:after{content:"";position:absolute;background:#fff9}#ctARCenter.locked:before,#ctARCenter.locked:after{background:#8dff98}#ctARCenter:before{left:50%;top:-10px;bottom:-10px;width:1px}#ctARCenter:after{top:50%;left:-10px;right:-10px;height:1px}'+
       '#ctAREmpty{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);width:min(88%,420px);padding:10px 12px;border-radius:14px;background:#000a;color:#fff;text-align:center;font:800 13px/1.35 system-ui;display:none}'+
       '#ctARRadarWrap{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:4;width:250px;pointer-events:none;text-align:center;color:#fff}'+
       '#ctARRadarWrap.off #ctARRadar,#ctARRadarWrap.off #ctARRadarLabel{display:none}'+
@@ -915,22 +924,29 @@
         }
         return {p,d,b};
       })
-      .filter(x=>Number.isFinite(x.d)&&Number.isFinite(x.b)&&x.d<=MAX_DISTANCE&&!ctARMovingAway.get(x.p.id))
+      .filter(x=>Number.isFinite(x.d)&&Number.isFinite(x.b)&&x.d<=MAX_DISTANCE&&(x.p._ctCar||!ctARMovingAway.get(x.p.id)))
       .map(x=>({...x,delta:ctARAngleDiff(x.b,ctARHeading)}))
       .filter(x=>Math.abs(x.delta)<=HALF)
       .sort((a,b)=>a.d-b.d).slice(0,6);
     if(gpsChanged)ctARLastGpsSig=gpsSig;
     layer.innerHTML='';
+    const lockCandidate=rows.filter(x=>Math.abs(x.delta)<=4).sort((a,b)=>a.d-b.d)[0]||null;
+    const lockId=lockCandidate?.p?.id||null;
+    const now=Date.now();
+    const changed=lockId&&lockId!==ctARLockedId;
+    ctARLockedId=lockId;
+    $('ctARCenter')?.classList.toggle('locked',!!lockId);
+    if(changed&&now-ctARLastVibeAt>900){try{navigator.vibrate?.(45)}catch{}ctARLastVibeAt=now;ctARLockedAt=now}
     rows.forEach((x,i)=>{
-      const m=document.createElement('div');m.className='ctARMarker';
+      const m=document.createElement('div');m.className='ctARMarker'+((x.p._ctCar||x.p.sightingKind==='car')?' car':'')+(x.p.id===lockId?' locked':'');
       const xpos=50+(x.delta/HALF)*42;
       const ypos=30+(i%5)*10;
       m.style.left=Math.max(8,Math.min(92,xpos))+'%';
       m.style.top=Math.min(72,ypos)+'%';
-      m.innerHTML=esc(ctARPointName(x.p))+'<small>📏 '+esc(ctARDistanceText(x.d))+'</small>';
+      m.innerHTML=esc(ctARPointName(x.p))+'<small>📏 '+esc(ctARDistanceText(x.d))+(x.p.id===lockId?' · 🎯 centrato':'')+'</small>';
       layer.appendChild(m);
     });
-    info.textContent='📷 Direzione '+Math.round(ctARHeading)+'° · '+rows.length+' punto'+(rows.length===1?'':'i')+' davanti';
+    info.textContent=lockCandidate?('🎯 '+ctARPointName(lockCandidate.p)+' · '+ctARDistanceText(lockCandidate.d)):('📷 Direzione '+Math.round(ctARHeading)+'° · '+rows.length+' punto'+(rows.length===1?'':'i')+' davanti');
     if(rows.length){
       empty.style.display='none';
     }else{
@@ -974,7 +990,7 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+    ctARActive=false;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
     window.removeEventListener('deviceorientation',ctAROrientation,true);
