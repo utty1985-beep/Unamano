@@ -1,4 +1,4 @@
-name: Build CacciaTraccia APK 6.1.14
+name: Build CacciaTraccia APK 6.1.15
 on:
   workflow_dispatch:
   push:
@@ -33,8 +33,8 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/cacciatraccia-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6114' versionName='6.1.14'" /tmp/cacciatraccia-badging.txt
-          cp "$APK" app/build/outputs/apk/release/CacciaTraccia-Italia-v6.1.14-UNSIGNED.apk
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6115' versionName='6.1.15'" /tmp/cacciatraccia-badging.txt
+          cp "$APK" app/build/outputs/apk/release/CacciaTraccia-Italia-v6.1.15-UNSIGNED.apk
       - name: Bundle signing tools
         run: |
           mkdir -p app/build/signing-tools/lib
@@ -42,9 +42,9 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CacciaTraccia-Italia-v6.1.14-build
+          name: CacciaTraccia-Italia-v6.1.15-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/CacciaTraccia-Italia-v6.1.14-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/CacciaTraccia-Italia-v6.1.15-UNSIGNED.apk
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
