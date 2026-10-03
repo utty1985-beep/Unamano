@@ -820,7 +820,7 @@
   // ---------- Vista punti con telecamera: specie già salvate + direzione + distanza ----------
   let ctARStream=null,ctARActive=false,ctARHeading=null,ctARTimer=null;
   let ctARRawHeading=null,ctARRenderAt=0,ctARMotionUntil=0,ctARHasMotionSensor=false;
-  let ctARTiltBeta=null,ctARTiltGamma=null,ctARTiltStableAt=0;
+  let ctARTiltBeta=null,ctARTiltGamma=null,ctARTiltStableAt=0,ctARTiltBias=0;
   let ctARCompassCandidate=null,ctARCompassCandidateAt=0;
   let ctARLockedId=null,ctARLockedAt=0,ctARLastVibeAt=0;
   let ctARRadarEnabled=true;try{ctARRadarEnabled=localStorage.getItem('ct-ar-radar')!=='0'}catch{}
@@ -916,13 +916,24 @@
   function ctARDeviceMotion(e){
     ctARHasMotionSensor=true;
     const r=e?.rotationRate||{};
-    const yaw=Math.abs(Number(r.alpha)||0);
-    const pitch=Math.abs(Number(r.beta)||0);
-    const roll=Math.abs(Number(r.gamma)||0);
-    const other=Math.max(pitch,roll);
-    // Considera svolta solo se l'asse orizzontale è nettamente dominante.
-    // Su/giù e inclinazione laterale non devono mai sbloccare i punti AR.
-    if(yaw>6.5&&yaw>other*1.45)ctARMotionUntil=performance.now()+520;
+    const wz=Number(r.alpha)||0,wx=Number(r.beta)||0,wy=Number(r.gamma)||0;
+    const g=e?.accelerationIncludingGravity||{};
+    const gx=Number(g.x),gy=Number(g.y),gz=Number(g.z);
+    let turn=0,other=0;
+    const gNorm=Math.hypot(gx,gy,gz);
+    if(Number.isFinite(gNorm)&&gNorm>3){
+      // Proietta la velocità angolare sulla verticale reale (gravità):
+      // solo la rotazione sinistra/destra attorno alla verticale può cambiare i gradi.
+      const mag=Math.hypot(wx,wy,wz);
+      turn=Math.abs((wx*gx+wy*gy+wz*gz)/gNorm);
+      other=Math.sqrt(Math.max(0,mag*mag-turn*turn));
+    }else{
+      // Fallback: telefono verticale -> asse Y; telefono quasi piatto -> asse Z.
+      const upright=Number.isFinite(ctARTiltBeta)&&Math.abs(ctARTiltBeta)>45;
+      turn=Math.abs(upright?wy:wz);
+      other=Math.max(Math.abs(wx),Math.abs(upright?wz:wy));
+    }
+    if(turn>5.2&&turn>other*1.18)ctARMotionUntil=performance.now()+650;
   }
   function ctTiltCompensatedHeading(e){
     const alpha=Number(e?.alpha),beta=Number(e?.beta),gamma=Number(e?.gamma);
@@ -941,35 +952,42 @@
     else h=ctTiltCompensatedHeading(e);
     if(h==null)return;
     const a=Number.isFinite(+screen?.orientation?.angle)?+screen.orientation.angle:(Number.isFinite(+window.orientation)?+window.orientation:0);
-    const target=(h+a+360)%360;
-    ctARRawHeading=target;
+    const rawTarget=(h+a+360)%360;
+    ctARRawHeading=rawTarget;
     const now=performance.now();
     const beta=Number(e?.beta),gamma=Number(e?.gamma);
     if(Number.isFinite(beta)&&Number.isFinite(gamma)){
-      if(ctARTiltBeta==null||ctARTiltGamma==null){ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now}
-      else{
+      if(ctARTiltBeta==null||ctARTiltGamma==null){
+        ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now;
+      }else{
         const tiltChange=Math.max(Math.abs(beta-ctARTiltBeta),Math.abs(gamma-ctARTiltGamma));
-        if(tiltChange>2.2){
-          // Stai inclinando il telefono: ignora completamente il cambio di direzione.
+        if(tiltChange>1.2){
+          // Alto/basso o inclinazione: congela la direzione e ricalibra l'offset
+          // per impedire che il nuovo angolo verticale faccia cambiare i gradi.
+          if(Number.isFinite(ctARHeading)){
+            ctARTiltBias=ctARAngleDiff(ctARHeading,rawTarget);
+            ctARCompassCandidate=ctARHeading;
+            ctARCompassCandidateAt=now;
+          }
           ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now;
           return;
         }
-        // Dopo un breve periodo stabile, il nuovo angolo verticale diventa la nuova base.
-        if(now-ctARTiltStableAt>350){ctARTiltBeta=beta;ctARTiltGamma=gamma;ctARTiltStableAt=now}
       }
     }
-    if(!Number.isFinite(ctARHeading)){ctARHeading=target;ctARCompassCandidate=target;ctARCompassCandidateAt=now}
-    else{
+    const target=(rawTarget+ctARTiltBias+360)%360;
+    if(!Number.isFinite(ctARHeading)){
+      ctARHeading=target;ctARCompassCandidate=target;ctARCompassCandidateAt=now;
+    }else{
       const delta=ctARAngleDiff(target,ctARHeading),ad=Math.abs(delta);
       const moving=now<ctARMotionUntil;
       if(ctARHasMotionSensor&&!moving){
+        // Nessun aggiornamento dei gradi senza una vera rotazione orizzontale.
         return;
       }else if(ctARHasMotionSensor&&moving){
-        // Anche durante la svolta, accetta solo heading con telefono verticalmente stabile.
         const alpha=ad>25?.34:ad>12?.27:ad>6?.20:.12;
         ctARHeading=(ctARHeading+delta*alpha+360)%360;
       }else if(!ctARHasMotionSensor){
-        // Fallback senza giroscopio: un grande cambio deve restare coerente per almeno 320 ms.
+        // Fallback senza giroscopio: accetta solo un cambio stabile e coerente.
         const candDiff=Number.isFinite(ctARCompassCandidate)?Math.abs(ctARAngleDiff(target,ctARCompassCandidate)):999;
         if(ad>4){
           if(candDiff>4){ctARCompassCandidate=target;ctARCompassCandidateAt=now;return}
@@ -1091,7 +1109,7 @@
       $('ctARVideo').srcObject=ctARStream;
       $('ctAROverlay').classList.add('open');
       document.body.style.overflow='hidden';
-      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+      ctARActive=true;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARTiltBias=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
       window.addEventListener('devicemotion',ctARDeviceMotion,true);
       window.addEventListener('deviceorientationabsolute',ctAROrientation,true);
       window.addEventListener('deviceorientation',ctAROrientation,true);
@@ -1103,7 +1121,7 @@
     }
   }
   function ctStopARView(){
-    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
+    ctARActive=false;ctARHeading=null;ctARRawHeading=null;ctARRenderAt=0;ctARMotionUntil=0;ctARHasMotionSensor=false;ctARTiltBeta=null;ctARTiltGamma=null;ctARTiltStableAt=0;ctARTiltBias=0;ctARCompassCandidate=null;ctARCompassCandidateAt=0;ctARLockedId=null;ctARLockedAt=0;ctARPrevDistance.clear();ctARMovingAway.clear();ctARLastGpsSig='';
     if(ctARTimer){clearInterval(ctARTimer);ctARTimer=null}
     window.removeEventListener('devicemotion',ctARDeviceMotion,true);
     window.removeEventListener('deviceorientationabsolute',ctAROrientation,true);
