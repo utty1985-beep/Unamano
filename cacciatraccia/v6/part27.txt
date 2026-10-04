@@ -1,0 +1,207 @@
+// V6.4.0 - Play Store / privacy / Free + PRO
+(function(){
+  'use strict';
+
+  const APP_VER='6.4.0';
+  const FREE_DAILY_EXTERNAL_SEARCHES=5;
+  const QUOTA_KEY='pfc-external-search-quota-v1';
+  const MUSH_CONSENT_KEY='pfc-mush-ai-consent-v1';
+  const PRO_PRICE_FALLBACK='19,99 € / anno';
+  const PRO_FEATURE_IDS=new Set(['quickARBtn','ctConditionBtn','ctOfflineAreaBtn']);
+
+  function localDay(){
+    const d=new Date(),p=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  }
+  function bridge(){
+    try{return window.PassioneNative||null}catch{return null}
+  }
+  function isPro(){
+    try{return !!bridge()?.isPro?.()}catch{return false}
+  }
+  function quota(){
+    if(isPro())return {day:localDay(),used:0,limit:null,left:null};
+    let q={day:localDay(),used:0};
+    try{q={...q,...JSON.parse(localStorage.getItem(QUOTA_KEY)||'{}')}}catch{}
+    if(q.day!==localDay())q={day:localDay(),used:0};
+    q.used=Math.max(0,Math.min(FREE_DAILY_EXTERNAL_SEARCHES,Number(q.used)||0));
+    q.limit=FREE_DAILY_EXTERNAL_SEARCHES;
+    q.left=Math.max(0,q.limit-q.used);
+    return q;
+  }
+  function saveQuota(q){
+    try{localStorage.setItem(QUOTA_KEY,JSON.stringify({day:q.day,used:q.used}))}catch{}
+  }
+  function takeExternalSearch(kind){
+    if(isPro())return true;
+    const q=quota();
+    if(q.used>=FREE_DAILY_EXTERNAL_SEARCHES){
+      openPro('Hai esaurito le '+FREE_DAILY_EXTERNAL_SEARCHES+' ricerche esterne gratuite di oggi.');
+      try{toast('Limite giornaliero raggiunto · passa a PRO per ricerche illimitate')}catch{}
+      return false;
+    }
+    q.used+=1; q.left=Math.max(0,FREE_DAILY_EXTERNAL_SEARCHES-q.used); saveQuota(q); updatePlanUi();
+    try{toast('Ricerca esterna '+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+' · '+kind)}catch{}
+    return true;
+  }
+  function priceText(){
+    try{return bridge()?.getProPrice?.()||PRO_PRICE_FALLBACK}catch{return PRO_PRICE_FALLBACK}
+  }
+  function addPlayStyles(){
+    if(document.getElementById('pfcPlayStyles'))return;
+    const s=document.createElement('style');s.id='pfcPlayStyles';s.textContent=`
+      :root{--pfc-gold:#b8872f;--pfc-gold2:#e7c77d;--pfc-deep:#123724}
+      body{background:radial-gradient(circle at 15% -10%,rgba(39,101,65,.14),transparent 34rem),linear-gradient(180deg,#f5f3e9 0%,#edf1e8 100%);background-attachment:fixed}
+      .topbar{background:linear-gradient(128deg,#123724 0%,#1d5135 58%,#315e3f 100%);border-bottom:1px solid #ffffff20}
+      .card{box-shadow:0 5px 18px rgba(22,54,36,.08);border-color:#d5dbd2}
+      .primary{background:linear-gradient(135deg,#153e2a,#286042);box-shadow:0 3px 9px #173f2b26}
+      .primary:active,.secondary:active,.quickAction:active{transform:translateY(1px) scale(.99)}
+      #map{box-shadow:0 8px 26px rgba(14,46,29,.18)}
+      .quickAction{box-shadow:0 2px 7px #00000018;border:1px solid #ffffffaa}
+      .pfcPlanBtn{border:1px solid #e5c77c;background:linear-gradient(135deg,#fff4c9,#e5bd62);color:#503a0e;border-radius:999px;padding:7px 10px;font-weight:950;font-size:11px;white-space:nowrap;box-shadow:0 2px 8px #0002}
+      .pfcPlanBtn.pro{background:linear-gradient(135deg,#d9ffdd,#7dce91);border-color:#9cdeb0;color:#123d22}
+      .pfcQuotaHint{margin:6px 2px 0;font-size:11px;color:#697069;display:flex;align-items:center;justify-content:space-between;gap:8px}
+      .pfcQuotaHint b{color:#173f2b}
+      .pfcProTag{display:inline-flex;align-items:center;border-radius:999px;padding:2px 6px;margin-left:5px;background:#f7e7b4;color:#654a10;font-size:9px;font-weight:950;vertical-align:middle}
+      .pfcProHero{background:linear-gradient(145deg,#123724,#285e3f);color:#fff;border-radius:18px;padding:15px;margin:-2px -2px 12px}
+      .pfcProHero h2{margin:0 0 5px}.pfcProHero .price{font-size:25px;font-weight:950;color:#ffe4a0}
+      .pfcProList{display:grid;gap:7px;margin:11px 0}.pfcProList div{padding:9px 10px;border:1px solid #d9ddd5;border-radius:11px;background:#fbfcf8;font-size:13px}
+      .pfcPrivacyBox{font-size:11px;color:#687069;line-height:1.45;margin-top:9px}
+      .pfcPrivacyBtn{margin-top:8px;width:100%}
+      .pfcLimit{background:#fff8e4;border:1px solid #e7d39a;border-radius:12px;padding:8px 10px;font-size:12px;margin-top:8px}
+      @media(max-width:520px){.topActions #netPill{display:none}.pfcPlanBtn{padding:6px 8px}}
+    `;document.head.appendChild(s);
+  }
+  function ensureProModal(){
+    if(document.getElementById('pfcProModal'))return;
+    const m=document.createElement('div');m.id='pfcProModal';m.className='modal';m.innerHTML=`
+      <div class="dialog" style="max-width:620px">
+        <div class="sectionHead"><div><h2 style="margin-bottom:2px">Passione PRO</h2><div class="muted">Più strumenti, nessun limite giornaliero</div></div><button id="pfcProClose" class="iconBtn">✕</button></div>
+        <div class="pfcProHero"><h2>🌲 Porta l'app sul campo senza limiti</h2><div id="pfcProPrice" class="price">${PRO_PRICE_FALLBACK}</div><div style="font-size:12px;opacity:.88">Abbonamento annuale gestito da Google Play · rinnovo e disdetta da Play Store</div></div>
+        <div id="pfcProReason" class="pfcLimit" hidden></div>
+        <div class="pfcProList">
+          <div>♾️ <b>Ricerche esterne illimitate</b> — località, servizi esterni e riconoscimento funghi.</div>
+          <div>📷 <b>Radar / vista punti con fotocamera</b> fino a 10 km.</div>
+          <div>🌦️ <b>Confronti avanzati</b> di vento, meteo e condizioni degli appostamenti.</div>
+          <div>📥 <b>Aree mappa offline avanzate</b> per le uscite con poca rete.</div>
+          <div>🍄 <b>Riconoscimento fotografico funghi</b> senza limite giornaliero.</div>
+        </div>
+        <button id="pfcBuyPro" class="primary wide">Attiva PRO con Google Play</button>
+        <button id="pfcRestorePro" class="secondary wide" style="margin-top:7px">Ripristina acquisto</button>
+        <button id="pfcPrivacyFromPro" class="secondary wide" style="margin-top:7px">Privacy e trattamento dati</button>
+        <div class="pfcPrivacyBox">Il riconoscimento funghi è solo indicativo e non deve essere usato per decidere la commestibilità. Per le funzioni online alcuni dati necessari (ad esempio coordinate o la foto scelta per il riconoscimento) vengono inviati ai servizi esterni descritti nella Privacy Policy.</div>
+      </div>`;document.body.appendChild(m);
+    document.getElementById('pfcProClose').onclick=()=>m.classList.remove('open');
+    document.getElementById('pfcPrivacyFromPro').onclick=openPrivacy;
+    document.getElementById('pfcBuyPro').onclick=()=>{
+      const b=bridge();
+      if(b?.buyPro){try{b.buyPro();return}catch{}}
+      try{toast('L’acquisto PRO è disponibile dalla versione installata tramite Google Play.')}catch{}
+    };
+    document.getElementById('pfcRestorePro').onclick=()=>{
+      const b=bridge();
+      if(b?.restorePro){try{b.restorePro();try{toast('Controllo acquisti Google Play…')}catch{};return}catch{}}
+      try{toast('Il ripristino acquisti è disponibile nella versione Google Play.')}catch{}
+    };
+  }
+  function openPro(reason){
+    ensureProModal();
+    const r=document.getElementById('pfcProReason');
+    if(r){r.hidden=!reason;r.textContent=reason||''}
+    document.getElementById('pfcProPrice').textContent=priceText();
+    document.getElementById('pfcProModal').classList.add('open');
+  }
+  function openPrivacy(){
+    window.open(new URL('./privacy.html',location.href).toString(),'_blank','noopener');
+  }
+  function ensurePlanButton(){
+    const host=document.querySelector('.topActions');if(!host||document.getElementById('pfcPlanBtn'))return;
+    const b=document.createElement('button');b.id='pfcPlanBtn';b.className='pfcPlanBtn';b.type='button';b.onclick=()=>openPro('');
+    host.insertBefore(b,host.firstChild);
+  }
+  function ensureQuotaHint(){
+    const row=document.querySelector('.searchRow');if(!row||document.getElementById('pfcQuotaHint'))return;
+    const h=document.createElement('div');h.id='pfcQuotaHint';h.className='pfcQuotaHint';
+    row.insertAdjacentElement('afterend',h);
+  }
+  function ensurePrivacyButton(){
+    const page=document.getElementById('page-backup');if(!page||document.getElementById('pfcPrivacyBtn'))return;
+    const first=page.querySelector('.card');if(!first)return;
+    const b=document.createElement('button');b.id='pfcPrivacyBtn';b.type='button';b.className='secondary pfcPrivacyBtn';b.textContent='🔐 Privacy, permessi e servizi esterni';b.onclick=openPrivacy;first.appendChild(b);
+  }
+  function tagProControl(id){
+    const el=document.getElementById(id);if(!el||el.querySelector('.pfcProTag'))return;
+    const tag=document.createElement('span');tag.className='pfcProTag';tag.textContent='PRO';el.appendChild(tag);
+  }
+  function updatePlanUi(){
+    ensurePlanButton();ensureQuotaHint();
+    const b=document.getElementById('pfcPlanBtn'),h=document.getElementById('pfcQuotaHint');
+    const pro=isPro(),q=quota();
+    if(b){b.classList.toggle('pro',pro);b.textContent=pro?'✓ PRO attivo':('FREE · '+q.left+'/'+FREE_DAILY_EXTERNAL_SEARCHES)}
+    if(h){
+      h.innerHTML=pro?'<span>✓ Piano <b>PRO</b> · ricerche esterne illimitate</span><span>Google Play</span>':
+        '<span>🌐 Ricerche esterne oggi: <b>'+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+'</b></span><button id="pfcQuotaPro" class="mini" type="button">PRO illimitato</button>';
+      const x=document.getElementById('pfcQuotaPro');if(x)x.onclick=()=>openPro('Con PRO le ricerche esterne non hanno limite giornaliero.');
+    }
+    ['quickARBtn','ctConditionBtn','ctOfflineAreaBtn'].forEach(tagProControl);
+    const v=document.getElementById('ctVersionBadge');if(v)v.textContent='• V'+APP_VER;
+  }
+  function isCoordinateQuery(q){
+    return /^\s*-?\d+(?:\.\d+)?\s*[,; ]\s*-?\d+(?:\.\d+)?\s*$/.test(String(q||''));
+  }
+  function blockEvent(e){
+    try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch{}
+  }
+  function targetButton(e){return e.target?.closest?.('button,[role="button"]')||null}
+  function needsMushConsent(){
+    try{return localStorage.getItem(MUSH_CONSENT_KEY)!=='yes'}catch{return true}
+  }
+  function askMushConsent(){
+    if(!needsMushConsent())return true;
+    const ok=confirm('Privacy riconoscimento funghi\n\nPer analizzare la specie, la foto che scegli viene inviata tramite connessione HTTPS al servizio esterno MushroomWiseAI ospitato su Hugging Face. Non usare il risultato per decidere se un fungo è commestibile.\n\nVuoi continuare?');
+    if(ok)try{localStorage.setItem(MUSH_CONSENT_KEY,'yes')}catch{}
+    return ok;
+  }
+
+  document.addEventListener('click',e=>{
+    const b=targetButton(e);if(!b)return;
+    if(PRO_FEATURE_IDS.has(b.id)&&!isPro()){
+      blockEvent(e);openPro('Questa funzione avanzata è inclusa in Passione PRO.');return;
+    }
+    if(b.id==='searchBtn'){
+      const q=document.getElementById('mapSearch')?.value?.trim()||'';
+      if(q&&!isCoordinateQuery(q)&&!takeExternalSearch('ricerca luogo')){blockEvent(e);return}
+    }
+    if(b.id==='ctOpenWeatherSite'){
+      if(!takeExternalSearch('confronto meteo esterno')){blockEvent(e);return}
+    }
+    if(b.id==='ctMushExternal'||b.id==='ctMushOnline'){
+      if(window.__pfcMushSearchPaidFor){window.__pfcMushSearchPaidFor=false;return}
+      if(!takeExternalSearch('riconoscimento funghi esterno')){blockEvent(e);return}
+    }
+  },true);
+
+  document.addEventListener('change',e=>{
+    const input=e.target;
+    if(input?.id!=='ctMushFile'||!input.files?.length)return;
+    if(!askMushConsent()){
+      blockEvent(e);input.value='';try{toast('Foto non inviata. Puoi continuare a usare le altre funzioni.')}catch{};return;
+    }
+    if(!takeExternalSearch('riconoscimento fotografico fungo')){
+      blockEvent(e);input.value='';return;
+    }
+    window.__pfcMushSearchPaidFor=true;
+  },true);
+
+  window.PFCNativePlanChanged=function(){
+    setTimeout(()=>{updatePlanUi();if(isPro()){document.getElementById('pfcProModal')?.classList.remove('open');try{toast('Passione PRO attivo ✓')}catch{}}},60);
+  };
+  window.PFCPlayStore={version:APP_VER,isPro,quota,openPro,freeDailyExternalSearches:FREE_DAILY_EXTERNAL_SEARCHES};
+
+  const previousBind=bind;
+  bind=function(){
+    previousBind();
+    addPlayStyles();ensureProModal();ensurePlanButton();ensureQuotaHint();ensurePrivacyButton();
+    setTimeout(updatePlanUi,120);
+  };
+})();
