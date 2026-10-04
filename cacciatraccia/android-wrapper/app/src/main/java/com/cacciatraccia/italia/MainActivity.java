@@ -36,8 +36,11 @@ import com.android.billingclient.api.QueryPurchasesParams;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
@@ -49,6 +52,8 @@ public class MainActivity extends Activity {
     private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6400";
     private static final String PRIVACY_URL = "https://" + APP_HOST + APP_PATH + "privacy.html";
     private static final String PRO_PRODUCT_ID = "passione_pro_annuale";
+    private static final int FREE_DAILY_EXTERNAL_SEARCHES = 5;
+    private static final String LIMIT_PREFS = "pfc_daily_limits";
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -426,6 +431,37 @@ public class MainActivity extends Activity {
         });
     }
 
+    private String quotaDay() {
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+    }
+
+    private int getExternalSearchesUsedToday() {
+        synchronized (this) {
+            android.content.SharedPreferences prefs = getSharedPreferences(LIMIT_PREFS, MODE_PRIVATE);
+            String today = quotaDay();
+            String storedDay = prefs.getString("day", "");
+            if (!today.equals(storedDay)) {
+                prefs.edit().putString("day", today).putInt("used", 0).apply();
+                return 0;
+            }
+            return Math.max(0, Math.min(FREE_DAILY_EXTERNAL_SEARCHES, prefs.getInt("used", 0)));
+        }
+    }
+
+    private boolean consumeExternalSearch() {
+        if (proActive) return true;
+        synchronized (this) {
+            android.content.SharedPreferences prefs = getSharedPreferences(LIMIT_PREFS, MODE_PRIVATE);
+            String today = quotaDay();
+            String storedDay = prefs.getString("day", "");
+            int used = today.equals(storedDay) ? prefs.getInt("used", 0) : 0;
+            used = Math.max(0, Math.min(FREE_DAILY_EXTERNAL_SEARCHES, used));
+            if (used >= FREE_DAILY_EXTERNAL_SEARCHES) return false;
+            prefs.edit().putString("day", today).putInt("used", used + 1).apply();
+            return true;
+        }
+    }
+
     private void notifyWebPlanChanged() {
         runOnUiThread(() -> {
             if (webView != null) {
@@ -450,6 +486,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getProPrice() {
             return proPrice;
+        }
+
+        @JavascriptInterface
+        public int getExternalSearchesUsedToday() {
+            return MainActivity.this.getExternalSearchesUsedToday();
+        }
+
+        @JavascriptInterface
+        public boolean consumeExternalSearch() {
+            return MainActivity.this.consumeExternalSearch();
         }
 
         @JavascriptInterface
