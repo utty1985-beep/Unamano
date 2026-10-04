@@ -1,7 +1,31 @@
 // V6.4.1 - Aree protette e calendario venatorio
 (function(){
 'use strict';
-const VER='6.4.1',SOUND='pfc-protected-sound-v1';
+const VER='6.4.2',SOUND='pfc-protected-sound-v1',MODE_KEY='pfc-territory-mode-v1';
+let areaMode=(()=>{try{return localStorage.getItem(MODE_KEY)||'hunt'}catch{return 'hunt'}})();
+const MUSH_RULES={
+'Abruzzo':{short:'Autorizzazione/attestato richiesti. Tipo A fino a 3 kg; autorizzazioni specifiche possono avere limiti diversi.',src:'https://trasparenza.regione.abruzzo.it/servizi-erogati/carta-servizi/rilascio-permessi-raccolta-funghi-epigei-nella-regione-abruzzo'},
+'Basilicata':{short:'Tesserino richiesto (personale, turistico o speciale). Verifica limiti e prescrizioni dell’ente e dell’area di raccolta.',src:'https://www.regione.basilicata.it/?temi-paaf=foreste-e-tutela-del-territorio%2Ffunghi%2Fdisciplina-sulla-raccolta-e-la-commercializzazione-dei-funghi-epigei-spontaneifreschi-e-conservati'},
+'Calabria':{short:'Tessera/permesso richiesti. Raccolta amatoriale ordinaria fino a 3 kg; regole particolari per residenti montani e altre categorie.',src:'https://www.regione.calabria.it/ambiente-agricoltura-ed-energia/funghi-e-tartufi/'},
+'Campania':{short:'Autorizzazione secondo normativa regionale. Limite ordinario 3 kg al giorno; regole specifiche per ovolo e altre specie.',src:'https://www.regione.campania.it/normativa/item.php?b79f7d70f28fffc18af20b3afb0a87ac=2f518b9700578fb155418bfea21c3041&pgCode=G14I231R278&refresh=on&rss=rss'},
+'Emilia-Romagna':{short:'Tesserino territoriale richiesto. Regola generale: 3 kg; raccolta nei giorni e orari previsti. Parchi e territori possono avere regole ulteriori.',src:'https://ambiente.regione.emilia-romagna.it/it/parchi-natura2000/sistema-regionale/funghi-sottobosco-tartufi/le-regole-per-la-raccolta-dei-funghi'},
+'Friuli-Venezia Giulia':{short:'Autorizzazione e contributo richiesti. Limite ordinario 3 kg al giorno pro capite; esistono permessi turistici.',src:'https://www.regione.fvg.it/rafvg/cms/RAFVG/economia-imprese/agricoltura-foreste/raccolta-funghi/'},
+'Lazio':{short:'Attestato di corso micologico, contributo annuale e documento. Raccolta consentita tutti i giorni; limite ordinario 3 kg.',src:'https://www.regione.lazio.it/cittadini/agricoltura/Funghi'},
+'Liguria':{short:'Disciplina regionale con limiti territoriali/permessi. Limite complessivo ordinario 3 kg; regole specifiche per porcini, ovoli e altre specie.',src:'https://lrv.regione.liguria.it/liguriass_prod/articolo?anc=art4&pr=idx%2C0%3Bartic%2C0%3Barticparziale%2C1&urndoc=urn%3Anir%3Aregione.liguria%3Alegge%3A2014%3B17'},
+'Lombardia':{short:'Le regole regionali valgono ovunque, ma permessi, costi e aree possono dipendere da Comunità montane e Parchi. Verifica l’ente locale.',src:'https://www.regione.lombardia.it/agricoltura/raccolta-funghi-e-tartufi/raccolta-funghi--le-regole'},
+'Marche':{short:'Abilitazione e permesso annuale richiesti. Limite ordinario 3 kg al giorno; verificare eventuali regole locali o di area protetta.',src:'https://www.regione.marche.it/Regione-Utile/Agricoltura-Sviluppo-Rurale-e-Pesca/Funghi-Epigei'},
+'Molise':{short:'Tesserino regionale di idoneità e tassa annuale. Per i non residenti può valere il titolo della Regione di residenza; verificare limiti vigenti.',src:'https://www.regione.molise.it/flex/cm/pages/ServeBLOB.php/L/IT/IDPagina/14385'},
+'Piemonte':{short:'Titolo di raccolta personale. Limite ordinario 3 kg al giorno; nelle aree protette possono esserci limitazioni aggiuntive.',src:'https://www.regione.piemonte.it/web/temi/ambiente-territorio/biodiversita-aree-naturali/conservazione-salvaguardia/guida-alla-raccolta-funghi-piemonte-normative-procedure'},
+'Puglia':{short:'Permesso regionale nominativo. Raccolta tutti i giorni; limite ordinario 3 kg al giorno. Aree protette e regolamenti locali possono imporre divieti o condizioni.',src:'https://burp.regione.puglia.it/documents/20135/254217/LEGGE%2BREGIONALE%2B15%2Bmaggio%2B2006%2C%2Bn.%2B14%2B%28id%2B5218593%29.pdf/b9bafe08-2da5-1e57-441f-ea414f047d85?t=1622709338775&version=1.0'},
+'Sardegna':{short:'Non applico automaticamente un limite regionale unico: valgono il quadro nazionale e soprattutto divieti/regole di riserve, parchi, proprietà ed enti locali. Verifica la zona concreta.',src:'https://www.sardegnaambiente.it/index.php?c=4575&esn=Primo+piano&n=10&na=1&s=19&v=9&xsl=611'},
+'Sicilia':{short:'Tesserino nominativo regionale previsto. La disciplina operativa è gestita anche tramite Comuni e Corpo forestale; verificare requisiti e limiti aggiornati.',src:'https://www.regione.sicilia.it/istituzioni/regione/strutture-regionali/assessorato-territorio-ambiente/comando-corpo-forestale-regione-siciliana/ambiente/altri-contenuti/raccolta-funghi'},
+'Toscana':{short:'Autorizzazione regionale fuori dal Comune di residenza. Limite ordinario 3 kg; nei parchi e nelle aree protette valgono anche i regolamenti dell’ente gestore.',src:'https://www.regione.toscana.it/-/raccolta-funghi-ecco-le-disposizioni'},
+'Umbria':{short:'Raccolta disciplinata dalla L.R. 12/2000 e successive modifiche. Autorizzazioni e possibili limitazioni sono gestite dagli enti competenti: verificare la zona.',src:'https://www.regione.umbria.it/agricoltura/funghi-e-tartufi'},
+"Valle d'Aosta":{short:'Disciplina regionale specifica. Il limite generale indicato dalla Regione è 1 kg; verificare anche divieti locali e aree protette.',src:'https://www.regione.vda.it/corpoforestale/competenze/raccoltafunghi_i.aspx'},
+'Veneto':{short:'Titolo di raccolta e documento. Limite ordinario 3 kg; giorni e costi possono essere definiti dagli enti competenti. Nelle aree protette possono esserci divieti specifici.',src:'https://www.regione.veneto.it/web/enti-locali/raccolta-funghi'},
+'Provincia autonoma di Trento':{short:'Regole provinciali e comunali: denuncia/pagamento per molti non residenti, orari e limiti specifici. Verificare sempre il Comune e i divieti segnalati.',src:'https://forestefauna.provincia.tn.it/Foreste/Foreste-in-Trentino/Funghi'},
+'Provincia autonoma di Bolzano':{short:'Raccolta in genere nei giorni pari, 7–19. Fuori dal Comune di residenza serve pagamento; limiti diversi per residenti/non residenti. Vietata in aree protette salvo disciplina specifica.',src:'https://news.provincia.bz.it/it/news/adeguamento-della-tassa-per-la-raccolta-dei-funghi'}
+};
 const PUGLIA_CAL='https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria';
 const PUGLIA_ATC='https://foreste.regione.puglia.it/ambiti-territoriali-di-caccia-atc';
 const PUGLIA_AREE='https://pugliacon.regione.puglia.it/web/sit-puglia-paesaggio/6.2.2-componenti-delle-aree-protette-e-dei-siti-naturalistici';
@@ -20,7 +44,7 @@ const more=['Allodola','Alzavola','Beccaccia','Canapiglia','Cesena','Codone','Co
 
 function css(){
  if($('pfcTerrCss'))return;const s=document.createElement('style');s.id='pfcTerrCss';s.textContent=`
- .pfcTerr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}.pfcTerr button{min-height:55px;border:1px solid #d2d9d0;border-radius:14px;background:#fff;color:#173f2b;font-weight:900}.pfcTerr b{display:block;font-size:21px}
+ .pfcTerr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}.pfcTerr button{min-height:55px;border:1px solid #d2d9d0;border-radius:14px;background:#fff;color:#173f2b;font-weight:900}.pfcTerr b{display:block;font-size:21px}.pfcMode{display:flex;gap:7px;margin:7px 0 11px}.pfcMode button{flex:1;border:1px solid #cfd8d0;border-radius:999px;padding:9px;background:#fff;font-weight:900}.pfcMode button.active{background:#173f2b;color:#fff}.pfcLegend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:8px}.pfcDot{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}.pfcDot.hunt{background:rgba(210,35,35,.45);border:1px solid #bd2020}.pfcDot.env{background:rgba(242,153,27,.38);border:1px solid #d48312}.pfcDot.mush{background:rgba(126,62,170,.40);border:1px solid #7837a6}
  .pfcTop{display:flex;gap:9px;align-items:center;margin-bottom:10px}.pfcState{padding:12px;border-radius:14px;border:1px solid #d7ddd5;margin:8px 0}.pfcState.ok{background:#eff9f1;border-color:#add5b7}.pfcState.warn{background:#fff8e8;border-color:#dfc77b}.pfcState.bad{background:#fff0ef;border-color:#d58c86}
  .pfcItem{padding:10px;border:1px solid #d9ded8;border-radius:12px;margin:7px 0;background:#fff}.pfcHead{display:flex;justify-content:space-between;gap:8px;align-items:center}.pfcMeta{font-size:11px;color:#687069;margin-top:4px}.pfcTag{padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900;background:#eee}.pfcTag.open{background:#dcf5e3;color:#176b36}.pfcTag.closed{background:#f9deda;color:#96382e}.pfcTag.special{background:#fff0bf;color:#795910}
  .pfcGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pfcGrid .full{grid-column:1/-1}.pfcLegal{font-size:11px;line-height:1.45;background:#fff9e9;border:1px solid #ead59c;border-radius:12px;padding:10px;margin-top:9px}.pfcBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
@@ -32,9 +56,12 @@ function pages(){
  const a=document.createElement('section');a.id='page-protected';a.className='page';a.innerHTML=`
  <div class="pfcTop"><button id="pfcAreaBack" class="iconBtn">←</button><div><h2 style="margin:0">🛡️ Aree protette</h2><div class="muted">Controllo GPS e avviso di ingresso</div></div></div>
  <div class="card"><div class="sectionHead"><h3>Controllo in tempo reale</h3><span id="pfcAreaLive" class="pill soft">in attesa</span></div>
+ <div class="pfcMode"><button id="pfcModeHunt">🦆 Caccia</button><button id="pfcModeMush">🍄 Funghi</button></div>
+ <div class="pfcLegend"><span><i class="pfcDot hunt"></i>protetta per la caccia</span><span><i class="pfcDot env"></i>tutela ambientale da verificare</span><span><i class="pfcDot mush"></i>raccolta funghi vietata esplicitamente</span></div>
  <div id="pfcAreaState" class="pfcState warn"><b>Posizione non verificata</b><div class="pfcMeta">Attiva il GPS e aggiorna.</div></div>
  <div class="actionGrid"><button id="pfcAreaRefresh" class="primary">◎ Aggiorna aree</button><button id="pfcAreaSound" class="secondary">🔕 Avvisi sonori</button><button id="pfcAreaMap" class="secondary">🗺️ Mostra sulla mappa</button></div>
  <div id="pfcAreaStamp" class="muted" style="margin-top:8px"></div></div>
+ <div class="card"><div class="sectionHead"><h3>🍄 Normativa funghi della posizione</h3><span id="pfcMushRegion" class="pill soft">da rilevare</span></div><div id="pfcMushRule" class="pfcState warn"><b>Rileva la posizione</b><div class="pfcMeta">Mostrerò la regola regionale/provinciale disponibile e la fonte ufficiale.</div></div><button id="pfcMushSource" class="secondary wide" disabled>🏛️ Apri fonte ufficiale</button></div>
  <div class="card"><div class="sectionHead"><h3>Aree rilevate</h3><span class="pill soft">entro ~12 km</span></div><div id="pfcAreaList" class="empty">Nessun controllo effettuato.</div>
  <div class="pfcBtns"><button id="pfcAreaOfficial" class="secondary">🏛️ Cartografia ufficiale</button><button id="pfcAreaMap2" class="secondary">🗺️ Mappa principale</button></div>
  <div class="pfcLegal">⚠️ Supporto informativo: non sostituisce cartografie ufficiali, tabellazione, ordinanze o altri divieti. Se il servizio non è aggiornabile, l’app non considera la zona automaticamente libera.</div></div>`;
@@ -68,20 +95,40 @@ function inside(lat,lon,r){let z=false;for(let i=0,j=r.length-1;i<r.length;j=i++
 function segD(lat,lon,a,b){const R=6371000,k=Math.PI/180,c=Math.cos(lat*k),ax=(a[1]-lon)*k*R*c,ay=(a[0]-lat)*k*R,bx=(b[1]-lon)*k*R*c,by=(b[0]-lat)*k*R,vx=bx-ax,vy=by-ay,d=vx*vx+vy*vy;let t=d?-(ax*vx+ay*vy)/d:0;t=Math.max(0,Math.min(1,t));return Math.hypot(ax+t*vx,ay+t*vy)}
 function rdist(lat,lon,r){let d=Infinity;for(let i=1;i<r.length;i++)d=Math.min(d,segD(lat,lon,r[i-1],r[i]));return d}
 function name(e){const t=e.tags||{};return t.name||t['name:it']||t.short_name||t.operator||'Area protetta senza nome'}
-function parse(j){const seen=new Set(),z=[];(j.elements||[]).forEach(e=>{const rs=rings(e),id=e.type+':'+e.id;if(!rs.length||seen.has(id))return;seen.add(id);const t=e.tags||{};z.push({id,name:name(e),code:t.ref||t['ref:eu:site_code']||t.protect_class||'',rs})});return z}
+function areaKind(e){
+ const t=e.tags||{},s=[t.name,t['name:it'],t.description,t.protection_title,t.protect_class,t.ref,t.boundary,t.leisure,t.hunting,t['mushroom_picking'],t.foraging].filter(Boolean).join(' ').toLowerCase();
+ if(t['mushroom_picking']==='no'||t.foraging==='no'||/raccolta funghi vietata|divieto.*funghi/.test(s))return 'mushroom';
+ if(t.hunting==='no'||/oasi.{0,20}protez|ripopolamento|cattura|faunistic|venator|rifugio faunistico/.test(s))return 'hunting';
+ return 'environmental';
+}
+function parse(j){const seen=new Set(),z=[];(j.elements||[]).forEach(e=>{const rs=rings(e),id=e.type+':'+e.id;if(!rs.length||seen.has(id))return;seen.add(id);const t=e.tags||{};z.push({id,name:name(e),code:t.ref||t['ref:eu:site_code']||t.protect_class||'',kind:areaKind(e),rs})});return z}
 function fmt(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km'}
 function ranked(pos){return areas.map(a=>{const hit=a.rs.some(r=>inside(pos.lat,pos.lng,r)),d=hit?0:Math.min(...a.rs.map(r=>rdist(pos.lat,pos.lng,r)));return {...a,hit,d}}).sort((a,b)=>(b.hit-a.hit)||(a.d-b.d))}
 function overlay(list){
  if(!map||!window.L)return;if(areaLayer){try{map.removeLayer(areaLayer)}catch{}}areaLayer=L.layerGroup().addTo(map);
- list.slice(0,20).forEach(a=>a.rs.forEach(r=>L.polygon(r,{weight:a.hit?4:2,fillOpacity:a.hit?.2:.08}).bindPopup('<b>'+esc(a.name)+'</b>').addTo(areaLayer)))
+ list.slice(0,30).forEach(a=>a.rs.forEach(r=>{
+   const opt=a.kind==='hunting'?{color:'#c61f1f',fillColor:'#df3030',weight:a.hit?4:2,fillOpacity:a.hit?.28:.16}:
+             a.kind==='mushroom'?{color:'#7437a5',fillColor:'#8e55b8',weight:a.hit?4:2,fillOpacity:a.hit?.28:.17}:
+             {color:'#d27a0b',fillColor:'#efa229',weight:a.hit?3:2,fillOpacity:a.hit?.22:.11};
+   const lab=a.kind==='hunting'?'Zona protetta per la caccia':a.kind==='mushroom'?'Raccolta funghi vietata nei dati disponibili':'Area tutelata: verifica regolamento';
+   L.polygon(r,opt).bindPopup('<b>'+esc(a.name)+'</b><br><small>'+lab+'</small>').addTo(areaLayer)
+ }))
 }
 function renderArea(pos,fresh){
- const r=ranked(pos),hit=r.filter(x=>x.hit),near=r.filter(x=>!x.hit&&x.d<=5000).slice(0,10),k=hit.map(x=>x.id).sort().join('|'),st=$('pfcAreaState');
- if(hit.length){st.className='pfcState bad';st.innerHTML='<b>⛔ Dentro '+(hit.length===1?'un’area protetta rilevata':hit.length+' aree protette rilevate')+'</b><div class="pfcMeta">'+hit.map(x=>esc(x.name)).join(' · ')+' — verifica i divieti ufficiali.</div>';if(k!==lastInside)beep()}
- else if(near.length){st.className='pfcState warn';st.innerHTML='<b>⚠️ Area protetta a '+fmt(near[0].d)+'</b><div class="pfcMeta">'+esc(near[0].name)+' · distanza indicativa dal perimetro disponibile.</div>'}
- else{st.className='pfcState ok';st.innerHTML='<b>✓ Nessuna area protetta rilevata entro 5 km</b><div class="pfcMeta">Non esclude altri divieti o dati non presenti.</div>'}
+ const r=ranked(pos),hit=r.filter(x=>x.hit),near=r.filter(x=>!x.hit&&x.d<=5000).slice(0,12),huntHit=hit.filter(x=>x.kind==='hunting'),mushHit=hit.filter(x=>x.kind==='mushroom'),envHit=hit.filter(x=>x.kind==='environmental'),k=hit.map(x=>x.id).sort().join('|'),st=$('pfcAreaState');
+ if(areaMode==='mush'){
+   if(mushHit.length){st.className='pfcState bad';st.innerHTML='<b>⛔ Raccolta funghi vietata nei dati disponibili</b><div class="pfcMeta">'+mushHit.map(x=>esc(x.name)).join(' · ')+' · verifica comunque il regolamento ufficiale dell’area.</div>';if(k!==lastInside)beep()}
+   else if(envHit.length){st.className='pfcState warn';st.innerHTML='<b>⚠️ Sei in un’area tutelata</b><div class="pfcMeta">La tutela ambientale può prevedere limiti alla raccolta funghi. Controlla la norma regionale e il regolamento dell’ente gestore.</div>'}
+   else if(huntHit.length){st.className='pfcState warn';st.innerHTML='<b>🟥 Zona protetta per la caccia</b><div class="pfcMeta">Questo NON significa automaticamente divieto di accesso o raccolta funghi. La zona resta visibile in rosso; verifica solo eventuali regole ambientali/locali.</div>'}
+   else{st.className='pfcState ok';st.innerHTML='<b>✓ Nessun divieto funghi esplicito rilevato qui</b><div class="pfcMeta">Controlla comunque regola regionale, proprietà privata, parchi/riserve e ordinanze locali.</div>'}
+ }else{
+   if(huntHit.length){st.className='pfcState bad';st.innerHTML='<b>⛔ Zona protetta per la caccia</b><div class="pfcMeta">'+huntHit.map(x=>esc(x.name)).join(' · ')+' · attività venatoria vietata o limitata: verifica il provvedimento ufficiale.</div>';if(k!==lastInside)beep()}
+   else if(hit.length){st.className='pfcState warn';st.innerHTML='<b>⚠️ Area tutelata rilevata</b><div class="pfcMeta">Non la tratto automaticamente come divieto venatorio: verifica la disciplina specifica dell’area.</div>'}
+   else if(near.length){st.className='pfcState warn';st.innerHTML='<b>⚠️ Area tutelata a '+fmt(near[0].d)+'</b><div class="pfcMeta">'+esc(near[0].name)+' · distanza indicativa dal perimetro disponibile.</div>'}
+   else{st.className='pfcState ok';st.innerHTML='<b>✓ Nessuna area protetta rilevata entro 5 km</b><div class="pfcMeta">Non esclude divieti, oasi o perimetri non presenti nei dati interrogati.</div>'}
+ }
  lastInside=k;$('pfcAreaLive').textContent=fresh?'● controllo attivo':'● dati già caricati';$('pfcAreaStamp').textContent='GPS '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5)+' · ±'+Math.round(pos.acc||0)+' m';
- const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>'<div class="pfcItem"><div class="pfcHead"><b>'+(a.hit?'⛔ ':'🛡️ ')+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+esc(a.code||'perimetro cartografico')+'</div></div>').join(''):'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r)
+ const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>{const ico=a.kind==='hunting'?'🟥':a.kind==='mushroom'?'🍄⛔':'🟧',lab=a.kind==='hunting'?'caccia protetta':a.kind==='mushroom'?'funghi vietati':'tutela ambientale';return '<div class="pfcItem"><div class="pfcHead"><b>'+ico+' '+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+lab+' · '+esc(a.code||'perimetro cartografico')+'</div></div>'}).join(''):'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r)
 }
 function pos(p){return {lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0}}
 function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});if(!navigator.geolocation)return no(Error('GPS non disponibile'));navigator.geolocation.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})})}
@@ -89,13 +136,37 @@ async function loadAreas(p,force){
  if(!navigator.onLine){$('pfcAreaLive').textContent='offline / non verificato';if(areas.length)renderArea(p,false);return}
  if(!force&&areaAnchor&&hav([areaAnchor.lat,areaAnchor.lng],[p.lat,p.lng])<.8&&Date.now()-areaAnchor.at<720000&&areas.length){renderArea(p,false);return}
  $('pfcAreaLive').textContent='scarico perimetri…';
- const q='[out:json][timeout:25];(way(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];relation(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];way(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];relation(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];);out tags geom;';
+ const q='[out:json][timeout:25];(way(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];relation(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];way(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];relation(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];way(around:12000,'+p.lat+','+p.lng+')["hunting"="no"];relation(around:12000,'+p.lat+','+p.lng+')["hunting"="no"];way(around:12000,'+p.lat+','+p.lng+')["mushroom_picking"="no"];relation(around:12000,'+p.lat+','+p.lng+')["mushroom_picking"="no"];);out tags geom;';
  let j=null,err;for(const u of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){try{const r=await fetch(u+'?data='+encodeURIComponent(q),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);j=await r.json();break}catch(e){err=e}}
  if(!j)throw err||Error('Servizio cartografico non disponibile');areas=parse(j);areaAnchor={lat:p.lat,lng:p.lng,at:Date.now()};renderArea(p,true)
 }
-async function refreshArea(force=true){try{const p=await getPos();await loadAreas(p,force)}catch(e){$('pfcAreaLive').textContent='non verificato';$('pfcAreaState').className='pfcState warn';$('pfcAreaState').innerHTML='<b>⚠️ Verifica non disponibile</b><div class="pfcMeta">'+esc(e.message||'Errore')+'. Non interpretare l’assenza di dati come assenza di divieti.</div>'}}
+async function refreshArea(force=true){try{const p=await getPos();await Promise.allSettled([loadAreas(p,force),detectRuleRegion(p)])}catch(e){$('pfcAreaLive').textContent='non verificato';$('pfcAreaState').className='pfcState warn';$('pfcAreaState').innerHTML='<b>⚠️ Verifica non disponibile</b><div class="pfcMeta">'+esc(e.message||'Errore')+'. Non interpretare l’assenza di dati come assenza di divieti.</div>'}}
 function startArea(){if(areaWatch!=null||!navigator.geolocation)return;areaWatch=navigator.geolocation.watchPosition(p=>{if(!$('page-protected')?.classList.contains('active'))return;const x=pos(p);if(areas.length)renderArea(x,false);loadAreas(x,false).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:1500,timeout:20000})}
 function stopArea(){if(areaWatch!=null){navigator.geolocation.clearWatch(areaWatch);areaWatch=null}}
+function ruleKey(){
+ const p=String(where.province||'').toLowerCase(),r=String(where.region||'');
+ if(p.includes('bolzano')||p.includes('bozen'))return 'Provincia autonoma di Bolzano';
+ if(p.includes('trento'))return 'Provincia autonoma di Trento';
+ return r;
+}
+function syncMode(){
+ try{localStorage.setItem(MODE_KEY,areaMode)}catch{}
+ $('pfcModeHunt')?.classList.toggle('active',areaMode==='hunt');$('pfcModeMush')?.classList.toggle('active',areaMode==='mush');
+}
+function setMode(m){areaMode=m==='mush'?'mush':'hunt';syncMode();if(lastPos&&areas.length)renderArea(lastPos,false)}
+function renderMushRule(){
+ const k=ruleKey(),r=MUSH_RULES[k],tag=$('pfcMushRegion'),box=$('pfcMushRule'),btn=$('pfcMushSource');if(!box)return;
+ if(tag)tag.textContent=k||'Regione non rilevata';
+ if(!r){box.className='pfcState warn';box.innerHTML='<b>⚠️ Regola non strutturata</b><div class="pfcMeta">Non mostro limiti automatici senza una fonte ufficiale affidabile. Verifica Regione/Provincia ed ente gestore.</div>';if(btn){btn.disabled=true;btn.onclick=null}return}
+ box.className='pfcState warn';box.innerHTML='<b>🍄 '+esc(k)+'</b><div class="pfcMeta">'+esc(r.short)+'</div>';
+ if(btn){btn.disabled=false;btn.onclick=()=>ext(r.src)}
+}
+async function detectRuleRegion(p){
+ try{
+  const u='https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+p.lat+'&lon='+p.lng+'&zoom=8&addressdetails=1&accept-language=it',r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Regione non disponibile');const a=(await r.json()).address||{};
+  const rg=region(a.state||a.region)||String(a.state||a.region||'');where={...where,region:rg,province:a.state_district||a.county||a.province||where.province||'',city:a.city||a.town||a.village||a.municipality||where.city||''};renderMushRule()
+ }catch{renderMushRule()}
+}
 function region(v){const s=String(v||'').toLowerCase();if(s.includes('apulia'))return 'Puglia';return regions.find(x=>s.includes(x.toLowerCase().split('-')[0]))||''}
 function atc(a){const p=String(a.state_district||a.county||a.province||'').toLowerCase();for(const x of ['foggia','bari','brindisi','taranto','lecce'])if(p.includes(x))return 'ATC '+x[0].toUpperCase()+x.slice(1);if(/barletta|andria|trani/.test(p))return 'BAT · verifica ambito ufficiale';return ''}
 async function detect(){
@@ -113,11 +184,12 @@ function calendar(){
 function ext(u){window.open(u,'_blank','noopener')}
 function bindTerr(){
  $('pfcAreaOpen').onclick=()=>showPage('protected');$('pfcCalOpen').onclick=()=>showPage('huntcalendar');$('pfcAreaBack').onclick=$('pfcAreaMap2').onclick=()=>showPage('map');$('pfcCalBack').onclick=()=>showPage('map');
- $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcAreaOfficial').onclick=()=>ext(PUGLIA_AREE);$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
+ $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcModeHunt').onclick=()=>setMode('hunt');$('pfcModeMush').onclick=()=>setMode('mush');syncMode();$('pfcAreaOfficial').onclick=()=>ext(PUGLIA_AREE);$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
  $('pfcCalDetect').onclick=detect;$('pfcCalRegion').onchange=calendar;$('pfcCalDate').onchange=calendar;$('pfcCalToday').onclick=()=>{$('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()};$('pfcCalOfficial').onclick=()=>ext(PUGLIA_CAL);$('pfcAtcOfficial').onclick=()=>ext(PUGLIA_ATC);
  $('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()
 }
-const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(false)},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
+document.addEventListener('click',e=>{const id=e.target?.closest?.('button')?.id;if(id==='quickMushroomBtn'||id==='quickSpeciesBtn')setMode('mush');if(id==='quickSightingBtn')setMode('hunt')},true);
+const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(false);syncMode();renderMushRule()},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
 const oldBind=bind;bind=function(){oldBind();css();pages();entries();guide();bindTerr();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
 window.PFCTerritory={version:VER,refreshArea,detect,calendar};
 })();
