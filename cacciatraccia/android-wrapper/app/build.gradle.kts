@@ -7,8 +7,8 @@ android {
         applicationId = "com.cacciatraccia.italia"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6406
-        versionName = "6.4.6"
+        versionCode = 6407
+        versionName = "6.4.7"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
