@@ -1,7 +1,7 @@
-// V6.4.5 - Cruscotto uscita e miglioramenti di utilizzo
+// V6.4.6 - Cruscotto uscita e miglioramenti di utilizzo
 (function(){
 'use strict';
-const VER='6.4.5',HUD_KEY='pfc-field-hud-collapsed-v1';
+const VER='6.4.6',HUD_KEY='pfc-field-hud-collapsed-v1';
 let hudTimer=null;
 
 function addFieldStyles(){
