@@ -20,6 +20,8 @@ function addFieldStyles(){
  .pfcStatusChip.red{background:#fff0ef;border-color:#e0a09a;color:#912e26}.pfcStatusChip.orange{background:#fff7e9;border-color:#e4c886;color:#785914}.pfcStatusChip.green{background:#edf8ef;border-color:#b9d9bf;color:#216239}
  .pfcNearest{display:grid;gap:5px;margin-top:7px}.pfcNearItem{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;border:1px solid #ffffff24;background:#ffffff0d;border-radius:10px;padding:7px;text-align:left;width:100%;color:#fff}.pfcNearIcon{font-size:18px}.pfcNearName{font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pfcNearMeta{font-size:9px;opacity:.72}.pfcNearDist{font-weight:950;font-size:10px}
  .pfcMapUtility{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 10px}.pfcMapUtility button{flex:1 1 42%;min-height:42px}
+ .pfcHuntCompare{grid-column:1/-1!important;min-height:76px!important;background:linear-gradient(135deg,#dff3e3,#f8fff9)!important;color:#174f2c!important;border:2px solid #79b98b!important;box-shadow:0 5px 14px #1e6e3630!important;display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;text-align:left;padding:10px 14px!important}
+ .pfcHuntCompare>b{font-size:30px!important}.pfcHuntCompare .pfcCmpMain{font-size:15px;font-weight:950}.pfcHuntCompare .pfcCmpSub{font-size:10px;color:#55705d;font-weight:800;margin-top:2px}.pfcHuntCompare .pfcCmpLights{font-size:10px;font-weight:950;white-space:nowrap}.pfcHuntCompare:active{transform:scale(.99)}
  @media(max-width:520px){.pfcHudGrid{grid-template-columns:repeat(3,1fr)}.pfcHudActions{grid-template-columns:repeat(4,1fr)}.pfcFieldHud{margin-left:4px;margin-right:4px}}
  `;document.head.appendChild(s);
 }
@@ -85,20 +87,29 @@ function updateFieldHud(){
 function startHud(){
  if(hudTimer)return;updateFieldHud();hudTimer=setInterval(updateFieldHud,1200);
 }
+function ensureHuntCompareButton(){
+ const grid=document.querySelector('.mapQuickActions');if(!grid||document.getElementById('pfcHuntCompare'))return;
+ const b=document.createElement('button');b.id='pfcHuntCompare';b.type='button';b.className='quickAction pfcHuntCompare';
+ b.innerHTML='<b>🌦️</b><span><span class="pfcCmpMain">Confronta meteo dei punti</span><span class="pfcCmpSub">Vento · raffiche · pioggia · temperatura</span></span><span class="pfcCmpLights">🟢 idoneo<br>🔴 diverso</span>';
+ b.onclick=()=>{const q=document.getElementById('ctConditionBtn');if(q)q.click();else toast('Confronto meteo non ancora pronto')};
+ grid.prepend(b);
+}
 function syncModeQuickActions(){
  const md=mode();
  const bird=document.getElementById('quickSightingBtn');
  const found=document.getElementById('quickMushroomBtn');
  const species=document.getElementById('quickSpeciesBtn');
+ const compare=document.getElementById('pfcHuntCompare');
  if(bird)bird.style.display=md==='hunt'?'':'none';
  if(found)found.style.display=md==='mush'?'':'none';
  if(species)species.style.display=md==='mush'?'':'none';
+ if(compare)compare.style.display=md==='hunt'?'grid':'none';
  const grid=document.querySelector('.mapQuickActions');
  if(grid){grid.dataset.mode=md;grid.setAttribute('aria-label',md==='hunt'?'Azioni rapide modalità caccia':'Azioni rapide modalità funghi')}
  const hint=grid?.nextElementSibling;
  if(hint?.classList?.contains('hint')){
    hint.textContent=md==='hunt'
-     ? 'Modalità Caccia: registra un avvistamento di uccelli oppure salva un punto, avvia la camminata e segna la macchina.'
+     ? 'Modalità Caccia: confronta subito il meteo dei punti segnati. Verde = condizioni simili/idonee; rosso = condizioni diverse. Puoi anche registrare avvistamenti, salvare punti e segnare la macchina.'
      : 'Modalità Funghi: registra i funghi trovati oppure usa “Vedi specie” con la fotocamera. Salva anche il punto per ritrovarlo.';
  }
 }
@@ -107,7 +118,7 @@ function enhanceLabels(){
  const g=document.querySelector('#quickSaveHereBtn span');if(g)g.textContent='Salva qui';
 }
 const prevBind=bind;
-bind=function(){prevBind();addFieldStyles();ensureFieldHud();enhanceLabels();syncModeQuickActions();startHud();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
+bind=function(){prevBind();addFieldStyles();ensureFieldHud();ensureHuntCompareButton();enhanceLabels();syncModeQuickActions();startHud();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
 const prevRenderAll=renderAll;
 renderAll=function(){prevRenderAll();setTimeout(updateFieldHud,0)};
 window.PFCField={version:VER,update:updateFieldHud,sharePosition};
