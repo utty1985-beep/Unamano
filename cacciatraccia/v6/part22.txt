@@ -134,16 +134,26 @@
   function ensureConditionButton(){
     const right=document.querySelector('.mapTools.right');if(right&&!$('ctConditionBtn')){const b=document.createElement('button');b.id='ctConditionBtn';b.className='mapBtn ctQuestion';b.title='Verifica condizioni appostamenti';b.textContent='?';right.appendChild(b);b.onclick=openConditionCheck}
   }
+  function nval(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(+v)?+v:null}
   function pointBaseWind(p){
-    let deg=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;
+    let deg=nval(p.windDeg);if(deg==null)deg=nval(p.weather?.windDeg);
     if(deg==null){const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];const n=p.windName||p.weather?.windName,ix=names.indexOf(n);if(ix>=0)deg=ix*45}
-    const speed=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;
-    return {deg,speed};
+    let speed=nval(p.windSpeed);if(speed==null)speed=nval(p.weather?.windSpeed);
+    let gust=nval(p.windGust);if(gust==null)gust=nval(p.weather?.windGust);
+    const rain=nval(p.weather?.rainProbability),temp=nval(p.weather?.temperature),condition=p.weather?.condition||'';
+    return {deg,speed,gust,rain,temp,condition};
+  }
+  function weatherFamily(v){
+    if(typeof v==='number'){
+      if(v>=95)return 'storm';if(v>=85)return 'snow';if(v>=80)return 'wet';if(v>=71)return 'snow';if(v>=51)return 'wet';if(v===45||v===48)return 'fog';if(v>=0&&v<=3)return 'dry';return 'other';
+    }
+    const s=String(v||'').toLowerCase();
+    if(/tempor|thunder/.test(s))return 'storm';if(/neve|snow/.test(s))return 'snow';if(/piogg|rovesc|drizzle|rain/.test(s))return 'wet';if(/nebb|fog/.test(s))return 'fog';if(/seren|nuvol|copert|cloud|clear/.test(s))return 'dry';return 'other';
   }
   async function forecastAtPoint(p,target){
-    const day=isoLocal(target).slice(0,10),u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
+    const day=isoLocal(target).slice(0,10),u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}&hourly=temperature_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
     const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),h=j.hourly||{};const idx=nearestHourlyIndex(h.time,target.getTime());if(idx<0)throw Error('Orario non disponibile');const change=firstWindChange(h,idx);
-    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,code:h.weather_code?.[idx],change};
+    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,temp:nval(h.temperature_2m?.[idx]),code:h.weather_code?.[idx],change};
   }
   function clearConditionLayer(){try{conditionLayer?.clearLayers()}catch{}conditionLayer=null}
   async function runConditionCheck(){
@@ -152,23 +162,35 @@
     const pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
     const out=$('ctConditionResults');if(!pts.length){out.innerHTML='<div class="empty">Non hai ancora appostamenti/punti salvati da verificare.</div>';return}
     if(!navigator.onLine){out.innerHTML='<div class="empty">Per controllare una previsione nuova serve Internet. I punti e i dati salvati restano comunque disponibili offline.</div>';return}
-    out.innerHTML='<div class="empty">Controllo gli appostamenti…</div>';$('ctConditionRun').disabled=true;clearConditionLayer();conditionLayer=L.layerGroup().addTo(map);
+    out.innerHTML='<div class="empty">Confronto il meteo di tutti i punti segnati…</div>';$('ctConditionRun').disabled=true;clearConditionLayer();conditionLayer=L.layerGroup().addTo(map);
     const rows=[];
     for(const p of pts){
       try{
-        const f=await forecastAtPoint(p,target),base=pointBaseWind(p);let good=false,reason='';
+        const f=await forecastAtPoint(p,target),base=pointBaseWind(p);let good=false,reason='',checks=[];
         if(base.deg==null||base.speed==null){reason='Manca il vento di riferimento salvato';}
-        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed);good=dd<=45&&ds<=10&&f.rain<=55;reason=`Δ direzione ${Math.round(dd)}° · Δ velocità ${Math.round(ds)} km/h`;}
+        else{
+          const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed);
+          checks.push(['direzione',dd<=45,`${Math.round(dd)}°`],['velocità',ds<=10,`${Math.round(ds)} km/h`]);
+          if(base.gust!=null){const dg=Math.abs(base.gust-f.gust);checks.push(['raffiche',dg<=15,`${Math.round(dg)} km/h`])}
+          if(base.rain!=null){const dr=Math.abs(base.rain-f.rain);checks.push(['pioggia',dr<=30,`${Math.round(dr)} punti %`])}
+          else checks.push(['pioggia',f.rain<=55,`${Math.round(f.rain)}%`]);
+          if(base.temp!=null&&f.temp!=null){const dt=Math.abs(base.temp-f.temp);checks.push(['temperatura',dt<=6,`${dt.toFixed(1)} °C`])}
+          const wf=weatherFamily(f.code),wb=weatherFamily(base.condition);
+          if(wb!=='other')checks.push(['tipo meteo',wb===wf||wb==='dry'&&wf==='dry',wtext(f.code)]);
+          good=checks.every(x=>x[1]);
+          reason=checks.map(x=>(x[1]?'✓ ':'✕ ')+x[0]+' '+x[2]).join(' · ');
+        }
         rows.push({p,f,good,reason,base});
-        const color=good?'#1e8b4e':'#b74c3e';L.circleMarker([p.lat,p.lng],{radius:16,color,weight:5,fillColor:color,fillOpacity:.16}).addTo(conditionLayer);
+        const color=good?'#1e8b4e':'#b74c3e';L.circleMarker([p.lat,p.lng],{radius:17,color,weight:5,fillColor:color,fillOpacity:.18}).addTo(conditionLayer);
       }catch(e){rows.push({p,error:e.message||'Errore meteo'})}
     }
-    const ok=rows.filter(r=>r.good).length;$('ctConditionSummary').innerHTML=`Controllo per <b>${esc(fmtDateTime(target.toISOString()))}</b> · <span class="ctGood">${ok} simili</span> su ${rows.length}. Il verde significa “simile alle condizioni registrate”, non garantisce che il meteo resti invariato.`;
+    const ok=rows.filter(r=>r.good).length;$('ctConditionSummary').innerHTML=`Controllo per <b>${esc(fmtDateTime(target.toISOString()))}</b> · <span class="ctGood">${ok} idonei</span> su ${rows.length}. 🟢 Verde = meteo simile alle condizioni registrate; 🔴 rosso = condizioni diverse. È un confronto meteo, non una garanzia di presenza della selvaggina né di liceità dell’attività venatoria.`;
     out.innerHTML=rows.map(r=>{
       if(r.error)return `<div class="ctCondResult"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span>⚠️</span></div><div class="ctCondMeta">${esc(r.error)}</div></div>`;
       const change=r.f.change?`${fmtHour(r.f.change.time)} → ${esc(localWindName(wname(r.f.change.dir)))} ${Math.round(r.f.change.speed)} km/h`:'nessun cambio importante nelle 12 h successive';
-      const ref=r.base.deg==null?'non registrato':`${esc(localWindName(wname(r.base.deg)))} ${Math.round(r.base.speed||0)} km/h`;
-      return `<div class="ctCondResult ${r.good?'good':'bad'}"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span class="${r.good?'ctGood':'ctBad'}">${r.good?'● SIMILE':'● DIVERSA'}</span></div><div class="ctCondMeta">Riferimento salvato: <b>${ref}</b><br>Previsione: <b>${esc(localWindName(wname(r.f.dir)))} ${wdir(r.f.dir)} · ${Math.round(r.f.speed)} km/h</b> · raffiche ${Math.round(r.f.gust)} km/h<br>🌧 Pioggia: <b>${Math.round(r.f.rain)}%</b> · 🌦 ${esc(wtext(r.f.code))}<br>↻ Cambio vento: <b>${change}</b><br><span class="muted">${esc(r.reason)}</span></div><div class="rowBtns"><button class="mini" onclick="CT.condMap('${r.p.id}')">🗺 Mappa</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Dettagli</button></div></div>`;
+      const refWind=r.base.deg==null?'non registrato':`${esc(localWindName(wname(r.base.deg)))} ${Math.round(r.base.speed||0)} km/h`;
+      const refExtra=[r.base.gust!=null?'raffiche '+Math.round(r.base.gust)+' km/h':'',r.base.rain!=null?'pioggia '+Math.round(r.base.rain)+'%':'',r.base.temp!=null?'temperatura '+r.base.temp+' °C':'',r.base.condition?esc(r.base.condition):''].filter(Boolean).join(' · ');
+      return `<div class="ctCondResult ${r.good?'good':'bad'}"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span class="${r.good?'ctGood':'ctBad'}">${r.good?'● IDONEO · METEO SIMILE':'● CONDIZIONI DIVERSE'}</span></div><div class="ctCondMeta">Riferimento salvato: <b>${refWind}</b>${refExtra?'<br>'+refExtra:''}<br>Previsione: <b>${esc(localWindName(wname(r.f.dir)))} ${wdir(r.f.dir)} · ${Math.round(r.f.speed)} km/h</b> · raffiche ${Math.round(r.f.gust)} km/h${r.f.temp!=null?' · '+r.f.temp+' °C':''}<br>🌧 Pioggia: <b>${Math.round(r.f.rain)}%</b> · 🌦 ${esc(wtext(r.f.code))}<br>↻ Cambio vento: <b>${change}</b><br><span class="muted">${esc(r.reason)}</span></div><div class="rowBtns"><button class="mini" onclick="CT.condMap('${r.p.id}')">🗺 Mappa</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Dettagli</button></div></div>`;
     }).join('');
     $('ctConditionRun').disabled=false;decorateLocalWind(out);
   }
