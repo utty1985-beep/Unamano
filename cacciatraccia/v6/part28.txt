@@ -157,7 +157,7 @@ function renderArea(pos,fresh){
 function pos(p){return {lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0}}
 function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});if(!navigator.geolocation)return no(Error('GPS non disponibile'));navigator.geolocation.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})})}
 async function loadAreas(p,force){
- if(!navigator.onLine){$('pfcAreaLive').textContent='offline / non verificato';if(areas.length)renderArea(p,false);return}
+ if(!navigator.onLine){$('pfcAreaLive').textContent='offline / non verificato';if(areas.length){renderArea(p,false);return}throw Error('Connessione assente: nessuna cartografia salvata disponibile')}
  if(!force&&areaAnchor&&hav([areaAnchor.lat,areaAnchor.lng],[p.lat,p.lng])<.8&&Date.now()-areaAnchor.at<720000&&areas.length){renderArea(p,false);return}
  $('pfcAreaLive').textContent='scarico perimetri…';
  const q='[out:json][timeout:25];(way(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];relation(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];way(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];relation(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];way(around:12000,'+p.lat+','+p.lng+')["hunting"="no"];relation(around:12000,'+p.lat+','+p.lng+')["hunting"="no"];way(around:12000,'+p.lat+','+p.lng+')["mushroom_picking"="no"];relation(around:12000,'+p.lat+','+p.lng+')["mushroom_picking"="no"];);out tags geom;';
