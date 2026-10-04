@@ -106,15 +106,37 @@ function areaKind(e){
 function parse(j){const seen=new Set(),z=[];(j.elements||[]).forEach(e=>{const rs=rings(e),id=e.type+':'+e.id;if(!rs.length||seen.has(id))return;seen.add(id);const t=e.tags||{};z.push({id,name:name(e),code:t.ref||t['ref:eu:site_code']||t.protect_class||'',kind:areaKind(e),rs})});return z}
 function fmt(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km'}
 function ranked(pos){return areas.map(a=>{const hit=a.rs.some(r=>inside(pos.lat,pos.lng,r)),d=hit?0:Math.min(...a.rs.map(r=>rdist(pos.lat,pos.lng,r)));return {...a,hit,d}}).sort((a,b)=>(b.hit-a.hit)||(a.d-b.d))}
-function overlay(list){
- if(!map||!window.L)return;if(areaLayer){try{map.removeLayer(areaLayer)}catch{}}areaLayer=L.layerGroup().addTo(map);
- list.slice(0,30).forEach(a=>a.rs.forEach(r=>{
-   const opt=a.kind==='hunting'?{color:'#c61f1f',fillColor:'#df3030',weight:a.hit?4:2,fillOpacity:a.hit?.28:.16}:
-             a.kind==='mushroom'?{color:'#7437a5',fillColor:'#8e55b8',weight:a.hit?4:2,fillOpacity:a.hit?.28:.17}:
-             {color:'#d27a0b',fillColor:'#efa229',weight:a.hit?3:2,fillOpacity:a.hit?.22:.11};
-   const lab=a.kind==='hunting'?'Zona protetta per la caccia':a.kind==='mushroom'?'Raccolta funghi vietata nei dati disponibili':'Area tutelata: verifica regolamento';
-   L.polygon(r,opt).bindPopup('<b>'+esc(a.name)+'</b><br><small>'+lab+'</small>').addTo(areaLayer)
- }))
+function areaStyle(a){
+ return a.kind==='hunting'?{color:'#c61f1f',fillColor:'#df3030',weight:a.hit?4:2,fillOpacity:a.hit?.28:.16}:
+        a.kind==='mushroom'?{color:'#7437a5',fillColor:'#8e55b8',weight:a.hit?4:2,fillOpacity:a.hit?.28:.17}:
+        {color:'#d27a0b',fillColor:'#efa229',weight:a.hit?3:2,fillOpacity:a.hit?.22:.11}
+}
+function areaLabel(a){return a.kind==='hunting'?'Zona protetta per la caccia':a.kind==='mushroom'?'Raccolta funghi vietata nei dati disponibili':'Area tutelata: verifica regolamento'}
+function ensureAreaMiniMap(pos){
+ const el=$('pfcAreaMini');if(!el||!window.L)return null;
+ if(!areaMiniMap){
+  areaMiniMap=L.map(el,{zoomControl:true,attributionControl:true,preferCanvas:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(areaMiniMap);
+ }
+ if(pos&&Number.isFinite(+pos.lat))areaMiniMap.setView([+pos.lat,+pos.lng],13);
+ setTimeout(()=>areaMiniMap?.invalidateSize?.(),80);
+ return areaMiniMap
+}
+function renderMiniAreaMap(list,pos){
+ const mm=ensureAreaMiniMap(pos),msg=$('pfcAreaMiniMsg'),status=$('pfcAreaMapStatus');if(!mm)return;
+ if(areaMiniLayer){try{mm.removeLayer(areaMiniLayer)}catch{}}areaMiniLayer=L.layerGroup().addTo(mm);
+ if(areaMiniUser){try{mm.removeLayer(areaMiniUser)}catch{}}areaMiniUser=null;
+ const bounds=[];
+ if(pos&&Number.isFinite(+pos.lat)){areaMiniUser=L.circleMarker([+pos.lat,+pos.lng],{radius:7,color:'#1766cc',weight:3,fillColor:'#fff',fillOpacity:1}).bindTooltip('La tua posizione').addTo(mm);bounds.push([+pos.lat,+pos.lng])}
+ (list||[]).slice(0,30).forEach(a=>a.rs.forEach(r=>{if(!r?.length)return;L.polygon(r,areaStyle(a)).bindPopup('<b>'+esc(a.name)+'</b><br><small>'+areaLabel(a)+'</small>').addTo(areaMiniLayer);r.forEach(x=>bounds.push(x))}));
+ if(bounds.length>1){try{mm.fitBounds(bounds,{padding:[18,18],maxZoom:14})}catch{}}
+ if(msg){msg.textContent=list?.length?'Tocca un’area colorata per leggere il tipo di tutela.':'Nessuna area cartografica rilevata vicino al GPS.';msg.style.display='block';setTimeout(()=>{if(msg)msg.style.display='none'},4200)}
+ if(status)status.textContent=(list?.length||0)+' aree caricate'
+}
+function overlay(list,pos){
+ if(map&&window.L){if(areaLayer){try{map.removeLayer(areaLayer)}catch{}}areaLayer=L.layerGroup().addTo(map);
+ list.slice(0,30).forEach(a=>a.rs.forEach(r=>L.polygon(r,areaStyle(a)).bindPopup('<b>'+esc(a.name)+'</b><br><small>'+areaLabel(a)+'</small>').addTo(areaLayer)))}
+ renderMiniAreaMap(list,pos)
 }
 function renderArea(pos,fresh){
  const r=ranked(pos),hit=r.filter(x=>x.hit),near=r.filter(x=>!x.hit&&x.d<=5000).slice(0,12),huntHit=hit.filter(x=>x.kind==='hunting'),mushHit=hit.filter(x=>x.kind==='mushroom'),envHit=hit.filter(x=>x.kind==='environmental'),k=hit.map(x=>x.id).sort().join('|'),st=$('pfcAreaState');
@@ -130,7 +152,7 @@ function renderArea(pos,fresh){
    else{st.className='pfcState ok';st.innerHTML='<b>✓ Nessuna area protetta rilevata entro 5 km</b><div class="pfcMeta">Non esclude divieti, oasi o perimetri non presenti nei dati interrogati.</div>'}
  }
  lastInside=k;$('pfcAreaLive').textContent=fresh?'● controllo attivo':'● dati già caricati';$('pfcAreaStamp').textContent='GPS '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5)+' · ±'+Math.round(pos.acc||0)+' m';
- const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>{const ico=a.kind==='hunting'?'🟥':a.kind==='mushroom'?'🍄⛔':'🟧',lab=a.kind==='hunting'?'caccia protetta':a.kind==='mushroom'?'funghi vietati':'tutela ambientale';return '<div class="pfcItem"><div class="pfcHead"><b>'+ico+' '+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+lab+' · '+esc(a.code||'perimetro cartografico')+'</div></div>'}).join(''):'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r)
+ const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>{const ico=a.kind==='hunting'?'🟥':a.kind==='mushroom'?'🍄⛔':'🟧',lab=a.kind==='hunting'?'caccia protetta':a.kind==='mushroom'?'funghi vietati':'tutela ambientale';return '<div class="pfcItem"><div class="pfcHead"><b>'+ico+' '+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+lab+' · '+esc(a.code||'perimetro cartografico')+'</div></div>'}).join('') :'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r,pos)
 }
 function pos(p){return {lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0}}
 function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});if(!navigator.geolocation)return no(Error('GPS non disponibile'));navigator.geolocation.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})})}
