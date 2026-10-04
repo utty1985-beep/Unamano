@@ -26,12 +26,13 @@ function ref(p){
  return {d,s};
 }
 function candidates(){
- return (state?.points||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)&&p.type!=='Avvistamento'&&p.type!=='Parcheggio').filter(p=>{const r=ref(p);return r.d!=null&&r.s!=null}).slice(0,8);
+ return (state?.points||[]).filter(p=>{const t=String(p?.type||'').toLowerCase(),k=String(p?.sightingKind||'').toLowerCase(),s=String(p?.species||p?.name||'').toLowerCase();return Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)&&p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&k!=='mushroom'&&!t.includes('fung')&&!s.includes('fung')&&!s.includes('porcin')}).filter(p=>{const r=ref(p);return r.d!=null&&r.s!=null}).slice(0,8);
 }
 async function now(p){
- const u='https://api.open-meteo.com/v1/forecast?latitude='+p.lat+'&longitude='+p.lng+'&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability&wind_speed_unit=kmh&timezone=auto';
- const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('meteo');const c=(await r.json()).current||{};
- return {d:+c.wind_direction_10m||0,s:+c.wind_speed_10m||0,g:+c.wind_gusts_10m||0,r:+c.precipitation_probability||0};
+ const u='https://api.open-meteo.com/v1/forecast?latitude='+p.lat+'&longitude='+p.lng+'&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=precipitation_probability&wind_speed_unit=kmh&timezone=auto&forecast_days=1';
+ const rr=await fetch(u,{cache:'no-store'});if(!rr.ok)throw Error('meteo');const j=await rr.json(),x=j.current||{},h=j.hourly||{};
+ let rain=0;if(Array.isArray(h.time)&&h.time.length){const target=new Date(x.time||Date.now()).getTime();let bi=0,bd=Infinity;h.time.forEach((t,i)=>{const d=Math.abs(new Date(t).getTime()-target);if(d<bd){bd=d;bi=i}});rain=+h.precipitation_probability?.[bi]||0}
+ return {d:+x.wind_direction_10m||0,s:+x.wind_speed_10m||0,g:+x.wind_gusts_10m||0,r:rain};
 }
 function score(a,b){
  const sd=Math.max(0,1-diff(a.d,b.d)/90),ss=Math.max(0,1-Math.abs(a.s-b.s)/20),sr=Math.max(0,1-Math.max(0,b.r-20)/80);
