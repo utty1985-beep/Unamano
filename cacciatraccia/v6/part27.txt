@@ -21,6 +21,13 @@
   }
   function quota(){
     if(isPro())return {day:localDay(),used:0,limit:null,left:null};
+    const b=bridge();
+    try{
+      if(b?.getExternalSearchesUsedToday){
+        const used=Math.max(0,Math.min(FREE_DAILY_EXTERNAL_SEARCHES,Number(b.getExternalSearchesUsedToday())||0));
+        return {day:localDay(),used,limit:FREE_DAILY_EXTERNAL_SEARCHES,left:FREE_DAILY_EXTERNAL_SEARCHES-used,native:true};
+      }
+    }catch{}
     let q={day:localDay(),used:0};
     try{q={...q,...JSON.parse(localStorage.getItem(QUOTA_KEY)||'{}')}}catch{}
     if(q.day!==localDay())q={day:localDay(),used:0};
@@ -40,6 +47,20 @@
       try{toast('Limite giornaliero raggiunto · passa a PRO per ricerche illimitate')}catch{}
       return false;
     }
+    const b=bridge();
+    try{
+      if(b?.consumeExternalSearch){
+        const ok=!!b.consumeExternalSearch();
+        if(!ok){
+          openPro('Hai esaurito le '+FREE_DAILY_EXTERNAL_SEARCHES+' ricerche esterne gratuite di oggi.');
+          try{toast('Limite giornaliero raggiunto · passa a PRO per ricerche illimitate')}catch{}
+          return false;
+        }
+        const nq=quota();updatePlanUi();
+        try{toast('Ricerca esterna '+nq.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+' · '+kind)}catch{}
+        return true;
+      }
+    }catch{}
     q.used+=1; q.left=Math.max(0,FREE_DAILY_EXTERNAL_SEARCHES-q.used); saveQuota(q); updatePlanUi();
     try{toast('Ricerca esterna '+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+' · '+kind)}catch{}
     return true;
