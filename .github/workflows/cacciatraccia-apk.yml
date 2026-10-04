@@ -70,7 +70,7 @@ jobs:
           if (!terr.includes('pfcAreaMini') || !terr.includes('renderMiniAreaMap')) throw new Error('Protected-area in-app map missing');
           if (!terr.includes("cal.hidden=areaMode!=='hunt'")) throw new Error('Hunting calendar mode filter missing');
           if (!radar.includes('ctARFlatMode') || !radar.includes('telefono piatto')) throw new Error('Flat-phone radar mode missing');
-          if (!main.includes('?v=6406&tester=1')) throw new Error('Tester start URL missing');
+          if (!main.includes('?v=6407&tester=1')) throw new Error('Tester start URL missing');
           console.log('Web, quota, privacy, permissions and billing invariants: OK');
           NODE
 
