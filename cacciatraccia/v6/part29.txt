@@ -47,8 +47,8 @@ function ensureFieldHud(){
  chips.insertAdjacentElement('afterend',hud);
  try{if(localStorage.getItem(HUD_KEY)==='1')hud.classList.add('collapsed')}catch{}
  document.getElementById('pfcHudToggle').onclick=()=>{hud.classList.toggle('collapsed');try{localStorage.setItem(HUD_KEY,hud.classList.contains('collapsed')?'1':'0')}catch{};document.getElementById('pfcHudToggle').textContent=hud.classList.contains('collapsed')?'⌄':'⌃'};
- document.getElementById('pfcMiniHunt').onclick=()=>{window.PFCTerritory?.setMode?.('hunt');updateFieldHud()};
- document.getElementById('pfcMiniMush').onclick=()=>{window.PFCTerritory?.setMode?.('mush');updateFieldHud()};
+ document.getElementById('pfcMiniHunt').onclick=()=>{window.PFCTerritory?.setMode?.('hunt');syncModeQuickActions();updateFieldHud()};
+ document.getElementById('pfcMiniMush').onclick=()=>{window.PFCTerritory?.setMode?.('mush');syncModeQuickActions();updateFieldHud()};
  document.getElementById('pfcHudArea').onclick=()=>showPage('protected');
  document.getElementById('pfcHudRadar').onclick=()=>document.getElementById('quickARBtn')?.click();
  document.getElementById('pfcHudCarBtn').onclick=()=>document.getElementById('quickCarBtn')?.click();
@@ -61,6 +61,7 @@ async function sharePosition(){
  try{await navigator.clipboard.writeText(text);toast('Posizione copiata')}catch{toast(text)}
 }
 function updateFieldHud(){
+ syncModeQuickActions();
  const hud=document.getElementById('pfcFieldHud');if(!hud)return;
  const md=mode(),hunt=document.getElementById('pfcMiniHunt'),mush=document.getElementById('pfcMiniMush');hunt?.classList.toggle('active',md==='hunt');mush?.classList.toggle('active',md==='mush');
  const gps=document.getElementById('pfcHudGps'),chipGps=document.getElementById('pfcChipGps');
@@ -84,12 +85,29 @@ function updateFieldHud(){
 function startHud(){
  if(hudTimer)return;updateFieldHud();hudTimer=setInterval(updateFieldHud,1200);
 }
+function syncModeQuickActions(){
+ const md=mode();
+ const bird=document.getElementById('quickSightingBtn');
+ const found=document.getElementById('quickMushroomBtn');
+ const species=document.getElementById('quickSpeciesBtn');
+ if(bird)bird.style.display=md==='hunt'?'':'none';
+ if(found)found.style.display=md==='mush'?'':'none';
+ if(species)species.style.display=md==='mush'?'':'none';
+ const grid=document.querySelector('.mapQuickActions');
+ if(grid){grid.dataset.mode=md;grid.setAttribute('aria-label',md==='hunt'?'Azioni rapide modalità caccia':'Azioni rapide modalità funghi')}
+ const hint=grid?.nextElementSibling;
+ if(hint?.classList?.contains('hint')){
+   hint.textContent=md==='hunt'
+     ? 'Modalità Caccia: registra un avvistamento di uccelli oppure salva un punto, avvia la camminata e segna la macchina.'
+     : 'Modalità Funghi: registra i funghi trovati oppure usa “Vedi specie” con la fotocamera. Salva anche il punto per ritrovarlo.';
+ }
+}
 function enhanceLabels(){
  const q=document.querySelector('#quickARBtn span');if(q)q.textContent='Radar punti';
  const g=document.querySelector('#quickSaveHereBtn span');if(g)g.textContent='Salva qui';
 }
 const prevBind=bind;
-bind=function(){prevBind();addFieldStyles();ensureFieldHud();enhanceLabels();startHud();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
+bind=function(){prevBind();addFieldStyles();ensureFieldHud();enhanceLabels();syncModeQuickActions();startHud();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
 const prevRenderAll=renderAll;
 renderAll=function(){prevRenderAll();setTimeout(updateFieldHud,0)};
 window.PFCField={version:VER,update:updateFieldHud,sharePosition};
