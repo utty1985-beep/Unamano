@@ -1,0 +1,119 @@
+// V6.4.1 - Aree protette e calendario venatorio
+(function(){
+'use strict';
+const VER='6.4.1',SOUND='pfc-protected-sound-v1';
+const PUGLIA_CAL='https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria';
+const PUGLIA_ATC='https://foreste.regione.puglia.it/ambiti-territoriali-di-caccia-atc';
+const PUGLIA_AREE='https://pugliacon.regione.puglia.it/web/sit-puglia-paesaggio/6.2.2-componenti-delle-aree-protette-e-dei-siti-naturalistici';
+let areas=[],areaLayer=null,areaAnchor=null,areaWatch=null,lastInside='',where={};
+const regions=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria',"Valle d'Aosta",'Veneto'];
+const rules=[
+ {n:'Beccaccino',i:'🐦',a:'2026-10-01',b:'2027-01-31'},
+ {n:'Fagiano',i:'🐦',a:'2026-09-20',b:'2026-12-13'},
+ {n:'Lepre europea',i:'🐇',a:'2026-09-20',b:'2026-12-30'},
+ {n:'Cornacchia grigia',i:'🐦',a:'2026-09-20',b:'2027-01-10'},
+ {n:'Gazza',i:'🐦',a:'2026-09-20',b:'2027-01-10'},
+ {n:'Pavoncella',i:'🐦',special:'DDS 564 del 12/08/2026: termini e modalità specifici.'},
+ {n:'Moriglione',i:'🦆',special:'DDS 564 del 12/08/2026: termini e modalità specifici.'}
+];
+const more=['Allodola','Alzavola','Beccaccia','Canapiglia','Cesena','Codone','Colombaccio','Folaga','Gallinella d’acqua','Germano reale','Ghiandaia','Marzaiola','Merlo','Mestolone','Moretta','Porciglione','Quaglia','Tordo bottaccio','Tordo sassello'];
+
+function css(){
+ if($('pfcTerrCss'))return;const s=document.createElement('style');s.id='pfcTerrCss';s.textContent=`
+ .pfcTerr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}.pfcTerr button{min-height:55px;border:1px solid #d2d9d0;border-radius:14px;background:#fff;color:#173f2b;font-weight:900}.pfcTerr b{display:block;font-size:21px}
+ .pfcTop{display:flex;gap:9px;align-items:center;margin-bottom:10px}.pfcState{padding:12px;border-radius:14px;border:1px solid #d7ddd5;margin:8px 0}.pfcState.ok{background:#eff9f1;border-color:#add5b7}.pfcState.warn{background:#fff8e8;border-color:#dfc77b}.pfcState.bad{background:#fff0ef;border-color:#d58c86}
+ .pfcItem{padding:10px;border:1px solid #d9ded8;border-radius:12px;margin:7px 0;background:#fff}.pfcHead{display:flex;justify-content:space-between;gap:8px;align-items:center}.pfcMeta{font-size:11px;color:#687069;margin-top:4px}.pfcTag{padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900;background:#eee}.pfcTag.open{background:#dcf5e3;color:#176b36}.pfcTag.closed{background:#f9deda;color:#96382e}.pfcTag.special{background:#fff0bf;color:#795910}
+ .pfcGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pfcGrid .full{grid-column:1/-1}.pfcLegal{font-size:11px;line-height:1.45;background:#fff9e9;border:1px solid #ead59c;border-radius:12px;padding:10px;margin-top:9px}.pfcBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+ @media(max-width:520px){.pfcGrid,.pfcBtns{grid-template-columns:1fr}}
+ `;document.head.appendChild(s);
+}
+function pages(){
+ if($('page-protected'))return;
+ const a=document.createElement('section');a.id='page-protected';a.className='page';a.innerHTML=`
+ <div class="pfcTop"><button id="pfcAreaBack" class="iconBtn">←</button><div><h2 style="margin:0">🛡️ Aree protette</h2><div class="muted">Controllo GPS e avviso di ingresso</div></div></div>
+ <div class="card"><div class="sectionHead"><h3>Controllo in tempo reale</h3><span id="pfcAreaLive" class="pill soft">in attesa</span></div>
+ <div id="pfcAreaState" class="pfcState warn"><b>Posizione non verificata</b><div class="pfcMeta">Attiva il GPS e aggiorna.</div></div>
+ <div class="actionGrid"><button id="pfcAreaRefresh" class="primary">◎ Aggiorna aree</button><button id="pfcAreaSound" class="secondary">🔕 Avvisi sonori</button><button id="pfcAreaMap" class="secondary">🗺️ Mostra sulla mappa</button></div>
+ <div id="pfcAreaStamp" class="muted" style="margin-top:8px"></div></div>
+ <div class="card"><div class="sectionHead"><h3>Aree rilevate</h3><span class="pill soft">entro ~12 km</span></div><div id="pfcAreaList" class="empty">Nessun controllo effettuato.</div>
+ <div class="pfcBtns"><button id="pfcAreaOfficial" class="secondary">🏛️ Cartografia ufficiale</button><button id="pfcAreaMap2" class="secondary">🗺️ Mappa principale</button></div>
+ <div class="pfcLegal">⚠️ Supporto informativo: non sostituisce cartografie ufficiali, tabellazione, ordinanze o altri divieti. Se il servizio non è aggiornabile, l’app non considera la zona automaticamente libera.</div></div>`;
+ const c=document.createElement('section');c.id='page-huntcalendar';c.className='page';c.innerHTML=`
+ <div class="pfcTop"><button id="pfcCalBack" class="iconBtn">←</button><div><h2 style="margin:0">📅 Calendario venatorio</h2><div class="muted">Regione, ATC e specie per la data scelta</div></div></div>
+ <div class="card"><div class="sectionHead"><h3>Posizione venatoria</h3><span id="pfcCalGps" class="pill soft">GPS non letto</span></div><div class="pfcGrid">
+ <div><label>Regione</label><select id="pfcCalRegion">${regions.map(x=>`<option>${x}</option>`).join('')}</select></div><div><label>Data</label><input id="pfcCalDate" type="date"></div>
+ <div class="full"><label>ATC / provincia</label><input id="pfcCalAtc" readonly placeholder="Rileva da GPS"></div></div>
+ <div class="actionGrid" style="margin-top:8px"><button id="pfcCalDetect" class="primary">◎ Rileva da GPS</button><button id="pfcCalToday" class="secondary">Oggi</button></div><div id="pfcCalPlace" class="muted"></div></div>
+ <div class="card"><div class="sectionHead"><h3>Specie e stato</h3><span class="pill soft">2026/2027</span></div><div id="pfcCalState" class="pfcState warn"></div><div id="pfcSpecies"></div><div id="pfcMore"></div>
+ <div class="pfcBtns"><button id="pfcCalOfficial" class="secondary">🏛️ Calendario ufficiale</button><button id="pfcAtcOfficial" class="secondary">📍 ATC ufficiali</button></div>
+ <div class="pfcLegal">⚠️ Verifica sempre l’atto ufficiale e le modifiche successive: giornate consentite, carniere, ATC, aree protette e divieti locali possono cambiare. L’app non costituisce autorizzazione alla caccia.</div></div>`;
+ const main=document.querySelector('main'),g=$('page-guide');if(g){main.insertBefore(a,g);main.insertBefore(c,g)}else{main.append(a,c)}
+}
+function entries(){
+ if($('pfcTerr'))return;const q=document.querySelector('.mapQuickActions');if(!q)return;const x=document.createElement('div');x.id='pfcTerr';x.className='pfcTerr';x.innerHTML='<button id="pfcAreaOpen"><b>🛡️</b>Aree protette</button><button id="pfcCalOpen"><b>📅</b>Calendario venatorio</button>';q.insertAdjacentElement('afterend',x)
+}
+function guide(){
+ if($('pfcTerrGuide'))return;const p=$('page-guide');if(!p)return;const x=document.createElement('div');x.id='pfcTerrGuide';x.className='guideSection';x.innerHTML='<h2>🛡️ Territorio e calendario</h2><div class="guideGrid"><div class="guideItem"><div class="guidePic">🛡️</div><div><b>Aree protette</b><p>Controlla i perimetri disponibili vicino al GPS e ricevi un avviso quando entri in un’area rilevata.</p></div></div><div class="guideItem"><div class="guidePic">📅</div><div><b>Calendario venatorio</b><p>Rileva Regione/ATC, scegli la data e controlla le specie strutturate nel database normativo.</p></div></div></div>';p.appendChild(x)
+}
+function onSound(){try{return localStorage.getItem(SOUND)==='1'}catch{return false}}
+function soundBtn(){if($('pfcAreaSound'))$('pfcAreaSound').textContent=onSound()?'🔔 Avvisi sonori ON':'🔕 Avvisi sonori OFF'}
+function beep(){if(!onSound())return;try{navigator.vibrate?.([160,80,260])}catch{};try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.5);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.5)}catch{}}
+function toggleSound(){try{localStorage.setItem(SOUND,onSound()?'0':'1')}catch{}soundBtn();if(onSound()){beep();toast('Avvisi sonori attivati')}}
+function ring(g){const r=(g||[]).map(x=>[+x.lat,+x.lon]).filter(x=>isFinite(x[0])&&isFinite(x[1]));if(r.length>2&&(r[0][0]!==r.at(-1)[0]||r[0][1]!==r.at(-1)[1]))r.push([...r[0]]);return r}
+function rings(e){if(e.type==='way')return [ring(e.geometry)].filter(x=>x.length>3);return (e.members||[]).filter(m=>(m.role==='outer'||!m.role)&&m.geometry).map(m=>ring(m.geometry)).filter(x=>x.length>3)}
+function inside(lat,lon,r){let z=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const yi=r[i][0],xi=r[i][1],yj=r[j][0],xj=r[j][1];if((yi>lat)!=(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi||1e-12)+xi)z=!z}return z}
+function segD(lat,lon,a,b){const R=6371000,k=Math.PI/180,c=Math.cos(lat*k),ax=(a[1]-lon)*k*R*c,ay=(a[0]-lat)*k*R,bx=(b[1]-lon)*k*R*c,by=(b[0]-lat)*k*R,vx=bx-ax,vy=by-ay,d=vx*vx+vy*vy;let t=d?-(ax*vx+ay*vy)/d:0;t=Math.max(0,Math.min(1,t));return Math.hypot(ax+t*vx,ay+t*vy)}
+function rdist(lat,lon,r){let d=Infinity;for(let i=1;i<r.length;i++)d=Math.min(d,segD(lat,lon,r[i-1],r[i]));return d}
+function name(e){const t=e.tags||{};return t.name||t['name:it']||t.short_name||t.operator||'Area protetta senza nome'}
+function parse(j){const seen=new Set(),z=[];(j.elements||[]).forEach(e=>{const rs=rings(e),id=e.type+':'+e.id;if(!rs.length||seen.has(id))return;seen.add(id);const t=e.tags||{};z.push({id,name:name(e),code:t.ref||t['ref:eu:site_code']||t.protect_class||'',rs})});return z}
+function fmt(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km'}
+function ranked(pos){return areas.map(a=>{const hit=a.rs.some(r=>inside(pos.lat,pos.lng,r)),d=hit?0:Math.min(...a.rs.map(r=>rdist(pos.lat,pos.lng,r)));return {...a,hit,d}}).sort((a,b)=>(b.hit-a.hit)||(a.d-b.d))}
+function overlay(list){
+ if(!map||!window.L)return;if(areaLayer){try{map.removeLayer(areaLayer)}catch{}}areaLayer=L.layerGroup().addTo(map);
+ list.slice(0,20).forEach(a=>a.rs.forEach(r=>L.polygon(r,{weight:a.hit?4:2,fillOpacity:a.hit?.2:.08}).bindPopup('<b>'+esc(a.name)+'</b>').addTo(areaLayer)))
+}
+function renderArea(pos,fresh){
+ const r=ranked(pos),hit=r.filter(x=>x.hit),near=r.filter(x=>!x.hit&&x.d<=5000).slice(0,10),k=hit.map(x=>x.id).sort().join('|'),st=$('pfcAreaState');
+ if(hit.length){st.className='pfcState bad';st.innerHTML='<b>⛔ Dentro '+(hit.length===1?'un’area protetta rilevata':hit.length+' aree protette rilevate')+'</b><div class="pfcMeta">'+hit.map(x=>esc(x.name)).join(' · ')+' — verifica i divieti ufficiali.</div>';if(k!==lastInside)beep()}
+ else if(near.length){st.className='pfcState warn';st.innerHTML='<b>⚠️ Area protetta a '+fmt(near[0].d)+'</b><div class="pfcMeta">'+esc(near[0].name)+' · distanza indicativa dal perimetro disponibile.</div>'}
+ else{st.className='pfcState ok';st.innerHTML='<b>✓ Nessuna area protetta rilevata entro 5 km</b><div class="pfcMeta">Non esclude altri divieti o dati non presenti.</div>'}
+ lastInside=k;$('pfcAreaLive').textContent=fresh?'● controllo attivo':'● dati già caricati';$('pfcAreaStamp').textContent='GPS '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5)+' · ±'+Math.round(pos.acc||0)+' m';
+ const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>'<div class="pfcItem"><div class="pfcHead"><b>'+(a.hit?'⛔ ':'🛡️ ')+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+esc(a.code||'perimetro cartografico')+'</div></div>').join(''):'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r)
+}
+function pos(p){return {lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0}}
+function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});navigator.geolocation?.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})||no(Error('GPS non disponibile'))})}
+async function loadAreas(p,force){
+ if(!navigator.onLine){$('pfcAreaLive').textContent='offline / non verificato';if(areas.length)renderArea(p,false);return}
+ if(!force&&areaAnchor&&hav([areaAnchor.lat,areaAnchor.lng],[p.lat,p.lng])<.8&&Date.now()-areaAnchor.at<720000&&areas.length){renderArea(p,false);return}
+ $('pfcAreaLive').textContent='scarico perimetri…';
+ const q='[out:json][timeout:25];(way(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];relation(around:12000,'+p.lat+','+p.lng+')["boundary"="protected_area"];way(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];relation(around:12000,'+p.lat+','+p.lng+')["leisure"="nature_reserve"];);out tags geom;';
+ let j=null,err;for(const u of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){try{const r=await fetch(u+'?data='+encodeURIComponent(q),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);j=await r.json();break}catch(e){err=e}}
+ if(!j)throw err||Error('Servizio cartografico non disponibile');areas=parse(j);areaAnchor={lat:p.lat,lng:p.lng,at:Date.now()};renderArea(p,true)
+}
+async function refreshArea(force=true){try{const p=await getPos();await loadAreas(p,force)}catch(e){$('pfcAreaLive').textContent='non verificato';$('pfcAreaState').className='pfcState warn';$('pfcAreaState').innerHTML='<b>⚠️ Verifica non disponibile</b><div class="pfcMeta">'+esc(e.message||'Errore')+'. Non interpretare l’assenza di dati come assenza di divieti.</div>'}}
+function startArea(){if(areaWatch!=null||!navigator.geolocation)return;areaWatch=navigator.geolocation.watchPosition(p=>{if(!$('page-protected')?.classList.contains('active'))return;const x=pos(p);if(areas.length)renderArea(x,false);loadAreas(x,false).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:1500,timeout:20000})}
+function stopArea(){if(areaWatch!=null){navigator.geolocation.clearWatch(areaWatch);areaWatch=null}}
+function region(v){const s=String(v||'').toLowerCase();if(s.includes('apulia'))return 'Puglia';return regions.find(x=>s.includes(x.toLowerCase().split('-')[0]))||''}
+function atc(a){const p=String(a.state_district||a.county||a.province||'').toLowerCase();for(const x of ['foggia','bari','brindisi','taranto','lecce'])if(p.includes(x))return 'ATC '+x[0].toUpperCase()+x.slice(1);if(/barletta|andria|trani/.test(p))return 'BAT · verifica ambito ufficiale';return ''}
+async function detect(){
+ try{const p=await getPos(),u='https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+p.lat+'&lon='+p.lng+'&zoom=10&addressdetails=1&accept-language=it',r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Località non disponibile');const a=(await r.json()).address||{};where={region:region(a.state||a.region),province:a.state_district||a.county||a.province||'',city:a.city||a.town||a.village||a.municipality||'',atc:atc(a)};if(where.region)$('pfcCalRegion').value=where.region;$('pfcCalAtc').value=where.atc||where.province||'ATC non determinato';$('pfcCalPlace').textContent=[where.city,where.province,where.region].filter(Boolean).join(' · ');$('pfcCalGps').textContent='GPS ±'+Math.round(p.acc||0)+' m';calendar()}catch(e){$('pfcCalGps').textContent='GPS non disponibile';toast(e.message||'Errore GPS')}
+}
+function dmy(x){const p=x.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function calendar(){
+ const reg=$('pfcCalRegion').value,day=$('pfcCalDate').value||new Date().toISOString().slice(0,10),st=$('pfcCalState');
+ if(reg!=='Puglia'){st.className='pfcState warn';st.innerHTML='<b>📍 '+esc(reg)+'</b><div class="pfcMeta">La pagina è predisposta per i calendari regionali; il database verificato integrato in questa versione è Puglia 2026/27. Apri la fonte ufficiale regionale prima dell’uscita.</div>';$('pfcSpecies').innerHTML='';$('pfcMore').innerHTML='';return}
+ const open=rules.filter(x=>!x.special&&day>=x.a&&day<=x.b);st.className='pfcState '+(open.length?'ok':'warn');st.innerHTML='<b>'+(open.length?'✓ '+open.length+' specie con periodo verificato risultano aperte':'Nessuna specie del gruppo verificato risulta aperta')+'</b><div class="pfcMeta">Puglia · '+dmy(day)+(where.atc?' · '+esc(where.atc):'')+'. Restano da verificare giornate, carniere, ATC e divieti.</div>';
+ $('pfcSpecies').innerHTML=rules.map(x=>{const sp=!!x.special,op=!sp&&day>=x.a&&day<=x.b,t=sp?'REGOLA SPECIALE':(op?'APERTO':'CHIUSO');return '<div class="pfcItem"><div class="pfcHead"><b>'+x.i+' '+esc(x.n)+'</b><span class="pfcTag '+(sp?'special':op?'open':'closed')+'">'+t+'</span></div><div class="pfcMeta">'+(sp?esc(x.special):dmy(x.a)+' → '+dmy(x.b)+' · DGR 995/17-07-2026')+'</div></div>'}).join('');
+ $('pfcMore').innerHTML='<div class="pfcLegal"><b>Altre specie del calendario regionale</b><br>'+more.map(esc).join(' · ')+'<br><br>Per queste specie non mostro automaticamente “aperto/chiuso” finché la regola 2026/27 non è stata verificata e strutturata nell’app.</div>'
+}
+function ext(u){window.open(u,'_blank','noopener')}
+function bindTerr(){
+ $('pfcAreaOpen').onclick=()=>showPage('protected');$('pfcCalOpen').onclick=()=>showPage('huntcalendar');$('pfcAreaBack').onclick=$('pfcAreaMap2').onclick=()=>showPage('map');$('pfcCalBack').onclick=()=>showPage('map');
+ $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcAreaOfficial').onclick=()=>ext(PUGLIA_AREE);$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
+ $('pfcCalDetect').onclick=detect;$('pfcCalRegion').onchange=calendar;$('pfcCalDate').onchange=calendar;$('pfcCalToday').onclick=()=>{$('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()};$('pfcCalOfficial').onclick=()=>ext(PUGLIA_CAL);$('pfcAtcOfficial').onclick=()=>ext(PUGLIA_ATC);
+ $('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()
+}
+const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(false)},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
+const oldBind=bind;bind=function(){oldBind();css();pages();entries();guide();bindTerr();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
+window.PFCTerritory={version:VER,refreshArea,detect,calendar};
+})();
