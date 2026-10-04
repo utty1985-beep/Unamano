@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
 
     private static final String APP_HOST = "utty1985-beep.github.io";
     private static final String APP_PATH = "/Unamano/cacciatraccia/";
-    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6401";
+    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6401&tester=1";
     private static final String PRIVACY_URL = "https://" + APP_HOST + APP_PATH + "privacy.html";
     private static final String PRO_PRODUCT_ID = "passione_pro_annuale";
     private static final int FREE_DAILY_EXTERNAL_SEARCHES = 5;
