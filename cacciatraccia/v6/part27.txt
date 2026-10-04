@@ -16,7 +16,14 @@
   function bridge(){
     try{return window.PassioneNative||null}catch{return null}
   }
+  function isTester(){
+    try{
+      const u=new URL(location.href);
+      return u.searchParams.get('tester')==='1' || localStorage.getItem('pfc-tester-unlock')==='1';
+    }catch{return false}
+  }
   function isPro(){
+    if(isTester())return true;
     try{return !!bridge()?.isPro?.()}catch{return false}
   }
   function quota(){
@@ -158,9 +165,9 @@
     ensurePlanButton();ensureQuotaHint();
     const b=document.getElementById('pfcPlanBtn'),h=document.getElementById('pfcQuotaHint');
     const pro=isPro(),q=quota();
-    if(b){b.classList.toggle('pro',pro);b.textContent=pro?'✓ PRO attivo':('FREE · '+q.left+'/'+FREE_DAILY_EXTERNAL_SEARCHES)}
+    if(b){b.classList.toggle('pro',pro);b.textContent=isTester()?'🧪 TEST · TUTTO SBLOCCATO':(pro?'✓ PRO attivo':('FREE · '+q.left+'/'+FREE_DAILY_EXTERNAL_SEARCHES))}
     if(h){
-      h.innerHTML=pro?'<span>✓ Piano <b>PRO</b> · ricerche esterne illimitate</span><span>Google Play</span>':
+      h.innerHTML=isTester()?'<span>🧪 Modalità <b>TESTER</b> · tutte le funzioni e ricerche sbloccate</span><span>sviluppo</span>':pro?'<span>✓ Piano <b>PRO</b> · ricerche esterne illimitate</span><span>Google Play</span>':
         '<span>🌐 Ricerche esterne oggi: <b>'+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+'</b></span><button id="pfcQuotaPro" class="mini" type="button">PRO illimitato</button>';
       const x=document.getElementById('pfcQuotaPro');if(x)x.onclick=()=>openPro('Con PRO le ricerche esterne non hanno limite giornaliero.');
     }
@@ -217,7 +224,7 @@
   window.PFCNativePlanChanged=function(){
     setTimeout(()=>{updatePlanUi();if(isPro()){document.getElementById('pfcProModal')?.classList.remove('open');try{toast('Passione PRO attivo ✓')}catch{}}},60);
   };
-  window.PFCPlayStore={version:APP_VER,isPro,quota,openPro,freeDailyExternalSearches:FREE_DAILY_EXTERNAL_SEARCHES};
+  window.PFCPlayStore={version:APP_VER,isPro,isTester,quota,openPro,freeDailyExternalSearches:FREE_DAILY_EXTERNAL_SEARCHES};
 
   const previousBind=bind;
   bind=function(){
