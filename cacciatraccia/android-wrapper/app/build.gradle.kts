@@ -2,13 +2,13 @@ plugins { id("com.android.application") }
 
 android {
     namespace = "com.cacciatraccia.italia"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.cacciatraccia.italia"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 6309
-        versionName = "6.3.9"
+        targetSdk = 36
+        versionCode = 6400
+        versionName = "6.4.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -16,7 +16,7 @@ android {
     }
 }
 
-
 dependencies {
-    implementation("androidx.core:core:1.15.0")
+    implementation("androidx.core:core:1.17.0")
+    implementation("com.android.billingclient:billing:9.1.0")
 }
