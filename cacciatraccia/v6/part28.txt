@@ -1,7 +1,7 @@
-// V6.4.1 - Aree protette e calendario venatorio
+// V6.4.7 - Aree protette, cartografia e calendario venatorio
 (function(){
 'use strict';
-const VER='6.4.6',SOUND='pfc-protected-sound-v1',MODE_KEY='pfc-territory-mode-v1';
+const VER='6.4.7',SOUND='pfc-protected-sound-v1',MODE_KEY='pfc-territory-mode-v1';
 let areaMode=(()=>{try{return localStorage.getItem(MODE_KEY)||'hunt'}catch{return 'hunt'}})();
 const MUSH_RULES={
 'Abruzzo':{short:'Autorizzazione/attestato richiesti. Tipo A fino a 3 kg; autorizzazioni specifiche possono avere limiti diversi.',src:'https://trasparenza.regione.abruzzo.it/servizi-erogati/carta-servizi/rilascio-permessi-raccolta-funghi-epigei-nella-regione-abruzzo'},
@@ -29,7 +29,8 @@ const MUSH_RULES={
 const PUGLIA_CAL='https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria';
 const PUGLIA_ATC='https://foreste.regione.puglia.it/ambiti-territoriali-di-caccia-atc';
 const PUGLIA_AREE='https://pugliacon.regione.puglia.it/web/sit-puglia-paesaggio/6.2.2-componenti-delle-aree-protette-e-dei-siti-naturalistici';
-let areas=[],areaLayer=null,areaAnchor=null,areaWatch=null,lastInside='',where={};
+const ITALIA_AREE='https://naturaitalia.mase.gov.it/';
+let areas=[],areaLayer=null,areaMiniMap=null,areaMiniLayer=null,areaMiniUser=null,areaAnchor=null,areaWatch=null,lastInside='',where={};
 const regions=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria',"Valle d'Aosta",'Veneto'];
 const rules=[
  {n:'Beccaccino',i:'🐦',a:'2026-10-01',b:'2027-01-31'},
@@ -44,7 +45,7 @@ const more=['Allodola','Alzavola','Beccaccia','Canapiglia','Cesena','Codone','Co
 
 function css(){
  if($('pfcTerrCss'))return;const s=document.createElement('style');s.id='pfcTerrCss';s.textContent=`
- .pfcTerr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}.pfcTerr button{min-height:55px;border:1px solid #d2d9d0;border-radius:14px;background:#fff;color:#173f2b;font-weight:900}.pfcTerr b{display:block;font-size:21px}.pfcMode{display:flex;gap:7px;margin:7px 0 11px}.pfcMode button{flex:1;border:1px solid #cfd8d0;border-radius:999px;padding:9px;background:#fff;font-weight:900}.pfcMode button.active{background:#173f2b;color:#fff}.pfcLegend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:8px}.pfcDot{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}.pfcDot.hunt{background:rgba(210,35,35,.45);border:1px solid #bd2020}.pfcDot.env{background:rgba(242,153,27,.38);border:1px solid #d48312}.pfcDot.mush{background:rgba(126,62,170,.40);border:1px solid #7837a6}
+ .pfcTerr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}.pfcTerr button{min-height:55px;border:1px solid #d2d9d0;border-radius:14px;background:#fff;color:#173f2b;font-weight:900}.pfcTerr b{display:block;font-size:21px}.pfcMode{display:flex;gap:7px;margin:7px 0 11px}.pfcMode button{flex:1;border:1px solid #cfd8d0;border-radius:999px;padding:9px;background:#fff;font-weight:900}.pfcMode button.active{background:#173f2b;color:#fff}.pfcLegend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:8px}.pfcAreaMini{height:300px;border-radius:14px;overflow:hidden;border:1px solid #ccd7ce;background:#e9eee8;margin-top:9px;position:relative}.pfcAreaMiniMsg{position:absolute;z-index:500;left:8px;right:8px;top:8px;background:#fffffff0;border:1px solid #d5ddd5;border-radius:10px;padding:7px 9px;font-size:10px;font-weight:800;color:#405047;pointer-events:none}.pfcDot{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}.pfcDot.hunt{background:rgba(210,35,35,.45);border:1px solid #bd2020}.pfcDot.env{background:rgba(242,153,27,.38);border:1px solid #d48312}.pfcDot.mush{background:rgba(126,62,170,.40);border:1px solid #7837a6}
  .pfcTop{display:flex;gap:9px;align-items:center;margin-bottom:10px}.pfcState{padding:12px;border-radius:14px;border:1px solid #d7ddd5;margin:8px 0}.pfcState.ok{background:#eff9f1;border-color:#add5b7}.pfcState.warn{background:#fff8e8;border-color:#dfc77b}.pfcState.bad{background:#fff0ef;border-color:#d58c86}
  .pfcItem{padding:10px;border:1px solid #d9ded8;border-radius:12px;margin:7px 0;background:#fff}.pfcHead{display:flex;justify-content:space-between;gap:8px;align-items:center}.pfcMeta{font-size:11px;color:#687069;margin-top:4px}.pfcTag{padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900;background:#eee}.pfcTag.open{background:#dcf5e3;color:#176b36}.pfcTag.closed{background:#f9deda;color:#96382e}.pfcTag.special{background:#fff0bf;color:#795910}
  .pfcGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pfcGrid .full{grid-column:1/-1}.pfcLegal{font-size:11px;line-height:1.45;background:#fff9e9;border:1px solid #ead59c;border-radius:12px;padding:10px;margin-top:9px}.pfcBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
@@ -62,6 +63,7 @@ function pages(){
  <div class="actionGrid"><button id="pfcAreaRefresh" class="primary">◎ Aggiorna aree</button><button id="pfcAreaSound" class="secondary">🔕 Avvisi sonori</button><button id="pfcAreaMap" class="secondary">🗺️ Mostra sulla mappa</button></div>
  <div id="pfcAreaStamp" class="muted" style="margin-top:8px"></div></div>
  <div class="card"><div class="sectionHead"><h3>🍄 Normativa funghi della posizione</h3><span id="pfcMushRegion" class="pill soft">da rilevare</span></div><div id="pfcMushRule" class="pfcState warn"><b>Rileva la posizione</b><div class="pfcMeta">Mostrerò la regola regionale/provinciale disponibile e la fonte ufficiale.</div></div><button id="pfcMushSource" class="secondary wide" disabled>🏛️ Apri fonte ufficiale</button></div>
+ <div class="card"><div class="sectionHead"><h3>🗺️ Cartografia nell'app</h3><span id="pfcAreaMapStatus" class="pill soft">attendo GPS</span></div><div id="pfcAreaMini" class="pfcAreaMini"><div id="pfcAreaMiniMsg" class="pfcAreaMiniMsg">La mappa verrà caricata dopo il controllo della posizione.</div></div></div>
  <div class="card"><div class="sectionHead"><h3>Aree rilevate</h3><span class="pill soft">entro ~12 km</span></div><div id="pfcAreaList" class="empty">Nessun controllo effettuato.</div>
  <div class="pfcBtns"><button id="pfcAreaOfficial" class="secondary">🏛️ Cartografia ufficiale</button><button id="pfcAreaMap2" class="secondary">🗺️ Mappa principale</button></div>
  <div class="pfcLegal">⚠️ Supporto informativo: non sostituisce cartografie ufficiali, tabellazione, ordinanze o altri divieti. Se il servizio non è aggiornabile, l’app non considera la zona automaticamente libera.</div></div>`;
@@ -140,8 +142,21 @@ async function loadAreas(p,force){
  let j=null,err;for(const u of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){try{const r=await fetch(u+'?data='+encodeURIComponent(q),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);j=await r.json();break}catch(e){err=e}}
  if(!j)throw err||Error('Servizio cartografico non disponibile');areas=parse(j);areaAnchor={lat:p.lat,lng:p.lng,at:Date.now()};renderArea(p,true)
 }
-async function refreshArea(force=true){try{const p=await getPos();await Promise.allSettled([loadAreas(p,force),detectRuleRegion(p)])}catch(e){$('pfcAreaLive').textContent='non verificato';$('pfcAreaState').className='pfcState warn';$('pfcAreaState').innerHTML='<b>⚠️ Verifica non disponibile</b><div class="pfcMeta">'+esc(e.message||'Errore')+'. Non interpretare l’assenza di dati come assenza di divieti.</div>'}}
-function startArea(){if(areaWatch!=null||!navigator.geolocation)return;areaWatch=navigator.geolocation.watchPosition(p=>{if(!$('page-protected')?.classList.contains('active'))return;const x=pos(p);if(areas.length)renderArea(x,false);loadAreas(x,false).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:1500,timeout:20000})}
+async function refreshArea(force=true){
+ const live=$('pfcAreaLive'),list=$('pfcAreaList'),ms=$('pfcAreaMapStatus'),msg=$('pfcAreaMiniMsg');
+ if(live)live.textContent='controllo…';if(ms)ms.textContent='caricamento';if(list)list.innerHTML='<div class="empty">Controllo cartografia e posizione…</div>';if(msg)msg.textContent='Carico le aree vicino alla posizione GPS…';
+ try{
+  const p=await getPos();
+  const rr=await Promise.allSettled([loadAreas(p,force),detectRuleRegion(p)]);
+  if(rr[0].status==='rejected')throw rr[0].reason;
+  if(ms)ms.textContent=areas.length?areas.length+' aree caricate':'nessuna area vicina';
+ }catch(e){
+  if(live)live.textContent='non verificato';if(ms)ms.textContent='servizio non disponibile';
+  if($('pfcAreaState')){$('pfcAreaState').className='pfcState warn';$('pfcAreaState').innerHTML='<b>⚠️ Verifica non disponibile</b><div class="pfcMeta">'+esc(e?.message||'Errore')+'. Non interpretare l’assenza di dati come assenza di divieti.</div>'}
+  if(list)list.innerHTML='<div class="empty">Impossibile aggiornare la cartografia. Tocca “Aggiorna aree” per riprovare.</div>';if(msg)msg.textContent='Cartografia non aggiornata: riprova o apri la fonte ufficiale.'
+ }
+}
+function startArea(){if(areaWatch!=null||!navigator.geolocation)return;areaWatch=navigator.geolocation.watchPosition(p=>{if(!$('page-protected')?.classList.contains('active'))return;const x=pos(p);if(areas.length)renderArea(x,false);loadAreas(x,false).catch(()=>{})},e=>{if($('pfcAreaLive'))$('pfcAreaLive').textContent='GPS non disponibile';if($('pfcAreaMiniMsg'))$('pfcAreaMiniMsg').textContent='Serve la posizione GPS per centrare la cartografia.'},{enableHighAccuracy:true,maximumAge:1500,timeout:20000})}
 function stopArea(){if(areaWatch!=null){navigator.geolocation.clearWatch(areaWatch);areaWatch=null}}
 function ruleKey(){
  const p=String(where.province||'').toLowerCase(),r=String(where.region||'');
@@ -152,6 +167,8 @@ function ruleKey(){
 function syncMode(){
  try{localStorage.setItem(MODE_KEY,areaMode)}catch{}
  $('pfcModeHunt')?.classList.toggle('active',areaMode==='hunt');$('pfcModeMush')?.classList.toggle('active',areaMode==='mush');
+ const cal=$('pfcCalOpen'),terr=$('pfcTerr');if(cal)cal.hidden=areaMode!=='hunt';if(terr)terr.style.gridTemplateColumns=areaMode==='hunt'?'1fr 1fr':'1fr';
+ if(areaMode!=='hunt'&&$('page-huntcalendar')?.classList.contains('active'))showPage('map');
 }
 function setMode(m){areaMode=m==='mush'?'mush':'hunt';syncMode();if(lastPos&&areas.length)renderArea(lastPos,false)}
 function renderMushRule(){
@@ -181,15 +198,21 @@ function calendar(){
  $('pfcSpecies').innerHTML=rules.map(x=>{const sp=!!x.special,op=!sp&&day>=x.a&&day<=x.b,t=sp?'REGOLA SPECIALE':(op?'APERTO':'CHIUSO');return '<div class="pfcItem"><div class="pfcHead"><b>'+x.i+' '+esc(x.n)+'</b><span class="pfcTag '+(sp?'special':op?'open':'closed')+'">'+t+'</span></div><div class="pfcMeta">'+(sp?esc(x.special):dmy(x.a)+' → '+dmy(x.b)+' · DGR 995/17-07-2026')+'</div></div>'}).join('');
  $('pfcMore').innerHTML='<div class="pfcLegal"><b>Altre specie del calendario regionale</b><br>'+more.map(esc).join(' · ')+'<br><br>Per queste specie non mostro automaticamente “aperto/chiuso” finché la regola 2026/27 non è stata verificata e strutturata nell’app.</div>'
 }
-function ext(u){window.open(u,'_blank','noopener')}
+function ext(u){
+ try{
+  if(window.PassioneNative){location.href=u;return}
+  const w=window.open(u,'_blank','noopener');if(!w)location.href=u
+ }catch{try{location.href=u}catch{}}
+}
+function officialAreaUrl(){return String(where.region||'')==='Puglia'?PUGLIA_AREE:ITALIA_AREE}
 function bindTerr(){
  $('pfcAreaOpen').onclick=()=>showPage('protected');$('pfcCalOpen').onclick=()=>showPage('huntcalendar');$('pfcAreaBack').onclick=$('pfcAreaMap2').onclick=()=>showPage('map');$('pfcCalBack').onclick=()=>showPage('map');
- $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcModeHunt').onclick=()=>setMode('hunt');$('pfcModeMush').onclick=()=>setMode('mush');syncMode();$('pfcAreaOfficial').onclick=()=>ext(PUGLIA_AREE);$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
+ $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcModeHunt').onclick=()=>setMode('hunt');$('pfcModeMush').onclick=()=>setMode('mush');syncMode();$('pfcAreaOfficial').onclick=()=>ext(officialAreaUrl());$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
  $('pfcCalDetect').onclick=detect;$('pfcCalRegion').onchange=calendar;$('pfcCalDate').onchange=calendar;$('pfcCalToday').onclick=()=>{$('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()};$('pfcCalOfficial').onclick=()=>ext(PUGLIA_CAL);$('pfcAtcOfficial').onclick=()=>ext(PUGLIA_ATC);
  $('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()
 }
 document.addEventListener('click',e=>{const id=e.target?.closest?.('button')?.id;if(id==='quickMushroomBtn'||id==='quickSpeciesBtn')setMode('mush');if(id==='quickSightingBtn')setMode('hunt')},true);
-const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(false);syncMode();renderMushRule()},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
+const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(true);syncMode();renderMushRule();setTimeout(()=>areaMiniMap?.invalidateSize?.(),120)},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
 const oldBind=bind;bind=function(){oldBind();css();pages();entries();guide();bindTerr();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
 window.PFCTerritory={version:VER,refreshArea,detect,calendar,setMode,getMode:()=>areaMode,getRegion:()=>where.region||'',getProvince:()=>where.province||'',getRule:()=>MUSH_RULES[ruleKey()]||null,applyRules:(x)=>{if(x&&typeof x==='object')Object.assign(MUSH_RULES,x);try{renderMushRule()}catch{}}};
 })();
