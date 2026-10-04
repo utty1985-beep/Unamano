@@ -59,8 +59,11 @@ function onSound(){try{return localStorage.getItem(SOUND)==='1'}catch{return fal
 function soundBtn(){if($('pfcAreaSound'))$('pfcAreaSound').textContent=onSound()?'🔔 Avvisi sonori ON':'🔕 Avvisi sonori OFF'}
 function beep(){if(!onSound())return;try{navigator.vibrate?.([160,80,260])}catch{};try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.5);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.5)}catch{}}
 function toggleSound(){try{localStorage.setItem(SOUND,onSound()?'0':'1')}catch{}soundBtn();if(onSound()){beep();toast('Avvisi sonori attivati')}}
-function ring(g){const r=(g||[]).map(x=>[+x.lat,+x.lon]).filter(x=>isFinite(x[0])&&isFinite(x[1]));if(r.length>2&&(r[0][0]!==r.at(-1)[0]||r[0][1]!==r.at(-1)[1]))r.push([...r[0]]);return r}
-function rings(e){if(e.type==='way')return [ring(e.geometry)].filter(x=>x.length>3);return (e.members||[]).filter(m=>(m.role==='outer'||!m.role)&&m.geometry).map(m=>ring(m.geometry)).filter(x=>x.length>3)}
+function pts(g){return (g||[]).map(x=>[+x.lat,+x.lon]).filter(x=>isFinite(x[0])&&isFinite(x[1]))}
+function eq(a,b){return a&&b&&Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[1])<1e-6}
+function ring(g){const r=pts(g);return r.length>3&&eq(r[0],r.at(-1))?r:[]}
+function assemble(gs){const s=gs.map(pts).filter(x=>x.length>1),out=[];while(s.length){let r=s.shift(),go=true;while(go&&!eq(r[0],r.at(-1))){go=false;for(let i=0;i<s.length;i++){let q=s[i];if(eq(r.at(-1),q[0])){r=r.concat(q.slice(1));s.splice(i,1);go=true;break}if(eq(r.at(-1),q.at(-1))){r=r.concat([...q].reverse().slice(1));s.splice(i,1);go=true;break}if(eq(r[0],q.at(-1))){r=q.slice(0,-1).concat(r);s.splice(i,1);go=true;break}if(eq(r[0],q[0])){r=[...q].reverse().slice(0,-1).concat(r);s.splice(i,1);go=true;break}}}if(r.length>3&&eq(r[0],r.at(-1)))out.push(r)}return out}
+function rings(e){if(e.type==='way')return [ring(e.geometry)].filter(x=>x.length>3);return assemble((e.members||[]).filter(m=>(m.role==='outer'||!m.role)&&m.geometry).map(m=>m.geometry))}
 function inside(lat,lon,r){let z=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const yi=r[i][0],xi=r[i][1],yj=r[j][0],xj=r[j][1];if((yi>lat)!=(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi||1e-12)+xi)z=!z}return z}
 function segD(lat,lon,a,b){const R=6371000,k=Math.PI/180,c=Math.cos(lat*k),ax=(a[1]-lon)*k*R*c,ay=(a[0]-lat)*k*R,bx=(b[1]-lon)*k*R*c,by=(b[0]-lat)*k*R,vx=bx-ax,vy=by-ay,d=vx*vx+vy*vy;let t=d?-(ax*vx+ay*vy)/d:0;t=Math.max(0,Math.min(1,t));return Math.hypot(ax+t*vx,ay+t*vy)}
 function rdist(lat,lon,r){let d=Infinity;for(let i=1;i<r.length;i++)d=Math.min(d,segD(lat,lon,r[i-1],r[i]));return d}
@@ -81,7 +84,7 @@ function renderArea(pos,fresh){
  const show=hit.concat(near);$('pfcAreaList').innerHTML=show.length?show.map(a=>'<div class="pfcItem"><div class="pfcHead"><b>'+(a.hit?'⛔ ':'🛡️ ')+esc(a.name)+'</b><span class="pfcTag '+(a.hit?'closed':'')+'">'+(a.hit?'DENTRO':fmt(a.d))+'</span></div><div class="pfcMeta">'+esc(a.code||'perimetro cartografico')+'</div></div>').join(''):'<div class="empty">Nessuna area rilevata entro 5 km.</div>';overlay(r)
 }
 function pos(p){return {lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0}}
-function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});navigator.geolocation?.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})||no(Error('GPS non disponibile'))})}
+function getPos(){return new Promise((ok,no)=>{if(lastPos&&isFinite(lastPos.lat))return ok({...lastPos});if(!navigator.geolocation)return no(Error('GPS non disponibile'));navigator.geolocation.getCurrentPosition(p=>ok(pos(p)),no,{enableHighAccuracy:true,maximumAge:2000,timeout:18000})})}
 async function loadAreas(p,force){
  if(!navigator.onLine){$('pfcAreaLive').textContent='offline / non verificato';if(areas.length)renderArea(p,false);return}
  if(!force&&areaAnchor&&hav([areaAnchor.lat,areaAnchor.lng],[p.lat,p.lng])<.8&&Date.now()-areaAnchor.at<720000&&areas.length){renderArea(p,false);return}
@@ -100,8 +103,9 @@ async function detect(){
 }
 function dmy(x){const p=x.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function calendar(){
- const reg=$('pfcCalRegion').value,day=$('pfcCalDate').value||new Date().toISOString().slice(0,10),st=$('pfcCalState');
- if(reg!=='Puglia'){st.className='pfcState warn';st.innerHTML='<b>📍 '+esc(reg)+'</b><div class="pfcMeta">La pagina è predisposta per i calendari regionali; il database verificato integrato in questa versione è Puglia 2026/27. Apri la fonte ufficiale regionale prima dell’uscita.</div>';$('pfcSpecies').innerHTML='';$('pfcMore').innerHTML='';return}
+ const reg=$('pfcCalRegion').value,day=$('pfcCalDate').value||new Date().toISOString().slice(0,10),st=$('pfcCalState'),cb=$('pfcCalOfficial'),ab=$('pfcAtcOfficial');
+ if(reg!=='Puglia'){if(cb){cb.disabled=true;cb.textContent='🏛️ Fonte regionale da integrare'}if(ab)ab.disabled=true;st.className='pfcState warn';st.innerHTML='<b>📍 '+esc(reg)+'</b><div class="pfcMeta">La pagina è predisposta per i calendari regionali; il database verificato integrato in questa versione è Puglia 2026/27. Per evitare indicazioni normative inesatte, le altre Regioni non vengono marcate automaticamente “aperte/chiuse” finché i dati ufficiali non sono strutturati.</div>';$('pfcSpecies').innerHTML='';$('pfcMore').innerHTML='';return}
+ if(cb){cb.disabled=false;cb.textContent='🏛️ Calendario ufficiale'}if(ab)ab.disabled=false;
  const open=rules.filter(x=>!x.special&&day>=x.a&&day<=x.b);st.className='pfcState '+(open.length?'ok':'warn');st.innerHTML='<b>'+(open.length?'✓ '+open.length+' specie con periodo verificato risultano aperte':'Nessuna specie del gruppo verificato risulta aperta')+'</b><div class="pfcMeta">Puglia · '+dmy(day)+(where.atc?' · '+esc(where.atc):'')+'. Restano da verificare giornate, carniere, ATC e divieti.</div>';
  $('pfcSpecies').innerHTML=rules.map(x=>{const sp=!!x.special,op=!sp&&day>=x.a&&day<=x.b,t=sp?'REGOLA SPECIALE':(op?'APERTO':'CHIUSO');return '<div class="pfcItem"><div class="pfcHead"><b>'+x.i+' '+esc(x.n)+'</b><span class="pfcTag '+(sp?'special':op?'open':'closed')+'">'+t+'</span></div><div class="pfcMeta">'+(sp?esc(x.special):dmy(x.a)+' → '+dmy(x.b)+' · DGR 995/17-07-2026')+'</div></div>'}).join('');
  $('pfcMore').innerHTML='<div class="pfcLegal"><b>Altre specie del calendario regionale</b><br>'+more.map(esc).join(' · ')+'<br><br>Per queste specie non mostro automaticamente “aperto/chiuso” finché la regola 2026/27 non è stata verificata e strutturata nell’app.</div>'
