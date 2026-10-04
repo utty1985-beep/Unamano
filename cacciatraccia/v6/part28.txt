@@ -228,7 +228,7 @@ function ext(u){
 }
 function officialAreaUrl(){return String(where.region||'')==='Puglia'?PUGLIA_AREE:ITALIA_AREE}
 function bindTerr(){
- $('pfcAreaOpen').onclick=()=>showPage('protected');$('pfcCalOpen').onclick=()=>showPage('huntcalendar');$('pfcAreaBack').onclick=$('pfcAreaMap2').onclick=()=>showPage('map');$('pfcCalBack').onclick=()=>showPage('map');
+ $('pfcAreaOpen').onclick=()=>showPage('protected');$('pfcCalOpen').onclick=()=>showPage('huntcalendar');$('pfcAreaBack').onclick=()=>showPage('map');$('pfcAreaMap2').onclick=()=>{showPage('map');setTimeout(()=>{if(lastPos&&map)map.setView([lastPos.lat,lastPos.lng],13)},80)};$('pfcCalBack').onclick=()=>showPage('map');
  $('pfcAreaRefresh').onclick=()=>refreshArea(true);$('pfcAreaSound').onclick=toggleSound;soundBtn();$('pfcModeHunt').onclick=()=>setMode('hunt');$('pfcModeMush').onclick=()=>setMode('mush');syncMode();$('pfcAreaOfficial').onclick=()=>ext(officialAreaUrl());$('pfcAreaMap').onclick=()=>{showPage('map');if(lastPos)map.setView([lastPos.lat,lastPos.lng],14)};
  $('pfcCalDetect').onclick=detect;$('pfcCalRegion').onchange=calendar;$('pfcCalDate').onchange=calendar;$('pfcCalToday').onclick=()=>{$('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()};$('pfcCalOfficial').onclick=()=>ext(PUGLIA_CAL);$('pfcAtcOfficial').onclick=()=>ext(PUGLIA_ATC);
  $('pfcCalDate').value=new Date().toISOString().slice(0,10);calendar()
