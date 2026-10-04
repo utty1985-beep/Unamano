@@ -1,7 +1,7 @@
-// V6.4.3 - aggiornamento dinamico normative Italia
+// V6.4.4 - aggiornamento dinamico normative Italia
 (function(){
 'use strict';
-const DATA_URL='./data/normativa-italia.json?v=6.4.3';
+const DATA_URL='./data/normativa-italia.json?v=6.4.4';
 const CACHE_KEY='pfc-normativa-italia-cache-v1';
 const CHECK_KEY='pfc-normativa-last-check-v1';
 const CHECK_EVERY=6*60*60*1000;
@@ -67,5 +67,5 @@ function patchTerritoryRender(){
 }
 const prevBind=bind;
 bind=function(){prevBind();addNormStyles();ensureStatusBox();loadCached();refreshNorms(false);patchTerritoryRender();setInterval(()=>refreshNorms(false),CHECK_EVERY);};
-window.PFCNormative={version:'6.4.3',refresh:refreshNorms,getDataset:()=>dataset};
+window.PFCNormative={version:'6.4.4',refresh:refreshNorms,getDataset:()=>dataset};
 })();
