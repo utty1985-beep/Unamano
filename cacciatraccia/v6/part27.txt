@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const APP_VER='6.4.4';
+  const APP_VER='6.4.5';
   const FREE_DAILY_EXTERNAL_SEARCHES=5;
   const QUOTA_KEY='pfc-external-search-quota-v1';
   const MUSH_CONSENT_KEY='pfc-mush-ai-consent-v1';
