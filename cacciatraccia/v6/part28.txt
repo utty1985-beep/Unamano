@@ -1,7 +1,7 @@
 // V6.4.1 - Aree protette e calendario venatorio
 (function(){
 'use strict';
-const VER='6.4.3',SOUND='pfc-protected-sound-v1',MODE_KEY='pfc-territory-mode-v1';
+const VER='6.4.4',SOUND='pfc-protected-sound-v1',MODE_KEY='pfc-territory-mode-v1';
 let areaMode=(()=>{try{return localStorage.getItem(MODE_KEY)||'hunt'}catch{return 'hunt'}})();
 const MUSH_RULES={
 'Abruzzo':{short:'Autorizzazione/attestato richiesti. Tipo A fino a 3 kg; autorizzazioni specifiche possono avere limiti diversi.',src:'https://trasparenza.regione.abruzzo.it/servizi-erogati/carta-servizi/rilascio-permessi-raccolta-funghi-epigei-nella-regione-abruzzo'},
