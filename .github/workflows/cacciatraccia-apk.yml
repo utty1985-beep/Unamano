@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia 6.4.0 Play
+name: Build Passione Funghi e Caccia 6.4.1 Play
 
 on:
   workflow_dispatch:
@@ -31,13 +31,13 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Validate v6.4.0 web app and Play rules
+      - name: Validate v6.4.1 web app and Play rules
         working-directory: ${{ github.workspace }}
         run: |
           node - <<'NODE'
           const fs = require('fs');
           const core = Array.from({length:25},(_,i)=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
-          const parts = [...core, 'cacciatraccia/v6/part27.txt'];
+          const parts = [...core, 'cacciatraccia/v6/part27.txt', 'cacciatraccia/v6/part28.txt'];
           const missing = parts.filter(p=>!fs.existsSync(p));
           if (missing.length) throw new Error('Missing parts: '+missing.join(', '));
 
@@ -54,7 +54,7 @@ jobs:
           for (const id of ['quickMushroomBtn','quickSpeciesBtn','quickCarBtn','followBtn']) {
             if (!html.includes('id="'+id+'"')) throw new Error('Missing UI control '+id);
           }
-          if (!appLoader.includes('part27.txt?v=6.4.0')) throw new Error('v6.4.0 module not loaded');
+          if (!appLoader.includes('part27.txt?v=6.4.1') || !appLoader.includes('part28.txt?v=6.4.1')) throw new Error('v6.4.1 modules not loaded');
           if (!play.includes('FREE_DAILY_EXTERNAL_SEARCHES=5')) throw new Error('Free quota missing');
           if (!play.includes('Passione PRO')) throw new Error('PRO UI missing');
           if (!fs.existsSync('cacciatraccia/privacy.html')) throw new Error('Privacy page missing');
@@ -77,10 +77,10 @@ jobs:
           test -f "$APK"
           test -f "$AAB"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/pfc-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6400' versionName='6.4.0'" /tmp/pfc-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.apk
-          cp "$AAB" app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.aab
-          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-badging.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6401' versionName='6.4.1'" /tmp/pfc-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.1-PLAY-UNSIGNED.apk
+          cp "$AAB" app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.1-PLAY-UNSIGNED.aab
+          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.1-badging.txt
 
       - name: Bundle signing tool
         run: |
@@ -90,11 +90,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.4.0-PLAY-build
+          name: Passione-Funghi-e-Caccia-v6.4.1-PLAY-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.apk
-            cacciatraccia/android-wrapper/app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.aab
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-badging.txt
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.1-PLAY-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.1-PLAY-UNSIGNED.aab
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.1-badging.txt
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
             cacciatraccia/privacy.html
