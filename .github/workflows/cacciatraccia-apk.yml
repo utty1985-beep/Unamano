@@ -1,4 +1,5 @@
-name: Build Passione Funghi e Caccia APK 6.3.9 FINAL
+name: Build Passione Funghi e Caccia 6.4.0 Play
+
 on:
   workflow_dispatch:
   push:
@@ -13,69 +14,90 @@ jobs:
     defaults:
       run:
         working-directory: cacciatraccia/android-wrapper
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
-      - name: Validate final web app
+          gradle-version: '9.6.0'
+
+      - name: Validate v6.4.0 web app and Play rules
         working-directory: ${{ github.workspace }}
         run: |
           node - <<'NODE'
           const fs = require('fs');
-          const parts = Array.from({length:25},(_,i)=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
+          const core = Array.from({length:25},(_,i)=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
+          const parts = [...core, 'cacciatraccia/v6/part27.txt'];
           const missing = parts.filter(p=>!fs.existsSync(p));
           if (missing.length) throw new Error('Missing parts: '+missing.join(', '));
+
           const src = parts.map(p=>fs.readFileSync(p,'utf8')).join('\n');
           new Function(src);
+
+          const appLoader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
           const html=fs.readFileSync('cacciatraccia/index.html','utf8');
+          const play=fs.readFileSync('cacciatraccia/v6/part27.txt','utf8');
+          const main=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/java/com/cacciatraccia/italia/MainActivity.java','utf8');
+          const manifest=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/AndroidManifest.xml','utf8');
+          const gradle=fs.readFileSync('cacciatraccia/android-wrapper/app/build.gradle.kts','utf8');
+
           for (const id of ['quickMushroomBtn','quickSpeciesBtn','quickCarBtn','followBtn']) {
             if (!html.includes('id="'+id+'"')) throw new Error('Missing UI control '+id);
           }
-          const p1=fs.readFileSync('cacciatraccia/v6/part01.txt','utf8');
-          const p24=fs.readFileSync('cacciatraccia/v6/part24.txt','utf8');
-          if (!p1.includes("leaflet-rotate@0.3.0")) throw new Error('Working V6.1.12 map core was not restored');
-          if (!p1.includes("map=L.map('map',opts).setView([41.5,14],6)")) throw new Error('Working V6.1.12 map initialization differs');
-          const bindFinal=p24.slice(p24.lastIndexOf('bind=function(){'));
-          if (/syncCarButton\(\);\s*renderCar\(\)/.test(bindFinal)) throw new Error('car must not render before initMap');
-          if (!p24.includes('if(!map){syncCarButton();return}')) throw new Error('renderCar guard missing');
-          const main=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/java/com/cacciatraccia/italia/MainActivity.java','utf8');
-          const manifest=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/AndroidManifest.xml','utf8');
-          if (!main.includes('MediaStore.ACTION_IMAGE_CAPTURE')) throw new Error('Instant camera intent missing');
-          if (!manifest.includes('androidx.core.content.FileProvider')) throw new Error('FileProvider missing');
-          if (!manifest.includes('android.permission.CAMERA')) throw new Error('Camera permission missing');
-          if (!main.includes('onPermissionRequest(PermissionRequest request)')) throw new Error('Web camera permission bridge missing');
-          if (!p24.includes('ensureARButton')) throw new Error('Vista punti camera missing');
-          if (!fs.existsSync('cacciatraccia/android-wrapper/app/src/main/res/xml/file_paths.xml')) throw new Error('file_paths.xml missing');
-          console.log('Final web app, map startup and camera invariants: OK');
+          if (!appLoader.includes('part27.txt?v=6.4.0')) throw new Error('v6.4.0 module not loaded');
+          if (!play.includes('FREE_DAILY_EXTERNAL_SEARCHES=5')) throw new Error('Free quota missing');
+          if (!play.includes('Passione PRO')) throw new Error('PRO UI missing');
+          if (!fs.existsSync('cacciatraccia/privacy.html')) throw new Error('Privacy page missing');
+          if (!main.includes('PRO_PRODUCT_ID = "passione_pro_annuale"')) throw new Error('Play Billing product missing');
+          if (!main.includes('PendingPurchasesParams')) throw new Error('Billing pending purchase support missing');
+          if (!manifest.includes('android:allowBackup="false"')) throw new Error('Backup hardening missing');
+          if (manifest.includes('ACCESS_BACKGROUND_LOCATION')) throw new Error('Background location must not be requested');
+          if (!gradle.includes('targetSdk = 36') || !gradle.includes('compileSdk = 36')) throw new Error('API 36 target missing');
+          console.log('Web, quota, privacy, permissions and billing invariants: OK');
           NODE
-      - name: Build release
-        run: gradle --no-daemon :app:assembleRelease
-      - name: Verify package
+
+      - name: Build release APK and AAB
+        run: gradle --no-daemon :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Verify APK identity
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          AAB=app/build/outputs/bundle/release/app-release.aab
           test -f "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/cacciatraccia-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6309' versionName='6.3.9'" /tmp/cacciatraccia-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.9-FINAL-UNSIGNED.apk
-      - name: Bundle signing tools
+          test -f "$AAB"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/pfc-badging.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6400' versionName='6.4.0'" /tmp/pfc-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.apk
+          cp "$AAB" app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.aab
+          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-badging.txt
+
+      - name: Bundle signing tool
         run: |
           mkdir -p app/build/signing-tools/lib
-          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" app/build/signing-tools/apksigner
-          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" app/build/signing-tools/apksigner
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
+
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.3.9-FINAL-build
+          name: Passione-Funghi-e-Caccia-v6.4.0-PLAY-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.3.9-FINAL-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.0-PLAY-UNSIGNED.aab
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.0-badging.txt
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
+            cacciatraccia/privacy.html
+            cacciatraccia/PLAYSTORE_PRIVACY_AND_DATA_SAFETY.md
           if-no-files-found: error
+          retention-days: 30
