@@ -191,5 +191,5 @@ function bindTerr(){
 document.addEventListener('click',e=>{const id=e.target?.closest?.('button')?.id;if(id==='quickMushroomBtn'||id==='quickSpeciesBtn')setMode('mush');if(id==='quickSightingBtn')setMode('hunt')},true);
 const oldPage=showPage;showPage=function(n){if(n!=='protected')stopArea();oldPage(n);if(n==='protected')setTimeout(()=>{startArea();refreshArea(false);syncMode();renderMushRule()},80);if(n==='huntcalendar')setTimeout(()=>{calendar();if(!where.region)detect()},80)};
 const oldBind=bind;bind=function(){oldBind();css();pages();entries();guide();bindTerr();const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER};
-window.PFCTerritory={version:VER,refreshArea,detect,calendar,setMode,getMode:()=>areaMode,getRegion:()=>where.region||'',getProvince:()=>where.province||'',getRule:()=>MUSH_RULES[ruleKey()]||null};
+window.PFCTerritory={version:VER,refreshArea,detect,calendar,setMode,getMode:()=>areaMode,getRegion:()=>where.region||'',getProvince:()=>where.province||'',getRule:()=>MUSH_RULES[ruleKey()]||null,applyRules:(x)=>{if(x&&typeof x==='object')Object.assign(MUSH_RULES,x);try{renderMushRule()}catch{}}};
 })();
