@@ -1094,7 +1094,7 @@
   }
   async function ctStartARView(){
     const pts=ctAREligiblePoints();
-    if(!pts.length)return toast('Prima salva almeno un avvistamento di uccello o un fungo.');
+    if(!pts.length){let m='hunt';try{m=window.PFCTerritory?.getMode?.()||'hunt'}catch{}return toast(m==='mush'?'Prima salva almeno un punto/fungo da mostrare nel radar.':'Prima salva almeno un avvistamento di uccello da mostrare nel radar.')}
     if(!navigator.mediaDevices?.getUserMedia)return toast('La telecamera live non è disponibile su questo dispositivo.');
     ctEnsureAROverlay();
     const gpsOk=await ctEnsureARPosition();
