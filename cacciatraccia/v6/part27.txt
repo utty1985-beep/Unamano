@@ -1,10 +1,11 @@
 // V6.6.1 - controlli modalità, ATC/regione, aree protette, GPS stabile e radar orizzontale
 (function(){
-  const FIX_VER='6.6.1';
+  const FIX_VER='6.6.2';
   const CFG_KEY='pfc-v661-settings';
   const REGIONS=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria','Valle d’Aosta','Veneto'];
   let cfg={mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:''};
-  let protectedWmsLayer=null, protectedOsmLayer=null, radarOpen=false, radarHeading=null, radarListener=null;
+  let protectedWmsLayer=null, protectedOsmLayer=null, radarOpen=false, radarHeading=null, radarListener=null, radarStream=null;
+  let detectBusy=false,lastDetectTry=0;
   const radarPrevDistances=new Map();
   try{cfg={...cfg,...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}}catch{}
   const q=id=>document.getElementById(id);
@@ -22,7 +23,7 @@
       .ct661Grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ct661Grid .full{grid-column:1/-1}.ct661Status{padding:9px;border-radius:11px;background:#edf3ed;font-size:12px;line-height:1.45}.ct661Actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.ct661Actions button{min-height:48px}
       .ctCompareHero{width:100%;margin-top:9px;background:#184f31;color:#fff;border:0;border-radius:13px;padding:13px;font-weight:900;font-size:15px;box-shadow:0 5px 16px #173f2b33}.ctCalendar{border-left:5px solid #986718}.ctCalendar .actionGrid{grid-template-columns:1fr 1fr}
       .ctProtButtons{display:grid;grid-template-columns:1fr;gap:8px}.ctProtNote{font-size:11px;color:#687069;line-height:1.45;margin-top:8px}
-      .ctRadarDialog{background:#102117;color:#fff}.ctRadarCompass{width:220px;height:220px;border-radius:50%;margin:12px auto;border:3px solid #ffffff88;position:relative;background:radial-gradient(circle,#214c32,#102117 68%)}.ctRadarCompass:before{content:'▲';position:absolute;left:50%;top:10px;transform:translateX(-50%);font-size:26px;color:#fff}.ctRadarCompass:after{content:'';position:absolute;left:50%;top:50%;width:3px;height:84px;background:#f1d36b;transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(var(--radar-rot,0deg));border-radius:4px}.ctRadarDeg{text-align:center;font-size:34px;font-weight:900}.ctRadarFlat{text-align:center;font-size:12px;opacity:.85}.ctRadarList{display:grid;gap:7px;margin-top:12px}.ctRadarItem{background:#ffffff12;border:1px solid #ffffff2d;border-radius:12px;padding:10px}.ctRadarItem b{display:block}.ctRadarAway{color:#f0c98b;font-size:11px}.ctRadarClose{background:#fff;color:#173f2b}.ctRadarHint{text-align:center;font-size:11px;opacity:.78;margin:6px 0 0}
+      .ctRadarDialog{background:#102117;color:#fff}.ctRadarStage{position:relative;height:290px;border-radius:16px;overflow:hidden;background:#07110c;margin:10px 0 8px}.ctRadarVideo{width:100%;height:100%;object-fit:cover;display:block;opacity:.72}.ctRadarStage .ctRadarCompass{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;background:radial-gradient(circle,#214c3277,#10211755 68%)}.ctRadarCameraMsg{position:absolute;left:10px;right:10px;bottom:8px;text-align:center;background:#0009;padding:6px 8px;border-radius:10px;font-size:11px}.ctRadarCompass{width:220px;height:220px;border-radius:50%;margin:12px auto;border:3px solid #ffffff88;position:relative;background:radial-gradient(circle,#214c32,#102117 68%)}.ctRadarCompass:before{content:'▲';position:absolute;left:50%;top:10px;transform:translateX(-50%);font-size:26px;color:#fff}.ctRadarCompass:after{content:'';position:absolute;left:50%;top:50%;width:3px;height:84px;background:#f1d36b;transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(var(--radar-rot,0deg));border-radius:4px}.ctRadarDeg{text-align:center;font-size:34px;font-weight:900}.ctRadarFlat{text-align:center;font-size:12px;opacity:.85}.ctRadarList{display:grid;gap:7px;margin-top:12px}.ctRadarItem{background:#ffffff12;border:1px solid #ffffff2d;border-radius:12px;padding:10px}.ctRadarItem b{display:block}.ctRadarAway{color:#f0c98b;font-size:11px}.ctRadarClose{background:#fff;color:#173f2b}.ctRadarHint{text-align:center;font-size:11px;opacity:.78;margin:6px 0 0}
       @media(max-width:520px){.ct661Actions{grid-template-columns:1fr 1fr}.ct661Actions button:last-child{grid-column:1/-1}.ct661Grid{grid-template-columns:1fr}.ct661Grid .full{grid-column:1}.ctRadarCompass{width:190px;height:190px}}
     `;document.head.appendChild(s);
   }
@@ -31,5 +32,4 @@
     const page=q('page-map');if(!page||q('ct661Card'))return;
     const card=document.createElement('div');card.id='ct661Card';card.className='card ct661';
     card.innerHTML=`<div class="sectionHead"><div><h2 style="margin-bottom:2px">🧭 Modalità e territorio</h2><div class="muted">v${FIX_VER} · controlli indipendenti dalla mappa</div></div><span id="ct661ModePill" class="pill soft">Caccia</span></div>
-      <div class="ctModeRow"><button id="ctModeHunt" class="ctModeBtn" type="button">🕊 Caccia</button><button id="ctModeMush" class="ctModeBtn" type="button">🍄 Funghi</button></div>
-      <div class="ct661Grid"><div><label>Regione</label><select id="ctR
+      <div class="ctModeRow"><button id=
