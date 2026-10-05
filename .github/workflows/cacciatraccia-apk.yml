@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'cacciatraccia/**'
+      - 'cacciatraccia/android-wrapper/**'
       - '.github/workflows/cacciatraccia-apk.yml'
 
 jobs:
