@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia 6.4.7 Play
+name: Build Passione Funghi e Caccia 6.4.8 Play
 
 on:
   workflow_dispatch:
@@ -31,13 +31,13 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Validate v6.4.7 web app and Play rules
+      - name: Validate v6.4.8 web app and Play rules
         working-directory: ${{ github.workspace }}
         run: |
           node - <<'NODE'
           const fs = require('fs');
           const core = Array.from({length:25},(_,i)=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
-          const parts = [...core, 'cacciatraccia/v6/part27.txt', 'cacciatraccia/v6/part28.txt', 'cacciatraccia/v6/part29.txt', 'cacciatraccia/v6/part30.txt', 'cacciatraccia/v6/part31.txt'];
+          const parts = [...core, 'cacciatraccia/v6/part27.txt', 'cacciatraccia/v6/part28.txt', 'cacciatraccia/v6/part29.txt', 'cacciatraccia/v6/part30.txt', 'cacciatraccia/v6/part31.txt', 'cacciatraccia/v6/part32.txt'];
           const missing = parts.filter(p=>!fs.existsSync(p));
           if (missing.length) throw new Error('Missing parts: '+missing.join(', '));
 
@@ -54,7 +54,7 @@ jobs:
           for (const id of ['quickMushroomBtn','quickSpeciesBtn','quickCarBtn','followBtn']) {
             if (!html.includes('id="'+id+'"')) throw new Error('Missing UI control '+id);
           }
-          if (!appLoader.includes('part27.txt?v=6.4.7') || !appLoader.includes('part28.txt?v=6.4.7') || !appLoader.includes('part29.txt?v=6.4.7') || !appLoader.includes('part30.txt?v=6.4.7') || !appLoader.includes('part31.txt?v=6.4.7')) throw new Error('v6.4.7 modules not loaded');
+          if (!appLoader.includes('part27.txt?v=6.4.8') || !appLoader.includes('part28.txt?v=6.4.8') || !appLoader.includes('part29.txt?v=6.4.8') || !appLoader.includes('part30.txt?v=6.4.8') || !appLoader.includes('part31.txt?v=6.4.8') || !appLoader.includes('part32.txt?v=6.4.8')) throw new Error('v6.4.8 modules not loaded');
           if (!play.includes('FREE_DAILY_EXTERNAL_SEARCHES=5')) throw new Error('Free quota missing');
           if (!play.includes('Passione PRO')) throw new Error('PRO UI missing');
           if (!fs.existsSync('cacciatraccia/privacy.html')) throw new Error('Privacy page missing');
@@ -65,12 +65,13 @@ jobs:
           if (!gradle.includes('targetSdk = 36') || !gradle.includes('compileSdk = 36')) throw new Error('API 36 target missing');
           if (!fs.readFileSync('cacciatraccia/v6/part29.txt','utf8').includes('pfcHuntCompare')) throw new Error('Hunting weather compare button missing');
           if (!fs.readFileSync('cacciatraccia/v6/part31.txt','utf8').includes('Miglior punto adesso')) throw new Error('smart outing module missing');
+          if (!fs.readFileSync('cacciatraccia/v6/part32.txt','utf8').includes('Regione e ATC vengono rilevati insieme dal GPS')) throw new Error('6.4.8 calendar/protected-area hotfix missing');
           const terr=fs.readFileSync('cacciatraccia/v6/part28.txt','utf8');
           const radar=fs.readFileSync('cacciatraccia/v6/part24.txt','utf8');
           if (!terr.includes('pfcAreaMini') || !terr.includes('renderMiniAreaMap')) throw new Error('Protected-area in-app map missing');
           if (!terr.includes("cal.hidden=areaMode!=='hunt'")) throw new Error('Hunting calendar mode filter missing');
           if (!radar.includes('ctARFlatMode') || !radar.includes('telefono piatto')) throw new Error('Flat-phone radar mode missing');
-          if (!main.includes('?v=6407&tester=1')) throw new Error('Tester start URL missing');
+          if (!main.includes('?v=6408&tester=1')) throw new Error('Tester start URL missing');
           console.log('Web, quota, privacy, permissions and billing invariants: OK');
           NODE
 
@@ -85,10 +86,10 @@ jobs:
           test -f "$APK"
           test -f "$AAB"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/pfc-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6407' versionName='6.4.7'" /tmp/pfc-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.7-PLAY-UNSIGNED.apk
-          cp "$AAB" app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.7-PLAY-UNSIGNED.aab
-          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.7-badging.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6408' versionName='6.4.8'" /tmp/pfc-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.8-PLAY-UNSIGNED.apk
+          cp "$AAB" app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.8-PLAY-UNSIGNED.aab
+          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.8-badging.txt
 
       - name: Bundle signing tool
         run: |
@@ -98,11 +99,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.4.7-PLAY-build
+          name: Passione-Funghi-e-Caccia-v6.4.8-PLAY-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.7-PLAY-UNSIGNED.apk
-            cacciatraccia/android-wrapper/app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.7-PLAY-UNSIGNED.aab
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.7-badging.txt
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.8-PLAY-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/bundle/release/Passione-Funghi-e-Caccia-v6.4.8-PLAY-UNSIGNED.aab
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.4.8-badging.txt
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
             cacciatraccia/privacy.html
