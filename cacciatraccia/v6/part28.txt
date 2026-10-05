@@ -45,7 +45,7 @@
     detectBusy=true;lastDetectTry=Date.now();
     let pos=lastPos;
     if((!pos||force)&&navigator.geolocation){
-      try{pos=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),no,{enableHighAccuracy:true,timeout:12000,maximumAge:3000}))}catch(e){if(!lastPos){toast('GPS non disponibile: '+(e.message||''));return}pos=lastPos;}
+      try{pos=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),no,{enableHighAccuracy:true,timeout:12000,maximumAge:3000}))}catch(e){if(!lastPos){detectBusy=false;toast('GPS non disponibile: '+(e.message||''));return}pos=lastPos;}
     }
     if(!pos){detectBusy=false;return toast('Attiva il GPS per rilevare Regione e ATC');}
     if(q('ctGeoStatus'))q('ctGeoStatus').textContent='Rilevo Regione e provincia…';
