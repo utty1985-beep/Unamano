@@ -1,0 +1,60 @@
+name: Verify Passione Completa 6.6.0
+
+on:
+  push:
+    branches: [passione-completa-v6.6.0]
+    paths:
+      - 'cacciatraccia/**'
+      - '.github/workflows/passione-completa-v660.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cacciatraccia/android-wrapper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Validate loaded JavaScript
+        working-directory: ${{ github.workspace }}
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
+          const paths=[];
+          for(let i=0;i<25;i++) paths.push('cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
+          for(let i=25;i<=40;i++){
+            const name='part'+String(i).padStart(2,'0')+'.txt';
+            if(loader.includes(name)) paths.push('cacciatraccia/v6/'+name);
+          }
+          const missing=paths.filter(p=>!fs.existsSync(p));
+          if(missing.length) throw new Error('Missing loaded modules: '+missing.join(', '));
+          const src=paths.map(p=>fs.readFileSync(p,'utf8')).join('\n');
+          new Function(src);
+          if(!src.includes('ctARFlatMode') || !src.includes('telefono piatto')) throw new Error('Radar flat-phone code missing');
+          if(loader.includes('part27.txt')) throw new Error('Free/PRO blocking module must not be loaded in tester build');
+          console.log('Loaded modules:',paths.join(', '));
+          console.log('Syntax and no-block checks: OK');
+          NODE
+
+      - name: Build APK
+        run: gradle --no-daemon :app:assembleRelease --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: passione-completa-v6.6.0-current
+          path: cacciatraccia/android-wrapper/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 7
