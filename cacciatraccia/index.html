@@ -49,12 +49,12 @@
       <button id="quickTrackBtn" class="quickAction"><b>🔴</b><span>Camminata</span></button>
       <button id="quickCarBtn" class="quickAction"><b>🚗</b><span>Segna auto</span></button>
     </div>
-    <div class="hint">“Salva punto” registra subito la posizione GPS attuale. Poi tocca il punto salvato sulla mappa per aggiungere uccelli o funghi trovati, vento, giorno, note e foto. Puoi ruotare la mappa con due dita oppure con ↶ ↷.</div>
+    <div class="hint">Sposta la mappa o tocca il punto desiderato, poi premi “Salva punto”: verrà salvata la posizione scelta sulla mappa, non la tua posizione GPS. Il GPS viene usato solo quando premi i comandi dedicati alla tua posizione.</div>
 
     <div id="selectedCard" class="card selected hidden">
       <div class="sectionHead"><div><h2 id="selectedTitle">Punto selezionato</h2><div id="selectedCoords" class="muted"></div></div><button id="clearSelectedBtn" class="iconBtn">✕</button></div>
       <div class="actionGrid">
-        <button id="savePointBtn" class="primary">📌 Salva posizione attuale</button>
+        <button id="savePointBtn" class="primary">📌 Salva punto selezionato</button>
         <button id="navigateBtn" class="secondary">▶ Partenza</button>
         <button id="shareSelectedBtn" class="secondary">↗ Condividi</button>
         <button id="weatherRefreshBtn" class="secondary">🌦 Meteo</button>
@@ -155,6 +155,6 @@
 </div></div>
 
 <div id="toast" class="toast" role="status"></div>
-<script type="module" src="app-loader.js?v=6.6.17-gpsfix"></script>
+<script type="module" src="app-loader.js?v=6.6.19-map-point"></script>
 </body>
 </html>
