@@ -1,7 +1,7 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
 const experimental=requestedVersion==='6611';
 const gpsFixTester=requestedVersion==='6600';
-const assetVersion=experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.18-gpsfix':'6.5.2-r6');
+const assetVersion=experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7');
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const enhancements=[27,28,29,30,32,33,34].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const radar=`./v6/part35.txt?v=${assetVersion}`;
