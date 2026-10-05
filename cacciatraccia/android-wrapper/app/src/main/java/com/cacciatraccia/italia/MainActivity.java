@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
 
     private static final String APP_HOST = "utty1985-beep.github.io";
     private static final String APP_PATH = "/Unamano/cacciatraccia/";
-    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6408&tester=1";
+    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6409&tester=1";
     private static final String PRIVACY_URL = "https://" + APP_HOST + APP_PATH + "privacy.html";
     private static final String PRO_PRODUCT_ID = "passione_pro_annuale";
     private static final int FREE_DAILY_EXTERNAL_SEARCHES = 5;
@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             s.setSafeBrowsingEnabled(true);
         }
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.4.8");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.4.9");
 
         webView.addJavascriptInterface(new NativeBridge(), "PassioneNative");
 
@@ -192,15 +192,15 @@ public class MainActivity extends Activity {
 
         initBilling();
 
-        boolean first648 = !getSharedPreferences("pfc_release_state", MODE_PRIVATE)
-                .getBoolean("web_648_loaded", false);
-        if (first648) {
+        boolean first649 = !getSharedPreferences("pfc_release_state", MODE_PRIVATE)
+                .getBoolean("web_649_loaded", false);
+        if (first649) {
             webView.clearCache(true);
             getSharedPreferences("pfc_release_state", MODE_PRIVATE)
-                    .edit().putBoolean("web_648_loaded", true).apply();
+                    .edit().putBoolean("web_649_loaded", true).apply();
         }
 
-        if (!first648 && state != null && webView.restoreState(state) != null) {
+        if (!first649 && state != null && webView.restoreState(state) != null) {
             String saved = state.getString("cameraUri");
             if (saved != null) cameraUri = Uri.parse(saved);
         } else {
