@@ -23,7 +23,7 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const core=[...Array.from({length:25},(_,i)=>i)];
-          const fixes=[27,28,29,30,32,33];
+          const fixes=[27,28,29,30,32,33,34];
           const read=i=>fs.readFileSync('cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt','utf8');
           const stableSrc=core.map(read).join('');
           const testerSrc=[...core,...fixes].map(read).join('');
@@ -32,12 +32,12 @@ jobs:
           const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
           if(!loader.includes("requestedVersion==='6611'")) throw new Error('Tester 6611 routing missing');
           if(!loader.includes("experimental?")) throw new Error('Tester/stable routing missing');
-          if(!loader.includes("experimental?'6.6.2-test1':'6.5.2-r5'")) throw new Error('Stable/tester asset versions mismatch');
-          if(!loader.includes("experimental?[27,28,29,30,32,33]")) throw new Error('Stable track must not load tester fixes by default');
+          if(!loader.includes("experimental?'6.6.3-test2':'6.5.2-r5'")) throw new Error('Stable/tester asset versions mismatch');
+          if(!loader.includes("experimental?[27,28,29,30,32,33,34]")) throw new Error('Stable track must not load tester fixes by default');
           for(const i of fixes){if(!loader.includes(String(i)))throw new Error('Tester loader missing fix '+i)}
           for(const forbidden of ['part25.txt','part26.txt','part31.txt']){if(loader.includes(forbidden))throw new Error('Unwanted module loaded: '+forbidden)}
           const sw=fs.readFileSync('cacciatraccia/sw.js','utf8');new Function(sw);
           if(!sw.includes('STABLE_CORE')||!sw.includes('ACTIVE_CORE'))throw new Error('Dual offline cache missing');
           JSON.parse(fs.readFileSync('cacciatraccia/data/normativa-italia.json','utf8'));
-          console.log('PASS: stable 6.5.2 is default; tester blocco 1 (6.6.2) isolated behind ?v=6611; syntax/order/data OK');
+          console.log('PASS: stable 6.5.2 is default; tester blocco 2 (6.6.3) isolated behind ?v=6611; syntax/order/data OK');
           NODE
