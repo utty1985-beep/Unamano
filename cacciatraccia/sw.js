@@ -1,7 +1,7 @@
-const CACHE='passione-funghi-caccia-v6-6-4';
-const CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.4`)];
-const FIXES=[27,28,29,30,32,33,34,35].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.4`);
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.6.4','./manifest.webmanifest','./icon.svg',...CORE,...FIXES];
+const CACHE='passione-funghi-caccia-v6-6-5';
+const CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.5`)];
+const FIXES=[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.5`);
+const SHELL=['./','./index.html','./data/normativa-italia.json?v=6.6.5','./styles.css?v=4.1.2','./app-loader.js?v=6.6.5','./manifest.webmanifest','./icon.svg',...CORE,...FIXES];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
