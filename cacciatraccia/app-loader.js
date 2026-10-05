@@ -1,6 +1,6 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
 const experimental=requestedVersion==='6611';
-const assetVersion=experimental?'6.6.4-test4':'6.5.2-r5';
+const assetVersion=experimental?'6.6.4-test5-lazy':'6.5.2-r5';
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const enhancements=[27,28,29,30,32,33,34].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const radar=`./v6/part35.txt?v=${assetVersion}`;
@@ -58,19 +58,39 @@ try{
       try{
         const extraSrc=await loadGroup(enhancements,'funzioni tester',4);
         new Function(extraSrc)();
-        if(pill)pill.textContent='● tester pronta · attivo radar…';
-
-        // Radar 6.6.4 separato: non può più rallentare o bloccare l'avvio iniziale.
-        runLater(async()=>{
-          try{
-            const radarSrc=await fetchPart(radar);
-            new Function(radarSrc)();
-            if(pill)pill.textContent='● tester 6.6.4 pronta';
-          }catch(e){
-            console.warn('Radar tester non caricato',e);
-            if(pill)pill.textContent='● tester pronta · radar da ricaricare';
-          }
-        },350);
+        // Il radar NON viene più caricato in automatico.
+        // Viene scaricato e attivato soltanto quando l'utente preme "Radar punti".
+        const radarBtn=document.getElementById('ctRadarBtn');
+        if(pill)pill.textContent='● tester 6.6.3 pronta · radar su richiesta';
+        if(radarBtn){
+          let radarLoading=false;
+          const lazyRadar=async()=>{
+            if(radarLoading)return;
+            radarLoading=true;
+            radarBtn.disabled=true;
+            const oldLabel=radarBtn.textContent;
+            radarBtn.textContent='📡 Carico radar…';
+            try{
+              const radarSrc=await fetchPart(radar);
+              new Function(radarSrc)();
+              radarBtn.disabled=false;
+              radarBtn.textContent=oldLabel;
+              radarLoading=false;
+              if(pill)pill.textContent='● tester 6.6.4 pronta';
+              // part35 sostituisce onclick in modo sincrono; rilancio il click una sola volta.
+              if(radarBtn.onclick!==lazyRadar)radarBtn.click();
+              else throw new Error('radar non collegato');
+            }catch(e){
+              console.warn('Radar tester non caricato',e);
+              radarLoading=false;
+              radarBtn.disabled=false;
+              radarBtn.textContent=oldLabel;
+              radarBtn.onclick=lazyRadar;
+              if(pill)pill.textContent='● tester pronta · radar non caricato';
+            }
+          };
+          radarBtn.onclick=lazyRadar;
+        }
       }catch(e){
         console.warn('Funzioni tester non caricate',e);
         if(pill)pill.textContent='● base stabile attiva · extra non caricati';
