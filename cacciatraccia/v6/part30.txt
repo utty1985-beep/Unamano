@@ -1,0 +1,77 @@
+// V6.6.0 - aggiornamento dinamico normative Italia
+(function(){
+'use strict';
+const DATA_URL='./data/normativa-italia.json?v=6.6.0';
+const CACHE_KEY='pfc-normativa-italia-cache-v1';
+const CHECK_KEY='pfc-normativa-last-check-v1';
+const CHECK_EVERY=6*60*60*1000;
+let dataset=null,lastStatus='';
+
+function addNormStyles(){
+ if(document.getElementById('pfcNormCss'))return;
+ const s=document.createElement('style');s.id='pfcNormCss';s.textContent=`
+ .pfcNormStatus{margin:8px 0 0;border:1px solid #d8ddd5;border-radius:12px;padding:9px 10px;background:#fbfcf8;font-size:11px;line-height:1.4}.pfcNormStatus.good{background:#eef8f0;border-color:#b9d8c0}.pfcNormStatus.warn{background:#fff7e6;border-color:#e2c47a}.pfcNormStatus.bad{background:#fff0ef;border-color:#dfa09a}
+ .pfcNormRow{display:flex;align-items:center;justify-content:space-between;gap:8px}.pfcNormRow b{font-size:12px}.pfcNormMeta{color:#687069;font-size:10px;margin-top:3px}.pfcNormBtn{margin-top:7px;width:100%}
+ `;document.head.appendChild(s);
+}
+function ageDays(d){if(!d)return Infinity;const t=new Date(d+'T12:00:00').getTime();return Math.max(0,(Date.now()-t)/86400000)}
+function currentRegion(){try{return window.PFCTerritory?.getRegion?.()||''}catch{return ''}}
+function currentRule(){
+ const r=currentRegion(),prov=String(window.PFCTerritory?.getProvince?.()||'').toLowerCase();
+ const k=prov.includes('bolzano')||prov.includes('bozen')?'Provincia autonoma di Bolzano':prov.includes('trento')?'Provincia autonoma di Trento':r;
+ return dataset?.mushrooms?.[k]||null;
+}
+function ensureStatusBox(){
+ const page=document.getElementById('page-protected');if(!page||document.getElementById('pfcNormStatus'))return;
+ const card=[...page.querySelectorAll('.card')].find(x=>x.textContent.includes('Normativa funghi'));
+ if(!card)return;
+ const d=document.createElement('div');d.id='pfcNormStatus';d.className='pfcNormStatus';d.innerHTML='<div class="pfcNormRow"><b>🔄 Normative online</b><span>inizializzazione…</span></div><div class="pfcNormMeta">L’app usa dati locali e controlla una versione aggiornata online.</div><button id="pfcNormRefresh" class="secondary pfcNormBtn">Aggiorna normative ora</button>';
+ card.appendChild(d);document.getElementById('pfcNormRefresh').onclick=()=>refreshNorms(true);
+}
+function renderStatus(){
+ const box=document.getElementById('pfcNormStatus');if(!box)return;
+ const r=currentRule(),updated=dataset?.meta?.updatedAt||'',days=ageDays(updated),changed=!!r?.sourceChanged,checked=r?.checkedAt||updated;
+ let cls='good',title='✓ Normative caricate',detail='Dataset aggiornato '+(updated||'—');
+ if(changed){cls='bad';title='⚠️ Fonte ufficiale modificata';detail='La fonte della tua zona è cambiata: verifica il testo ufficiale prima di affidarti alla sintesi.'}
+ else if(days>45){cls='warn';title='⚠️ Verifica normativa consigliata';detail='Il dataset non viene aggiornato da '+Math.floor(days)+' giorni.'}
+ else if(lastStatus==='offline'){cls='warn';title='📴 Uso copia locale';detail='Senza rete mostro l’ultima versione salvata sul telefono.'}
+ box.className='pfcNormStatus '+cls;
+ box.innerHTML='<div class="pfcNormRow"><b>'+title+'</b><span>'+esc(currentRegion()||'Italia')+'</span></div><div class="pfcNormMeta">'+esc(detail)+(checked?' · controllo '+esc(checked):'')+'</div><button id="pfcNormRefresh" class="secondary pfcNormBtn">Aggiorna normative ora</button>';
+ document.getElementById('pfcNormRefresh').onclick=()=>refreshNorms(true);
+}
+function apply(ds,saveIt=true){
+ if(!ds||typeof ds!=='object'||!ds.mushrooms)return false;dataset=ds;
+ try{window.PFCTerritory?.applyRules?.(ds.mushrooms)}catch{}
+ if(saveIt)try{localStorage.setItem(CACHE_KEY,JSON.stringify(ds))}catch{}
+ renderStatus();return true;
+}
+function loadCached(){
+ try{const x=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(x)apply(x,false)}catch{}
+}
+async function refreshNorms(force=false){
+ ensureStatusBox();
+ if(!navigator.onLine){lastStatus='offline';renderStatus();return false}
+ const prev=Number(localStorage.getItem(CHECK_KEY)||0);
+ if(!force&&Date.now()-prev<CHECK_EVERY&&dataset){renderStatus();return true}
+ const b=document.getElementById('pfcNormRefresh');if(b){b.disabled=true;b.textContent='Controllo fonti…'}
+ try{
+  const r=await fetch(DATA_URL+'&t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);
+  const j=await r.json();if(!apply(j,true))throw Error('Dataset non valido');
+  localStorage.setItem(CHECK_KEY,String(Date.now()));lastStatus='online';
+  try{toast('Normative aggiornate')}catch{};return true;
+ }catch(e){lastStatus='offline';renderStatus();try{toast('Uso l’ultima normativa salvata')}catch{};return false}
+ finally{const x=document.getElementById('pfcNormRefresh');if(x){x.disabled=false;x.textContent='Aggiorna normative ora'}}
+}
+function patchTerritoryRender(){
+ const obs=new MutationObserver(()=>renderStatus());const p=document.getElementById('page-protected');if(p)obs.observe(p,{childList:true,subtree:true});
+}
+const prevBind=bind;
+bind=function(){
+ prevBind();
+ try{
+  addNormStyles();ensureStatusBox();loadCached();refreshNorms(false);patchTerritoryRender();
+  setInterval(()=>{try{refreshNorms(false)}catch(e){console.error('PFC norm refresh',e)}},CHECK_EVERY);
+ }catch(e){console.error('PFC normative init',e)}
+};
+window.PFCNormative={version:'6.6.0',refresh:refreshNorms,getDataset:()=>dataset};
+})();
