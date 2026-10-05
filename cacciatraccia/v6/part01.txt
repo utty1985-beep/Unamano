@@ -1,8 +1,25 @@
-  if(!window.L){ loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'); await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); }
-  if(!window.L) throw Error('Leaflet non disponibile');
+  const waitScript=(src,ms=5000)=>new Promise((ok,no)=>{
+    const s=document.createElement('script');let done=false;
+    const finish=(err)=>{if(done)return;done=true;clearTimeout(tm);s.onload=null;s.onerror=null;if(err){try{s.remove()}catch{};no(err)}else ok()};
+    const tm=setTimeout(()=>finish(new Error('timeout '+src)),ms);
+    s.src=src;s.async=true;s.onload=()=>finish();s.onerror=()=>finish(new Error('errore caricamento '+src));document.head.appendChild(s);
+  });
+  if(!window.L){
+    loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
+    const cdn=[
+      'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    ];
+    let lastErr=null;
+    for(const src of cdn){
+      try{await waitScript(src,5000);if(window.L)break}catch(e){lastErr=e;console.warn('Leaflet CDN',src,e)}
+    }
+    if(!window.L)throw Error('Leaflet non disponibile'+(lastErr?' · controlla la rete':''));
+  }
   try {
     loadCss('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.css');
-    await loadScript('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js');
+    await waitScript('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js',4500);
   } catch(e) { console.warn('Rotazione avanzata non caricata', e); }
 }
 function icon(type){ const color=type==='Avvistamento'?'#a9342a':type==='Passaggio'?'#80582b':type==='Parcheggio'?'#315d80':'#2f6c42'; return L.divIcon({className:'',html:`<div style="width:25px;height:25px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:3px solid #fff;box-shadow:0 2px 6px #0006"></div>`,iconSize:[28,34],iconAnchor:[14,30]}); }
