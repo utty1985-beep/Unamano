@@ -1,5 +1,7 @@
-const CACHE='passione-funghi-caccia-v6-5-2-stable-recovery';
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.5.2','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.5.2`)];
+const CACHE='passione-funghi-caccia-v6-6-1';
+const CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.1`)];
+const FIXES=[27,28,29,30,31].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.1`);
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.6.1','./manifest.webmanifest','./icon.svg',...CORE,...FIXES];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
