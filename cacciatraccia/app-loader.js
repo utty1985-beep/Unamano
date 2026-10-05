@@ -1,7 +1,8 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
-const experimental=requestedVersion==='6611';
-const gpsFixTester=requestedVersion==='6600';
-const assetVersion=experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7');
+const fullFixTester=requestedVersion==='6620';
+const experimental=requestedVersion==='6611'||fullFixTester;
+const gpsFixTester=requestedVersion==='6600'||fullFixTester;
+const assetVersion=fullFixTester?'6.6.20-fullfix':(experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7'));
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const enhancements=[27,28,29,30,32,33,34].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const radar=`./v6/part35.txt?v=${assetVersion}`;
@@ -170,6 +171,24 @@ try{
 })();
 `;
   }
+  if(fullFixTester){
+    const startupOld='ensureModalActions(); await ensureLeaflet(); bind(); initMap();';
+    const startupNew='ensureModalActions(); await ensureLeaflet(); initMap(); bind();';
+    if(!coreSrc.includes(startupOld))throw new Error('Fix avvio mappa non applicabile');
+    coreSrc=coreSrc.replace(startupOld,startupNew);
+
+    const oldDefaultTime='const now=new Date();now.setMinutes(0,0,0);now.setHours(now.getHours()+1);';
+    if(coreSrc.includes(oldDefaultTime))coreSrc=coreSrc.replace(oldDefaultTime,'const now=new Date();now.setSeconds(0,0);');
+
+    const windFn=/function pointBaseWind\(p\)\{[\s\S]*?return \{deg,speed\};\n  \}/;
+    if(!windFn.test(coreSrc))throw new Error('Fix meteo base non applicabile');
+    coreSrc=coreSrc.replace(windFn,"function pointBaseWind(p){\n    const num=v=>(v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))?Number(v):null;\n    let deg=num(p.windDeg);if(deg==null)deg=num(p.weather?.windDeg);\n    if(deg==null){\n      const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];\n      const n=String(p.windName||p.weather?.windName||'').replace(/\\s*\\(.*?\\)\\s*/g,'').trim(),ix=names.indexOf(n);\n      if(ix>=0)deg=ix*45;\n    }\n    const speed=num(p.windSpeed)??num(p.weather?.windSpeed);\n    const gust=num(p.windGust)??num(p.weather?.windGust);\n    const rain=num(p.weather?.rainProbability);\n    return {deg,speed,gust,rain};\n  }");
+
+    const compareOld="if(base.deg==null||base.speed==null){reason='Manca il vento di riferimento salvato';}\n        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed);good=dd<=45&&ds<=10&&f.rain<=55;reason=`Δ direzione ${Math.round(dd)}° · Δ velocità ${Math.round(ds)} km/h`;}";
+    const compareNew="if(base.deg==null||base.speed==null){reason='Mancano dati meteo di riferimento salvati';}\n        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed),checks=[dd<=45,ds<=10],parts=[`Δ direzione ${Math.round(dd)}°`,`Δ velocità ${Math.round(ds)} km/h`];if(base.gust!=null&&Number.isFinite(+f.gust)){const dg=Math.abs(base.gust-(+f.gust));checks.push(dg<=15);parts.push(`Δ raffiche ${Math.round(dg)} km/h`)}if(base.rain!=null&&Number.isFinite(+f.rain)){const dr=Math.abs(base.rain-(+f.rain));checks.push(dr<=25);parts.push(`Δ pioggia ${Math.round(dr)}%`)}good=checks.every(Boolean);reason=parts.join(' · ');}";
+    if(!coreSrc.includes(compareOld))throw new Error('Fix confronto condizioni non applicabile');
+    coreSrc=coreSrc.replace(compareOld,compareNew);
+  }
   new Function(coreSrc)();
 
   if(!experimental){
@@ -185,7 +204,7 @@ try{
         // Il radar NON viene più caricato in automatico.
         // Viene scaricato e attivato soltanto quando l'utente preme "Radar punti".
         const radarBtn=document.getElementById('ctRadarBtn');
-        if(pill)pill.textContent='● tester 6.6.3 pronta · radar su richiesta';
+        if(pill)pill.textContent=fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta';
         if(radarBtn){
           let radarLoading=false;
           const lazyRadar=async()=>{
@@ -200,7 +219,7 @@ try{
               radarBtn.disabled=false;
               radarBtn.textContent=oldLabel;
               radarLoading=false;
-              if(pill)pill.textContent='● tester 6.6.4 pronta';
+              if(pill)pill.textContent=fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta';
               // part35 sostituisce onclick in modo sincrono; rilancio il click una sola volta.
               if(radarBtn.onclick!==lazyRadar)radarBtn.click();
               else throw new Error('radar non collegato');
