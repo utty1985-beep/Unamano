@@ -1,13 +1,13 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
 const experimental=requestedVersion==='6611';
-const assetVersion=experimental?'6.6.10':'6.5.2-r5';
+const assetVersion=experimental?'6.6.2-test1':'6.5.2-r5';
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
-const fixes=experimental?[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`):[];
+const fixes=experimental?[27,28,29,30,32,33].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`):[];
 const parts=[...core,...fixes];
 function bootError(m){console.error(m);const pill=document.getElementById('netPill');if(pill)pill.textContent='● errore avvio';const map=document.getElementById('map');if(map)map.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore avvio: ${String(m)}</div>`}
 try{
   const pill=document.getElementById('netPill');
-  if(pill)pill.textContent=experimental?'● tester 6.6.10…':'● stabile 6.5.2…';
+  if(pill)pill.textContent=experimental?'● tester blocco 1…':'● stabile 6.5.2…';
   const fetchPart=async p=>{
     const ac=new AbortController();
     const tm=setTimeout(()=>ac.abort(),12000);
