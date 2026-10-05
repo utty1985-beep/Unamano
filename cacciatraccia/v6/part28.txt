@@ -1,0 +1,49 @@
+egion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option value="${r}">${r}</option>`).join('')}</select></div><div><label>ATC / provincia</label><div id="ctAtcStatus" class="ct661Status">Da rilevare</div></div><div class="full ct661Status" id="ctGeoStatus">Premi “Rileva territorio” oppure attiva il GPS.</div></div>
+      <div class="ct661Actions"><button id="ctDetectTerritory" class="secondary" type="button">◎ Rileva territorio</button><button id="ctProtectedBtn" class="secondary" type="button">🛡 Aree protette</button><button id="ctRadarBtn" class="secondary" type="button">📡 Radar punti</button></div>
+      <button id="ctCompareMainBtn" class="ctCompareHero" type="button">❓ CONFRONTA METEO DEI PUNTI SEGNATI</button>`;
+    const first=page.querySelector('.searchRow')||page.firstElementChild;page.insertBefore(card,first);
+    q('ctRegion').value=cfg.region||'auto';
+    q('ctModeHunt').onclick=()=>setMode('hunt');q('ctModeMush').onclick=()=>setMode('mushroom');
+    q('ctRegion').onchange=e=>{cfg.region=e.target.value;persist();renderTerritory();if(cfg.region==='auto')detectTerritory(true)};
+    q('ctDetectTerritory').onclick=()=>detectTerritory(true);q('ctProtectedBtn').onclick=openProtected;q('ctRadarBtn').onclick=openRadar;
+    q('ctCompareMainBtn').onclick=()=>{const b=q('ctConditionBtn');if(b)b.click();else toast('Confronto meteo in caricamento: riprova tra un istante')};
+    ensureCalendarCard();renderTerritory();applyMode();
+  }
+
+  function ensureCalendarCard(){
+    const page=q('page-map');if(!page||q('ctCalendarCard'))return;
+    const card=document.createElement('div');card.id='ctCalendarCard';card.className='card ctCalendar';
+    card.innerHTML=`<div class="sectionHead"><div><h2 style="margin-bottom:2px">📅 Calendario venatorio</h2><div id="ctCalendarSub" class="muted">Fonte regionale ufficiale</div></div><span class="pill soft">Caccia</span></div><div id="ctCalendarText" style="font-size:13px">Seleziona o rileva la Regione.</div><div class="actionGrid"><button id="ctCalendarOpen" class="secondary" type="button">Apri fonte ufficiale</button><button id="ctAtcOpen" class="secondary" type="button">Apri ATC / cartografia</button></div>`;
+    const anchor=q('ct661Card');anchor?.insertAdjacentElement('afterend',card);
+    q('ctCalendarOpen').onclick=()=>openOfficial('calendar');q('ctAtcOpen').onclick=()=>openOfficial('atc');
+  }
+
+  function regionNow(){return cfg.region==='auto'?(cfg.detectedRegion||''):cfg.region;}
+  function pugliaAtc(province){
+    const p=String(province||'').toLowerCase();
+    if(p.includes('foggia'))return 'ATC Foggia';
+    if(p.includes('barletta')||p.includes('andria')||p.includes('trani')||p==='bt')return 'ATC BAT';
+    if(p.includes('bari'))return 'ATC Bari';
+    if(p.includes('brindisi'))return 'ATC Brindisi';
+    if(p.includes('taranto'))return 'ATC Taranto';
+    if(p.includes('lecce'))return 'ATC Lecce';
+    return province?`ATC da verificare · ${province}`:'ATC da verificare';
+  }
+  function renderTerritory(){
+    const region=regionNow();
+    if(q('ctRegion')&&q('ctRegion').value!==cfg.region)q('ctRegion').value=cfg.region;
+    const atc=region==='Puglia'?(cfg.atc||pugliaAtc(cfg.province)):(cfg.province?`Provincia: ${cfg.province}`:'Da rilevare');
+    if(q('ctAtcStatus'))q('ctAtcStatus').innerHTML=region?`<b>${esc(atc)}</b><br><span class="muted">${esc(region)}</span>`:'Da rilevare';
+    if(q('ctGeoStatus'))q('ctGeoStatus').textContent=region?`${cfg.region==='auto'?'GPS automatico':'Regione manuale'} · ${region}${cfg.province?' · '+cfg.province:''}`:'Territorio non ancora rilevato';
+    if(q('ctCalendarText'))q('ctCalendarText').textContent=region==='Puglia'?'Puglia · stagione venatoria 2026/2027 · calendario regionale approvato con DGR 995 del 17/07/2026.':(region?`${region} · usa il collegamento per consultare il calendario regionale aggiornato.`:'Seleziona o rileva la Regione.');
+  }
+
+  async function detectTerritory(force=false){
+    let pos=lastPos;
+    if((!pos||force)&&navigator.geolocation){
+      try{pos=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),no,{enableHighAccuracy:true,timeout:12000,maximumAge:3000}))}catch(e){if(!lastPos){toast('GPS non disponibile: '+(e.message||''));return}pos=lastPos;}
+    }
+    if(!pos)return toast('Attiva il GPS per rilevare Regione e ATC');
+    if(q('ctGeoStatus'))q('ctGeoStatus').textContent='Rilevo Regione e provincia…';
+    try{
+      const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${en
