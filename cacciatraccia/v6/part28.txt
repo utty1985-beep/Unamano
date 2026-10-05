@@ -1,4 +1,5 @@
-egion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option value="${r}">${r}</option>`).join('')}</select></div><div><label>ATC / provincia</label><div id="ctAtcStatus" class="ct661Status">Da rilevare</div></div><div class="full ct661Status" id="ctGeoStatus">Premi “Rileva territorio” oppure attiva il GPS.</div></div>
+"ctModeHunt" class="ctModeBtn" type="button">🕊 Caccia</button><button id="ctModeMush" class="ctModeBtn" type="button">🍄 Funghi</button></div>
+      <div class="ct661Grid"><div><label>Regione</label><select id="ctRegion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option value="${r}">${r}</option>`).join('')}</select></div><div><label>ATC / provincia</label><div id="ctAtcStatus" class="ct661Status">Da rilevare</div></div><div class="full ct661Status" id="ctGeoStatus">Premi “Rileva territorio” oppure attiva il GPS.</div></div>
       <div class="ct661Actions"><button id="ctDetectTerritory" class="secondary" type="button">◎ Rileva territorio</button><button id="ctProtectedBtn" class="secondary" type="button">🛡 Aree protette</button><button id="ctRadarBtn" class="secondary" type="button">📡 Radar punti</button></div>
       <button id="ctCompareMainBtn" class="ctCompareHero" type="button">❓ CONFRONTA METEO DEI PUNTI SEGNATI</button>`;
     const first=page.querySelector('.searchRow')||page.firstElementChild;page.insertBefore(card,first);
@@ -22,7 +23,7 @@ egion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option
   function pugliaAtc(province){
     const p=String(province||'').toLowerCase();
     if(p.includes('foggia'))return 'ATC Foggia';
-    if(p.includes('barletta')||p.includes('andria')||p.includes('trani')||p==='bt')return 'ATC BAT';
+    if(p.includes('barletta')||p.includes('andria')||p.includes('trani')||p==='bt')return 'ATC BAT · PFVR 2024-2029';
     if(p.includes('bari'))return 'ATC Bari';
     if(p.includes('brindisi'))return 'ATC Brindisi';
     if(p.includes('taranto'))return 'ATC Taranto';
@@ -39,11 +40,14 @@ egion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option
   }
 
   async function detectTerritory(force=false){
+    if(detectBusy)return;
+    if(!force&&Date.now()-lastDetectTry<60000)return;
+    detectBusy=true;lastDetectTry=Date.now();
     let pos=lastPos;
     if((!pos||force)&&navigator.geolocation){
       try{pos=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),no,{enableHighAccuracy:true,timeout:12000,maximumAge:3000}))}catch(e){if(!lastPos){toast('GPS non disponibile: '+(e.message||''));return}pos=lastPos;}
     }
-    if(!pos)return toast('Attiva il GPS per rilevare Regione e ATC');
+    if(!pos){detectBusy=false;return toast('Attiva il GPS per rilevare Regione e ATC');}
     if(q('ctGeoStatus'))q('ctGeoStatus').textContent='Rilevo Regione e provincia…';
     try{
-      const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${en
+      const u=`https://nominatim.openstreetmap.org/reverse?format
