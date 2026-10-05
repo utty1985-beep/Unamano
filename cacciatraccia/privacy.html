@@ -16,7 +16,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
 </style>
 </head>
 <body>
-<header><div><h1>🔐 Privacy Policy</h1><p>Passione Funghi e Caccia · versione 6.4.7</p></div></header>
+<header><div><h1>🔐 Privacy Policy</h1><p>Passione Funghi e Caccia · versione 6.4.0</p></div></header>
 <main>
 <section class="card">
 <h2>In breve</h2>
@@ -36,8 +36,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
 <section class="card">
 <h2>Posizione</h2>
 <p><span class="tag">Posizione approssimativa</span><span class="tag">Posizione precisa</span></p>
-<p>La posizione serve per mostrare dove ti trovi sulla mappa, salvare punti, ritrovare l'auto, registrare una camminata, calcolare distanze, ottenere meteo/vento, verificare le aree protette vicine e rilevare Regione/provincia/ATC. Non viene richiesta la posizione in background: il controllo delle aree protette resta attivo solo mentre la relativa pagina dell'app è in uso.</p>
-<p>Quando usi funzioni online, coordinate o area geografica possono essere inviate tramite HTTPS ai servizi necessari, per esempio Open-Meteo per meteo e vento, Nominatim/OpenStreetMap per ricerca e geocodifica, e OpenStreetMap Overpass API per interrogare i perimetri cartografici delle aree protette vicine.</p>
+<p>La posizione serve per mostrare dove ti trovi sulla mappa, salvare punti, ritrovare l'auto, registrare una camminata, calcolare distanze e ottenere meteo/vento sul punto scelto. Non viene richiesta la posizione in background.</p>
+<p>Quando usi funzioni online, coordinate o area geografica possono essere inviate tramite HTTPS ai servizi necessari, per esempio Open-Meteo per meteo e vento, Nominatim/OpenStreetMap per la ricerca di luoghi e servizi cartografici per le mappe.</p>
 </section>
 <section class="card">
 <h2>Fotocamera e foto</h2>
@@ -51,9 +51,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
 <ul>
 <li><b>GitHub Pages</b>, per distribuire il codice web dell'app;</li>
 <li><b>Open-Meteo</b>, per meteo e vento;</li>
-<li><b>OpenStreetMap / Nominatim</b>, per ricerca di luoghi, geocodifica inversa di Regione/provincia e dati cartografici;</li>
-<li><b>OpenStreetMap Overpass API</b>, per interrogare i perimetri delle aree protette vicine alla posizione GPS quando apri la funzione dedicata;</li>
-<li><b>Siti istituzionali di Regioni e Province autonome</b>, usati come riferimento per le sintesi normative e aperti direttamente solo quando l’utente sceglie di consultare la fonte ufficiale;</li>
+<li><b>OpenStreetMap / Nominatim</b>, per ricerca di luoghi e dati cartografici;</li>
 <li><b>Esri ArcGIS</b>, per alcune immagini e tessere cartografiche;</li>
 <li><b>jsDelivr</b>, per librerie tecniche necessarie all'interfaccia;</li>
 <li><b>Hugging Face / MushroomWiseAI</b>, solo per il riconoscimento fotografico richiesto dall'utente;</li>
@@ -64,11 +62,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
 </section>
 <section class="card">
 <h2>Piano Free e PRO</h2>
-<p>La versione Free consente fino a <b>5 ricerche verso servizi esterni al giorno</b>. Il conteggio giornaliero è salvato localmente sul dispositivo. Le coordinate inserite manualmente e le funzioni locali non consumano questo limite. I controlli di sicurezza/normativa “Aree protette” e “Calendario venatorio” non scalano la quota delle 5 ricerche.</p>
+<p>La versione Free consente fino a <b>5 ricerche verso servizi esterni al giorno</b>. Il conteggio giornaliero è salvato localmente sul dispositivo. Le coordinate inserite manualmente e le funzioni locali non consumano questo limite.</p>
 <p>PRO rimuove il limite e sblocca funzioni avanzate. Gli acquisti digitali sono gestiti da Google Play: l'app non riceve né conserva il numero della carta. Può ricevere da Google Play lo stato dell'abbonamento necessario per attivare PRO.</p>
 </section>
 <section class="card">
-<h2>Aggiornamento delle normative</h2><p>L’app scarica periodicamente un piccolo file <b>normativa-italia.json</b> pubblicato insieme all’app, con sintesi e riferimenti ufficiali. Il controllo non invia dati personali. Se una fonte ufficiale risulta modificata, l’app può segnalare che la sintesi deve essere ricontrollata invece di presentarla come certamente aggiornata. In assenza di rete resta disponibile l’ultima copia salvata.</p></section><section class="card"><h2>Sicurezza e conservazione</h2>
+<h2>Sicurezza e conservazione</h2>
 <ul>
 <li>Traffico di rete dell'app Android: solo HTTPS; il traffico in chiaro è disabilitato.</li>
 <li>Non vengono richiesti permessi generici di accesso all'intera memoria del telefono.</li>

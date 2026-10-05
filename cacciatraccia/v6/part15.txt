@@ -28,7 +28,7 @@
       const names=await caches.keys();
       await Promise.all(names.filter(n=>n.startsWith('cacciatraccia-')).map(n=>caches.delete(n)));
     }catch(e){console.warn('Aggiornamento cache',e)}
-    setTimeout(()=>{const q=new URLSearchParams();q.set('v','647');q.set('t',Date.now());if(new URL(location.href).searchParams.get('tester')==='1')q.set('tester','1');location.replace(location.pathname+'?'+q.toString())},350);
+    setTimeout(()=>location.replace(location.pathname+'?v=604&t='+Date.now()),350);
   }
   async function diagnostic(){
     const lines=[];
