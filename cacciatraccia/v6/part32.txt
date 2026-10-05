@@ -1,0 +1,22 @@
+eviceorientation',radarListener,true);renderRadar();
+  }
+  function closeRadar(){radarOpen=false;q('ctRadarModal')?.classList.remove('open');if(radarListener){window.removeEventListener('deviceorientationabsolute',radarListener,true);window.removeEventListener('deviceorientation',radarListener,true);radarListener=null}try{radarStream?.getTracks?.().forEach(t=>t.stop())}catch{}radarStream=null;const v=q('ctRadarVideo');if(v)v.srcObject=null;}
+  let lastTilt=null,lastRaw=null,lastAccepted=null;
+  function circularSmooth(prev,next,f=.22){if(prev==null)return next;let d=(((next-prev)+540)%360)-180;return clamp360(prev+d*f)}
+  function onOrientation(e){
+    if(!radarOpen)return;
+    const beta=Number(e.beta||0),gamma=Number(e.gamma||0),flat=Math.abs(beta)<=28&&Math.abs(gamma)<=28;
+    const raw=Number.isFinite(+e.webkitCompassHeading)?clamp360(+e.webkitCompassHeading):(Number.isFinite(+e.alpha)?clamp360(360-(+e.alpha)):null);
+    if(raw==null)return;
+    if(!flat){if(q('ctRadarFlat'))q('ctRadarFlat').textContent='📱 Rimetti il telefono piatto: direzione bloccata';lastTilt={beta,gamma};return;}
+    if(lastTilt&&lastRaw!=null){const tiltMove=Math.hypot(beta-lastTilt.beta,gamma-lastTilt.gamma),yawMove=diffAngle(raw,lastRaw);if(tiltMove>3.5&&yawMove<9){lastTilt={beta,gamma};lastRaw=raw;return;}}
+    lastTilt={beta,gamma};lastRaw=raw;lastAccepted=circularSmooth(lastAccepted,raw,.28);radarHeading=lastAccepted;
+    if(q('ctRadarFlat'))q('ctRadarFlat').textContent='✅ Telefono piatto · ruota a sinistra/destra';renderRadar();
+  }
+  function renderRadar(){
+    if(!radarOpen)return;const deg=q('ctRadarDeg'),comp=q('ctRadarCompass'),list=q('ctRadarList');if(!list)return;
+    if(radarHeading==null){deg.textContent='—°';list.innerHTML='<div class="ctRadarItem">Muovi lentamente il telefono a sinistra/destra per iniziare.</div>';return}
+    deg.textContent=Math.round(radarHeading)+'°';comp?.style.setProperty('--radar-rot',radarHeading+'deg');
+    const origin=lastPos,arr=(state.points||[]).map(p=>{const d=kmDist(origin,{lat:+p.lat,lng:+p.lng}),br=bearing(origin,{lat:+p.lat,lng:+p.lng});return{p,d,br,delta:diffAngle(br,radarHeading)}}).filter(x=>Number.isFinite(x.d)&&x.d<=10&&x.delta<=28).sort((a,b)=>a.d-b.d);
+    if(!arr.length){list.innerHTML='<div class="ctRadarItem"><b>Nessun punto in questa direzione</b><span>Ruota lentamente a sinistra o destra.</span></div>';return}
+    list.innerHTML=arr.slice(0,8).map(x=>{const prev=radarPrevDistances.get(x.p.
