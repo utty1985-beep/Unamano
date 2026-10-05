@@ -11,7 +11,7 @@
     layersBtn:'Apre la scelta tra mappa satellitare, stradale e livello Venti.',
     ctConditionBtn:'Controlla le condizioni previste sui tuoi appostamenti e le confronta con quelle salvate.',
     quickSightingBtn:'Salva rapidamente un avvistamento nella posizione in cui ti trovi.',
-    quickSaveHereBtn:'Salva un punto nella posizione GPS attuale.',
+    quickSaveHereBtn:'Fissa un punto nella posizione scelta sulla mappa. Se non hai toccato un punto preciso, usa il centro della mappa.',
     quickTrackBtn:'Apre la Camminata per registrare il percorso GPS della giornata.',
     quickCarBtn:'Memorizza dove hai lasciato l’auto.',
     savePointBtn:'Salva la posizione selezionata tra i tuoi punti.',
