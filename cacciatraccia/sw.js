@@ -1,8 +1,8 @@
-const CACHE='passione-funghi-caccia-v6-6-8';
-const ACTIVE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.8`)];
-const STABLE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.5.2-r3`)];
-const FIXES=[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.8`);
-const SHELL=['./','./index.html','./data/normativa-italia.json?v=6.6.8','./styles.css?v=4.1.2','./app-loader.js?v=6.6.8','./manifest.webmanifest','./icon.svg',...ACTIVE_CORE,...STABLE_CORE,...FIXES];
+const CACHE='passione-funghi-caccia-v6-6-9';
+const ACTIVE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.9`)];
+const STABLE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.5.2-r4`)];
+const FIXES=[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.9`);
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.6.9','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
