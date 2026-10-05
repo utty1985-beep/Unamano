@@ -1,0 +1,43 @@
+codeURIComponent(pos.lat)}&lon=${encodeURIComponent(pos.lng)}&zoom=10&addressdetails=1&accept-language=it`;
+      const r=await fetch(u,{headers:{'Accept':'application/json'},cache:'no-store'});if(!r.ok)throw Error('servizio territorio '+r.status);
+      const j=await r.json(),a=j.address||{};
+      const reg=a.state||a.region||'',prov=a.province||a.county||a.state_district||'';
+      cfg.detectedRegion=REGIONS.find(x=>x.toLowerCase()===String(reg).toLowerCase())||reg||cfg.detectedRegion;
+      cfg.province=String(prov||'').replace(/^Provincia di\s+/i,'').trim();
+      cfg.atc=cfg.detectedRegion==='Puglia'?pugliaAtc(cfg.province):'';persist();renderTerritory();
+    }catch(e){console.warn('Territorio',e);if(q('ctGeoStatus'))q('ctGeoStatus').textContent='GPS attivo · Regione non ottenuta dalla rete';}
+  }
+
+  function setMode(mode){cfg.mode=mode==='mushroom'?'mushroom':'hunt';persist();applyMode();}
+  function applyMode(){
+    const hunt=cfg.mode!=='mushroom';
+    q('ctModeHunt')?.classList.toggle('active',hunt);q('ctModeMush')?.classList.toggle('active',!hunt);
+    if(q('ct661ModePill'))q('ct661ModePill').textContent=hunt?'Caccia':'Funghi';
+    ['quickSightingBtn','ctConditionBtn','ctCompareMainBtn','ctCalendarCard','ctHuntDayBar','ctSightingCheck'].forEach(id=>{const e=q(id);if(e)e.style.display=hunt?'':'none'});
+    ['quickMushroomBtn','quickSpeciesBtn'].forEach(id=>{const e=q(id);if(e)e.style.display=hunt?'none':''});
+  }
+
+  function protectedModal(){
+    let m=q('ctProtectedModal');if(m)return m;
+    m=document.createElement('div');m.id='ctProtectedModal';m.className='modal';m.innerHTML=`<div class="dialog"><div class="sectionHead"><div><h2>🛡 Aree protette e cartografia</h2><div class="muted">La finestra non sostituisce la mappa: puoi chiuderla e continuare a usare tutti i comandi.</div></div><button id="ctProtectedClose" class="iconBtn">✕</button></div><div class="ctProtButtons"><button id="ctOfficialOverlay" class="primary" type="button">Mostra/nascondi strato ufficiale Puglia</button><button id="ctOsmOverlay" class="secondary" type="button">Ricrea aree protette visibili da OpenStreetMap</button><button id="ctOfficialPortal" class="secondary" type="button">Apri cartografia ufficiale Regione</button><button id="ctProtectedClear" class="danger" type="button">Togli tutti gli strati protetti</button></div><div id="ctProtectedStatus" class="ctProtNote">Lo strato ufficiale usa il WMS del SIT Puglia quando la Regione è Puglia. La cartografia ricreata usa i confini pubblici OpenStreetMap presenti nell’area visibile.</div></div>`;document.body.appendChild(m);
+    q('ctProtectedClose').onclick=()=>m.classList.remove('open');m.onclick=e=>{if(e.target===m)m.classList.remove('open')};
+    q('ctOfficialOverlay').onclick=toggleOfficialProtected;q('ctOsmOverlay').onclick=loadOsmProtected;q('ctOfficialPortal').onclick=()=>openOfficial('map');q('ctProtectedClear').onclick=clearProtected;
+    return m;
+  }
+  function openProtected(){protectedModal().classList.add('open');}
+  function clearProtected(){
+    try{if(protectedWmsLayer){map.removeLayer(protectedWmsLayer);protectedWmsLayer=null}}catch{}
+    try{if(protectedOsmLayer){map.removeLayer(protectedOsmLayer);protectedOsmLayer=null}}catch{}
+    if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Strati protetti rimossi. La mappa resta completamente utilizzabile.';
+  }
+  function toggleOfficialProtected(){
+    if(!map||!window.L)return toast('Mappa non pronta');
+    if(regionNow()!=='Puglia')return toast('Strato WMS integrato disponibile per Puglia; usa “Apri cartografia ufficiale Regione” per le altre regioni');
+    try{
+      if(protectedWmsLayer){map.removeLayer(protectedWmsLayer);protectedWmsLayer=null;if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Strato ufficiale Puglia nascosto.';return}
+      protectedWmsLayer=L.tileLayer.wms('https://webapps.sit.puglia.it/arcgis/services/Operationals/AreeProtetteReteNatura2000/MapServer/WMSServer',{layers:'0,1,2,3,4,5,6,7,8',format:'image/png',transparent:true,version:'1.3.0',attribution:'SIT Regione Puglia',opacity:.62});
+      protectedWmsLayer.on?.('tileerror',()=>{if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Il server WMS ufficiale non ha restituito una tessera. Puoi usare la cartografia ricreata oppure aprire il portale ufficiale.'});
+      protectedWmsLayer.addTo(map);if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Strato ufficiale SIT Puglia attivo sopra la mappa.';
+    }catch(e){console.warn(e);toast('Strato ufficiale non disponibile in questo momento')}
+  }
+  as
