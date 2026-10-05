@@ -1,0 +1,134 @@
+// V6.4.8 - hotfix GPS calendario/ATC e avvio cartografia aree protette
+(function(){
+'use strict';
+const VER='6.4.8';
+const PUGLIA_AREE_URL='https://pugliacon.regione.puglia.it/web/sit-puglia-paesaggio/6.2.2-componenti-delle-aree-protette-e-dei-siti-naturalistici';
+const ITALIA_AREE_URL='https://naturaitalia.mase.gov.it/';
+let calManual=false, calSyncBusy=false, protectedBusy=false;
+
+function $(id){return document.getElementById(id)}
+function safeText(el,txt){if(el)el.textContent=txt}
+function provinceToAtc(province,region){
+  if(String(region||'')!=='Puglia') return '';
+  const p=String(province||'').toLowerCase();
+  for(const x of ['foggia','bari','brindisi','taranto','lecce']) if(p.includes(x)) return 'ATC '+x[0].toUpperCase()+x.slice(1);
+  if(/barletta|andria|trani|bat/.test(p)) return 'BAT · verifica ambito ufficiale';
+  return '';
+}
+function currentDetectedRegion(){try{return window.PFCTerritory?.getRegion?.()||''}catch{return ''}}
+function currentDetectedProvince(){try{return window.PFCTerritory?.getProvince?.()||''}catch{return ''}}
+
+function ensureCalendarControls(){
+  const reg=$('pfcCalRegion'),atc=$('pfcCalAtc');
+  if(!reg||!atc)return;
+  reg.disabled=!calManual;
+  reg.setAttribute('aria-label','Regione venatoria');
+  atc.readOnly=true;
+  let row=$('pfcCalModeRow');
+  if(!row){
+    row=document.createElement('div');row.id='pfcCalModeRow';row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap';
+    row.innerHTML='<button id="pfcCalManualBtn" type="button" class="secondary" style="flex:1;min-height:42px">✏️ Cambia regione manualmente</button><span id="pfcCalAutoNote" class="muted" style="font-size:11px;flex:1 1 180px">Regione e ATC vengono rilevati insieme dal GPS.</span>';
+    const place=$('pfcCalPlace');(place?.parentElement||reg.parentElement)?.appendChild(row);
+    $('pfcCalManualBtn').onclick=async()=>{
+      if(calManual){
+        calManual=false;ensureCalendarControls();await syncCalendarFromGps(true);return;
+      }
+      calManual=true;ensureCalendarControls();
+      atc.value='— selezione manuale: ATC da verificare —';
+      safeText($('pfcCalGps'),'Modalità manuale');
+      safeText($('pfcCalAutoNote'),'Regione modificabile; l’ATC automatico vale solo con rilevamento GPS.');
+      try{reg.focus()}catch{}
+    };
+    reg.addEventListener('change',()=>{
+      if(!calManual)return;
+      atc.value='— ATC non associato alla selezione manuale —';
+      safeText($('pfcCalPlace'),'Regione scelta manualmente · usa “Rileva da GPS” per ripristinare Regione + ATC automatici');
+      safeText($('pfcCalGps'),'Manuale');
+    });
+  }
+  const btn=$('pfcCalManualBtn');
+  if(btn)btn.textContent=calManual?'◎ Ripristina Regione + ATC da GPS':'✏️ Cambia regione manualmente';
+  if(!calManual)safeText($('pfcCalAutoNote'),'Regione e ATC vengono rilevati insieme dal GPS.');
+}
+
+async function syncCalendarFromGps(force=false){
+  if(calSyncBusy||(!force&&calManual))return;
+  calSyncBusy=true;
+  try{
+    calManual=false;ensureCalendarControls();
+    safeText($('pfcCalGps'),'Rilevo GPS…');
+    safeText($('pfcCalAutoNote'),'Aggiorno Regione e ATC dalla posizione attuale…');
+    try{await window.PFCTerritory?.detect?.()}catch{}
+    await new Promise(r=>setTimeout(r,80));
+    const reg=$('pfcCalRegion'),atc=$('pfcCalAtc');
+    const detected=currentDetectedRegion(),province=currentDetectedProvince();
+    if(reg&&detected)reg.value=detected;
+    if(atc){
+      const auto=provinceToAtc(province,detected);
+      if(auto)atc.value=auto;
+      else if(!atc.value||/non determinato|manuale/i.test(atc.value))atc.value=province||'ATC da verificare';
+    }
+    ensureCalendarControls();
+    if(detected)safeText($('pfcCalAutoNote'),'GPS: '+detected+(province?' · '+province:'')+'. Regione e ATC sincronizzati.');
+  }finally{calSyncBusy=false}
+}
+
+function setProtectedLoading(msg){
+  safeText($('pfcAreaLive'),'acquisizione GPS…');
+  safeText($('pfcAreaMapStatus'),'caricamento');
+  const list=$('pfcAreaList');if(list)list.innerHTML='<div class="empty">'+msg+'</div>';
+  safeText($('pfcAreaMiniMsg'),'Carico la cartografia sulla posizione GPS…');
+}
+function protectedTimeoutGuard(){
+  setTimeout(()=>{
+    const ms=$('pfcAreaMapStatus'),list=$('pfcAreaList'),msg=$('pfcAreaMiniMsg');
+    const stuck=!ms||/attendo gps|caricamento/i.test(ms.textContent||'');
+    if(!stuck)return;
+    safeText($('pfcAreaLive'),'GPS/cartografia da riprovare');
+    safeText(ms,'tocca Aggiorna aree');
+    if(list)list.innerHTML='<div class="empty">Il controllo sta impiegando troppo tempo. Tocca “Aggiorna aree”; la cartografia ufficiale resta sempre disponibile qui sotto.</div>';
+    safeText(msg,'Controllo lento: riprova con “Aggiorna aree” oppure apri la cartografia ufficiale.');
+  },15000);
+}
+async function refreshProtected(force=true){
+  if(protectedBusy)return;
+  protectedBusy=true;setProtectedLoading('Controllo posizione e aree protette…');protectedTimeoutGuard();
+  try{
+    const job=window.PFCTerritory?.refreshArea?.(force);
+    if(job&&typeof job.then==='function')await job;
+  }catch(e){
+    safeText($('pfcAreaLive'),'non verificato');
+    safeText($('pfcAreaMapStatus'),'riprova');
+    const list=$('pfcAreaList');if(list)list.innerHTML='<div class="empty">Impossibile completare il controllo: '+String(e?.message||'errore GPS/cartografia')+'.</div>';
+  }finally{protectedBusy=false}
+}
+function openOfficialArea(){
+  const url=currentDetectedRegion()==='Puglia'?PUGLIA_AREE_URL:ITALIA_AREE_URL;
+  try{location.href=url}catch{try{window.open(url,'_blank','noopener')}catch{}}
+}
+function ensureProtectedControls(){
+  const off=$('pfcAreaOfficial');if(off){off.disabled=false;off.onclick=openOfficialArea}
+  const ref=$('pfcAreaRefresh');if(ref)ref.onclick=()=>refreshProtected(true);
+}
+
+const prevShowPage=showPage;
+showPage=function(n){
+  prevShowPage(n);
+  if(n==='huntcalendar')setTimeout(()=>{ensureCalendarControls();syncCalendarFromGps(true)},140);
+  if(n==='protected')setTimeout(()=>{ensureProtectedControls();refreshProtected(true)},140);
+};
+
+const prevBind648=bind;
+bind=function(){
+  prevBind648();
+  ensureCalendarControls();ensureProtectedControls();
+  const det=$('pfcCalDetect');if(det)det.onclick=()=>syncCalendarFromGps(true);
+  if(window.PFCTerritory)window.PFCTerritory.version=VER;
+  const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER;
+};
+
+setTimeout(()=>{
+  if($('page-huntcalendar')?.classList.contains('active'))syncCalendarFromGps(true);
+  if($('page-protected')?.classList.contains('active')){ensureProtectedControls();refreshProtected(true)}
+},900);
+})();
