@@ -149,7 +149,9 @@
   async function runConditionCheck(){
     const date=$('ctConditionDate').value,time=$('ctConditionTime').value||'08:00';if(!date)return toast('Scegli la data');
     const target=new Date(`${date}T${time}:00`);if(Number.isNaN(target.getTime()))return toast('Data o ora non valida');
-    const pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
+    const focus=lastPos&&Number.isFinite(+lastPos.lat)&&Number.isFinite(+lastPos.lng)?[+lastPos.lat,+lastPos.lng]:(()=>{const m=map?.getCenter?.();return m?[m.lat,m.lng]:null})();
+    let pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
+    if(focus)pts=pts.map(p=>({p,d:haveSafe(focus,[+p.lat,+p.lng])})).filter(x=>x.d<=20).sort((a,b)=>a.d-b.d).slice(0,12).map(x=>x.p);
     const out=$('ctConditionResults');if(!pts.length){out.innerHTML='<div class="empty">Non hai ancora appostamenti/punti salvati da verificare.</div>';return}
     if(!navigator.onLine){out.innerHTML='<div class="empty">Per controllare una previsione nuova serve Internet. I punti e i dati salvati restano comunque disponibili offline.</div>';return}
     out.innerHTML='<div class="empty">Controllo gli appostamenti…</div>';$('ctConditionRun').disabled=true;clearConditionLayer();conditionLayer=L.layerGroup().addTo(map);
@@ -173,21 +175,29 @@
     $('ctConditionRun').disabled=false;decorateLocalWind(out);
   }
 
+  function haveSafe(a,b){try{return hav(a,b)}catch{return Infinity}}
+  function localOfflineBounds(){
+    if((map?.getZoom?.()||0)>=13)return map.getBounds();
+    const m=lastPos&&Number.isFinite(+lastPos.lat)&&Number.isFinite(+lastPos.lng)?{lat:+lastPos.lat,lng:+lastPos.lng}:map.getCenter();
+    const km=4,dLat=km/111.32,dLng=km/(111.32*Math.max(.25,Math.cos(m.lat*Math.PI/180)));
+    return L.latLngBounds([m.lat-dLat,m.lng-dLng],[m.lat+dLat,m.lng+dLng]);
+  }
+
   // ---------- salva un'area satellitare da usare con poca rete ----------
   function tileXY(lat,lng,z){const n=2**z,x=Math.floor((lng+180)/360*n),y=Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n);return {x,y}}
   async function saveOfflineArea(){
     if(!map)return toast('Mappa non pronta');if(!navigator.onLine)return toast('Serve Internet per salvare una nuova area');
-    const b=map.getBounds(),base=Math.max(10,Math.min(17,Math.round(map.getZoom()))),reqs=[];
+    const b=localOfflineBounds(),base=Math.max(13,Math.min(17,Math.round(map.getZoom()))),reqs=[];
     for(const z of [base,Math.min(18,base+1)]){
       const nw=tileXY(b.getNorth(),b.getWest(),z),se=tileXY(b.getSouth(),b.getEast(),z),n=2**z;
       for(let y=Math.max(0,nw.y-1);y<=Math.min(n-1,se.y+1);y++)for(let x=nw.x-1;x<=se.x+1;x++){const xx=((x%n)+n)%n;reqs.push(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${xx}`)}
     }
-    const urls=[...new Set(reqs)].slice(0,220);if(!urls.length)return toast('Area non disponibile');
+    const urls=[...new Set(reqs)].slice(0,96);if(!urls.length)return toast('Area non disponibile');
     toast(`Salvo ${urls.length} tessere mappa…`);let done=0;
     try{
       const cache=await caches.open(OFFLINE_TILE_CACHE);
-      for(let i=0;i<urls.length;i+=8){const batch=urls.slice(i,i+8);await Promise.allSettled(batch.map(async u=>{const q=new Request(u,{mode:'no-cors',cache:'reload'});const r=await fetch(q);if(r)await cache.put(q,r.clone());done++}));}
-      localStorage.setItem('cacciatraccia-offline-area-last',JSON.stringify({at:new Date().toISOString(),count:done,center:map.getCenter(),zoom:base}));toast(`Area offline salvata: ${done} tessere`);
+      for(let i=0;i<urls.length;i+=4){const batch=urls.slice(i,i+4);await Promise.allSettled(batch.map(async u=>{const q=new Request(u,{mode:'no-cors',cache:'reload'});const r=await fetch(q);if(r)await cache.put(q,r.clone());done++}));}
+      localStorage.setItem('cacciatraccia-offline-area-last',JSON.stringify({at:new Date().toISOString(),count:done,center:map.getCenter(),zoom:base}));toast(`Zona interessata salvata offline: ${done} tessere`);
     }catch(e){console.warn(e);toast('Salvataggio area incompleto: '+done+' tessere')}
   }
   function ensureOfflineButton(){
