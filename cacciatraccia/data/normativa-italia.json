@@ -7,15 +7,17 @@
       "title": "Stagione venatoria 2026/2027 — Regione Puglia",
       "src": "https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria",
       "detail": "Calendario Venatorio Regionale approvato con DGR n. 995 del 17/07/2026; Programma Venatorio DGR n. 994/2026; pre-apertura DGR n. 996/2026.",
-      "checkStatus": "pending-baseline",
-      "sourceChanged": false
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "sourceFingerprint": "04bc1bfce8b00aa6c1029578f51c635aa961987818be4297348d20df622ce0a3"
     },
     "Puglia_ATC": {
       "title": "Ambiti Territoriali di Caccia (ATC) — Regione Puglia",
       "src": "https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc",
       "detail": "Fonte ufficiale per ambiti e collegamenti degli ATC pugliesi.",
-      "checkStatus": "pending-baseline",
-      "sourceChanged": false
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9"
     }
   },
   "mushrooms": {
@@ -23,22 +25,25 @@
       "title": "Raccolta dei funghi — Ministero della Salute",
       "src": "https://www.salute.gov.it/new/it/tema/sistema-di-controllo-della-sicurezza-alimentare/raccolta-dei-funghi/",
       "detail": "Quadro nazionale e rinvio alle discipline regionali; per la commestibilità rivolgersi agli Ispettorati micologici.",
-      "checkStatus": "pending-baseline",
-      "sourceChanged": false
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "sourceFingerprint": "712fcb3a29aaf942ac3885802200e95f2bbe84098eaa64b2fbfdd84b797b2871"
     },
     "Puglia": {
       "title": "L.R. Puglia 25 agosto 2003, n. 12 — funghi epigei",
       "src": "https://burp.regione.puglia.it/documents/20135/132731/LEGGE%20REGIONALE%2025%20agosto%202003%2C%20n.%2012%20%28id%205347807%29.pdf/f83f348e-6684-1b07-dcfe-513f07e6ffdf?t=1622128499862&version=1.0",
       "detail": "Disciplina regionale della raccolta e commercializzazione dei funghi epigei, da leggere insieme alle modifiche successive.",
-      "checkStatus": "pending-baseline",
-      "sourceChanged": false
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "sourceFingerprint": "2c8648d88a208cdd087a43eff6ee58047809761915d47a9421baae2c1d76043a"
     },
     "Puglia_modifiche": {
       "title": "L.R. Puglia 13 marzo 2012, n. 3 — modifiche disciplina funghi",
       "src": "https://trasparenza.regione.puglia.it/sites/default/files/provvedimento_amministrativo/44708_3_13-03-2012_L3_2012.pdf",
       "detail": "Modifiche e integrazioni alla L.R. 12/2003 e alla L.R. 14/2006.",
-      "checkStatus": "pending-baseline",
-      "sourceChanged": false
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "sourceFingerprint": "0f78e855fac5a97a444625afd4bf800c740a76eaad76c285cb6efc34ce30251a"
     }
   }
 }
