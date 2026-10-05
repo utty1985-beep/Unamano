@@ -2,6 +2,10 @@ name: Check normative Passione Funghi e Caccia
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/check_pfc_regulations.py'
+      - '.github/workflows/check-pfc-regulations.yml'
   schedule:
     - cron: '17 4 * * *'
 
