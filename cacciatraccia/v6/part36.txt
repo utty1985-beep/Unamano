@@ -1,0 +1,65 @@
+// V6.6.5 - normative ufficiali monitorate e visibili per modalità
+(function(){
+  const VER='6.6.5',CFG='pfc-v661-settings';
+  const q=id=>document.getElementById(id);
+  let normData=null,normBusy=false;
+  const fallback={
+    schemaVersion:1,lastVerified:'2026-10-05',
+    disclaimer:"Le informazioni nell'app sono di orientamento. Fa fede la fonte ufficiale collegata.",
+    hunting:{Puglia:{title:'Stagione venatoria 2026/2027 — Regione Puglia',src:'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria',detail:'Calendario Venatorio Regionale: DGR n. 995 del 17/07/2026.',checkStatus:'fallback',sourceChanged:false},Puglia_ATC:{title:'Ambiti Territoriali di Caccia (ATC) — Regione Puglia',src:'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc',detail:'Fonte ufficiale ATC della Regione Puglia.',checkStatus:'fallback',sourceChanged:false}},
+    mushrooms:{Italia:{title:'Raccolta dei funghi — Ministero della Salute',src:'https://www.salute.gov.it/new/it/tema/sistema-di-controllo-della-sicurezza-alimentare/raccolta-dei-funghi/',detail:'Quadro nazionale e rinvio alle norme regionali.',checkStatus:'fallback',sourceChanged:false},Puglia:{title:'L.R. Puglia 25 agosto 2003, n. 12 — funghi epigei',src:'https://burp.regione.puglia.it/documents/20135/132731/LEGGE%20REGIONALE%2025%20agosto%202003%2C%20n.%2012%20%28id%205347807%29.pdf/f83f348e-6684-1b07-dcfe-513f07e6ffdf?t=1622128499862&version=1.0',detail:'Disciplina regionale, con successive modifiche e integrazioni.',checkStatus:'fallback',sourceChanged:false}}
+  };
+  function cfg(){try{return{mode:'hunt',region:'auto',detectedRegion:'',...JSON.parse(localStorage.getItem(CFG)||'{}')}}catch{return{mode:'hunt',region:'auto',detectedRegion:''}}}
+  function currentRegion(){const c=cfg();return c.region==='auto'?(c.detectedRegion||''):c.region}
+  function addCss(){if(q('ctNormCss'))return;const s=document.createElement('style');s.id='ctNormCss';s.textContent=`
+    .ctNormCard{border-left:5px solid #315d80}.ctNormList{display:grid;gap:8px;margin-top:9px}.ctNormItem{border:1px solid #d8ddd7;border-radius:12px;padding:10px;background:#fff}.ctNormTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ctNormItem b{font-size:13px}.ctNormDetail{font-size:11px;line-height:1.45;color:#58645c;margin-top:5px}.ctNormState{font-size:10px;font-weight:900;padding:4px 7px;border-radius:999px;background:#eaf3ec;color:#255f39;white-space:nowrap}.ctNormState.warn{background:#fff0df;color:#8b5616}.ctNormState.bad{background:#fdebea;color:#922d25}.ctNormOpen{margin-top:7px;width:100%}.ctNormFoot{font-size:10px;color:#69736c;line-height:1.4;margin-top:8px}
+  `;document.head.appendChild(s)}
+  function ensureCard(){
+    const page=q('page-map');if(!page)return null;let card=q('ctNormCard');if(card)return card;
+    addCss();card=document.createElement('div');card.id='ctNormCard';card.className='card ctNormCard';
+    card.innerHTML='<div class="sectionHead"><div><h2 style="margin-bottom:2px">⚖️ Normative e fonti ufficiali</h2><div id="ctNormSub" class="muted">Monitor automatico delle fonti</div></div><span id="ctNormPill" class="pill soft">—</span></div><div id="ctNormBody" class="ctNormList"><div class="empty">Carico fonti ufficiali…</div></div><div id="ctNormFoot" class="ctNormFoot"></div>';
+    const cal=q('ctCalendarCard'),ctrl=q('ct661Card');(cal||ctrl)?.insertAdjacentElement('afterend',card);if(!cal&&!ctrl)page.insertAdjacentElement('afterbegin',card);return card;
+  }
+  function stateBadge(x){
+    if(x?.sourceChanged)return '<span class="ctNormState warn">⚠️ fonte cambiata</span>';
+    if(x?.checkStatus==='unavailable')return '<span class="ctNormState bad">non raggiungibile</span>';
+    if(x?.checkStatus==='ok')return '<span class="ctNormState">✓ monitorata</span>';
+    return '<span class="ctNormState">fonte ufficiale</span>';
+  }
+  function item(x){
+    if(!x)return '';
+    return '<div class="ctNormItem"><div class="ctNormTop"><b>'+esc(x.title||'Fonte ufficiale')+'</b>'+stateBadge(x)+'</div><div class="ctNormDetail">'+esc(x.detail||'Consulta la fonte ufficiale per il testo aggiornato.')+'</div><button class="secondary ctNormOpen" type="button" data-norm-url="'+esc(x.src||'')+'">Apri fonte ufficiale ↗</button></div>';
+  }
+  function render(){
+    const card=ensureCard();if(!card)return;const d=normData||fallback,c=cfg(),hunt=c.mode!=='mushroom',reg=currentRegion(),body=q('ctNormBody'),pill=q('ctNormPill'),sub=q('ctNormSub');
+    if(pill)pill.textContent=hunt?'Caccia':'Funghi';
+    if(sub)sub.textContent=(reg||'Regione non rilevata')+' · controllo fonti automatico';
+    let arr=[];
+    if(hunt){
+      if(reg==='Puglia'||!reg)arr=[d.hunting?.Puglia,d.hunting?.Puglia_ATC].filter(Boolean);
+      else arr=[];
+    }else{
+      if(reg==='Puglia'||!reg)arr=[d.mushrooms?.Puglia,d.mushrooms?.Puglia_modifiche,d.mushrooms?.Italia].filter(Boolean);
+      else arr=[d.mushrooms?.Italia].filter(Boolean);
+    }
+    if(!arr.length){
+      body.innerHTML='<div class="ctNormItem"><b>Fonte regionale non ancora integrata</b><div class="ctNormDetail">Per '+esc(reg||'questa Regione')+' non mostro regole non verificate. Usa il portale ufficiale regionale.</div><button id="ctNormRegionalSearch" class="secondary ctNormOpen" type="button">Cerca portale ufficiale ↗</button></div>';
+      q('ctNormRegionalSearch').onclick=()=>window.open('https://www.google.com/search?q='+encodeURIComponent('Regione '+(reg||'Italia')+' '+(hunt?'calendario venatorio 2026 2027':'raccolta funghi normativa')+' sito ufficiale'),'_blank','noopener');
+    }else body.innerHTML=arr.map(item).join('');
+    body.querySelectorAll('[data-norm-url]').forEach(b=>b.onclick=()=>{const u=b.dataset.normUrl;if(u)window.open(u,'_blank','noopener')});
+    const changed=arr.some(x=>x?.sourceChanged),unavail=arr.some(x=>x?.checkStatus==='unavailable');
+    q('ctNormFoot').innerHTML=(changed?'<b style="color:#8b5616">Una fonte ufficiale è cambiata: verifica il testo prima di fare affidamento sulle informazioni precedenti.</b><br>':'')+(unavail?'Una fonte non era raggiungibile all’ultimo controllo.<br>':'')+'Ultima verifica editoriale: '+esc(d.lastVerified||'—')+' · '+esc(d.disclaimer||fallback.disclaimer);
+    card.style.display='';
+  }
+  async function load(){
+    if(normBusy)return;normBusy=true;try{const r=await fetch('./data/normativa-italia.json?v='+VER,{cache:'no-store'});if(!r.ok)throw Error(String(r.status));normData=await r.json()}catch(e){console.warn('Normative data',e);normData=fallback}finally{normBusy=false;render()}
+  }
+  function bind(){
+    ensureCard();load();
+    ['ctModeHunt','ctModeMush'].forEach(id=>q(id)?.addEventListener('click',()=>setTimeout(render,0)));
+    q('ctRegion')?.addEventListener('change',()=>setTimeout(render,50));
+    const host=q('ctGeoStatus');if(host)new MutationObserver(()=>render()).observe(host,{childList:true,characterData:true,subtree:true});
+  }
+  function boot(){let n=0,t=setInterval(()=>{n++;if(q('ct661Card')){clearInterval(t);bind()}else if(n>50)clearInterval(t)},120)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
