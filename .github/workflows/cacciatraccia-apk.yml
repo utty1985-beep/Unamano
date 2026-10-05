@@ -44,13 +44,12 @@ jobs:
           const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
           const main=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/java/com/cacciatraccia/italia/MainActivity.java','utf8');
           const gradle=fs.readFileSync('cacciatraccia/android-wrapper/app/build.gradle.kts','utf8');
-          if(!loader.includes('v=6.5.2')) throw new Error('Fresh 6.5.2 loader missing');
+          if(!loader.includes("requestedVersion==='6502'")) throw new Error('Stable 6502 route missing');
+          if(!loader.includes("stable6502?[]")) throw new Error('Stable route must exclude tester fixes');
+          if(!loader.includes("'6.5.2':'6.6.6'")) throw new Error('Stable asset version mapping missing');
           if(!main.includes('?v=6502')) throw new Error('Android start URL 6502 missing');
           if(!gradle.includes('versionCode = 6502') || !gradle.includes('versionName = "6.5.2"')) throw new Error('Android identity mismatch');
-          for(const forbidden of ['part27.txt','part28.txt','part29.txt','part30.txt','part31.txt','part32.txt','part33.txt']){
-            if(loader.includes(forbidden)) throw new Error('Later unstable module loaded: '+forbidden);
-          }
-          console.log('Exact stable 6.3.4 core restored and syntax OK');
+          console.log('Stable 6.5.2 route isolated and core syntax OK');
           NODE
 
       - name: Build release APK
