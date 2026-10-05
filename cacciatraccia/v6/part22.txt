@@ -1,7 +1,7 @@
 
 // V6.1.9 - verifica condizioni appostamenti, pioggia/cambio vento, Favugna, GPS orientato, area offline, backup automatico, condivisione completa punti
 (function(){
-  const CT_VER='6.1.10';
+  const CT_VER='6.1.11';
   const AUTO_SNAP_KEY='cacciatraccia-auto-snapshot-v1';
   const OFFLINE_TILE_CACHE='cacciatraccia-offline-tiles-v1';
   let ctHeadingFollow=true,conditionLayer=null;
@@ -141,9 +141,18 @@
     return {deg,speed};
   }
   async function forecastAtPoint(p,target){
-    const day=isoLocal(target).slice(0,10),u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
+    const day=isoLocal(target).slice(0,10);
+    const now=new Date(),sameDay=isoLocal(now).slice(0,10)===day,nearNow=Math.abs(target.getTime()-now.getTime())<=90*60*1000;
+    const currentPart=sameDay&&nearNow?'&current=weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m':'';
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}${currentPart}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
     const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),h=j.hourly||{};const idx=nearestHourlyIndex(h.time,target.getTime());if(idx<0)throw Error('Orario non disponibile');const change=firstWindChange(h,idx);
-    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,code:h.weather_code?.[idx],change};
+    // Se stai verificando "adesso" (o entro circa 90 minuti), uso gli stessi dati
+    // correnti usati quando salvi il punto. Così un punto appena fissato non risulta
+    // falsamente "diverso" solo perché il confronto prendeva l'ora intera successiva.
+    if(sameDay&&nearNow&&j.current){
+      return {time:j.current.time||h.time[idx],dir:+j.current.wind_direction_10m||0,speed:+j.current.wind_speed_10m||0,gust:+j.current.wind_gusts_10m||0,rain:+h.precipitation_probability?.[idx]||0,code:j.current.weather_code,change,live:true};
+    }
+    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,code:h.weather_code?.[idx],change,live:false};
   }
   function clearConditionLayer(){try{conditionLayer?.clearLayers()}catch{}conditionLayer=null}
   async function runConditionCheck(){
@@ -244,7 +253,21 @@
     if($('rotateLeftBtn'))$('rotateLeftBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(getBearing()-15))toast('Rotazione non disponibile su questo browser')};
     if($('rotateRightBtn'))$('rotateRightBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(getBearing()+15))toast('Rotazione non disponibile su questo browser')};
     if($('northBtn'))$('northBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(0))toast('Rotazione non disponibile su questo browser')};
-    map?.on('dragstart',()=>{if(follow){follow=false;$('followBtn')?.classList.remove('active')}});
+    const stopFollowForManualMap=()=>{
+      if(!follow)return;
+      follow=false;
+      $('followBtn')?.classList.remove('active');
+    };
+    map?.on('dragstart',stopFollowForManualMap);
+    // Disattiva "Seguimi" appena l'utente appoggia il dito sulla mappa, prima ancora
+    // che arrivi il prossimo aggiornamento GPS: niente più ritorno forzato al pallino blu.
+    const mapEl=map?.getContainer?.();
+    if(mapEl&&!mapEl.dataset.ctManualPanFix){
+      mapEl.dataset.ctManualPanFix='1';
+      mapEl.addEventListener('pointerdown',stopFollowForManualMap,{passive:true});
+      mapEl.addEventListener('touchstart',stopFollowForManualMap,{passive:true});
+      mapEl.addEventListener('wheel',stopFollowForManualMap,{passive:true});
+    }
     window.addEventListener('pagehide',()=>autoSnapshot(true));document.addEventListener('visibilitychange',()=>{if(document.hidden)autoSnapshot(false)});
     const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_VER;
   };
