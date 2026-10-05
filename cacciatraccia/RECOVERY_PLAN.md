@@ -51,6 +51,7 @@ Una modifica per volta. Ogni punto deve:
 - [x] Firma Android e continuità package com.cacciatraccia.italia
 
 ## B. AGGIORNAMENTI DA REINSERIRE UNO ALLA VOLTA
+- [x] 0. Modalità TESTER: tutte le funzioni Free/PRO sbloccate, limiti disattivati solo nella build di prova
 - [ ] 1. Anti-regressione comandi: test automatici completi di tutti i pulsanti principali
 - [ ] 2. Modalità Caccia/Funghi: mostrare solo i comandi pertinenti
 - [ ] 3. Confronto meteo appostamenti in Caccia, con verde/rosso
