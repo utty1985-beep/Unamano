@@ -1,5 +1,7 @@
-const CACHE='passione-funghi-caccia-v6-5-2-stable-recovery';
-const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.5.2','./manifest.webmanifest','./icon.svg',...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.5.2`)];
+const CACHE='passione-funghi-caccia-v6-6-0-complete-tester';
+const SHELL=['./','./index.html','./styles.css?v=4.1.2','./app-loader.js?v=6.6.0','./manifest.webmanifest','./icon.svg',
+...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.0`),
+'./v6/part28.txt?v=6.6.0','./v6/part29.txt?v=6.6.0','./v6/part30.txt?v=6.6.0','./v6/part31.txt?v=6.6.0','./v6/part32.txt?v=6.6.0','./v6/part33.txt?v=6.6.0','./v6/part34.txt?v=6.6.0','./data/normativa-italia.json?v=6.6.0'];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
