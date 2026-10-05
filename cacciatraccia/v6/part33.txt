@@ -1,0 +1,85 @@
+// V6.4.9 - fix pulsante Home verifica appostamenti
+(function(){
+'use strict';
+const VER='6.4.9';
+
+function $(id){return document.getElementById(id)}
+
+function setHomeCompareLabel(){
+  const b=$('pfcHuntCompare');if(!b)return;
+  const main=b.querySelector('.pfcCmpMain'),sub=b.querySelector('.pfcCmpSub');
+  if(main)main.textContent='Verifica appostamenti';
+  if(sub)sub.textContent='Genera subito zone verdi/rosse · vento · raffiche · pioggia · temperatura';
+  b.dataset.ctHelp='Avvia la stessa verifica appostamenti disponibile nel Diario e genera subito i risultati verde/rosso.';
+}
+
+async function runHomeAppostamenti(){
+  if(window.PFCTerritory?.getMode?.()!=='hunt')return;
+  const gate=window.PFCPlayStore;
+  const q=$('ctConditionBtn');
+
+  if(gate&&typeof gate.isPro==='function'&&!gate.isPro()){
+    if(q)q.click();
+    else gate.openPro?.('La verifica avanzata degli appostamenti è inclusa in Passione PRO.');
+    return;
+  }
+
+  if(!q){
+    try{toast('Verifica appostamenti in caricamento… riprova tra un istante')}catch{}
+    setTimeout(wireHomeCompare,250);
+    return;
+  }
+
+  // Apri direttamente la finestra di verifica, senza passare dal click sintetico
+  // che in alcune WebView Android non propagava correttamente l'azione.
+  try{
+    if(typeof q.onclick==='function')q.onclick.call(q);
+    else q.click();
+  }catch{q.click()}
+
+  await new Promise(r=>setTimeout(r,90));
+  const modal=$('ctConditionModal'),run=$('ctConditionRun'),out=$('ctConditionResults');
+  if(!modal?.classList.contains('open')){
+    modal?.classList.add('open');
+  }
+  if(out)out.innerHTML='<div class="empty">Avvio verifica degli appostamenti…</div>';
+
+  // Il pulsante Home deve produrre subito i risultati, come richiesto.
+  if(run&&!run.disabled){
+    try{
+      if(typeof run.onclick==='function')await run.onclick.call(run);
+      else run.click();
+    }catch{
+      try{run.click()}catch{}
+    }
+  }else if(!run){
+    try{toast('Modulo verifica non disponibile: riapri la pagina')}catch{}
+  }
+}
+
+function wireHomeCompare(){
+  const b=$('pfcHuntCompare');if(!b)return;
+  setHomeCompareLabel();
+  b.onclick=runHomeAppostamenti;
+}
+
+const oldBind649=bind;
+bind=function(){
+  oldBind649();
+  wireHomeCompare();
+  setTimeout(wireHomeCompare,180);
+  const v=$('ctVersionBadge');if(v)v.textContent='• V'+VER;
+};
+
+const oldRenderAll649=renderAll;
+renderAll=function(){
+  const r=oldRenderAll649();
+  setTimeout(wireHomeCompare,0);
+  return r;
+};
+
+document.addEventListener('click',e=>{
+  const id=e.target?.closest?.('button')?.id;
+  if(id==='pfcMiniHunt')setTimeout(wireHomeCompare,80);
+},true);
+})();
