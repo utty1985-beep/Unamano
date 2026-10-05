@@ -1,8 +1,8 @@
-// V6.4.0 - Play Store / privacy / Free + PRO
+// V6.5.0 - Play Store / privacy / Free + PRO
 (function(){
   'use strict';
 
-  const APP_VER='6.4.0';
+  const APP_VER='6.5.0';
   const FREE_DAILY_EXTERNAL_SEARCHES=5;
   const QUOTA_KEY='pfc-external-search-quota-v1';
   const MUSH_CONSENT_KEY='pfc-mush-ai-consent-v1';
