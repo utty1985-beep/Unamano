@@ -32,11 +32,11 @@ jobs:
           const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
           if(!loader.includes("requestedVersion==='6502'")) throw new Error('Stable 6502 routing missing');
           if(!loader.includes("stable6502?[]")) throw new Error('Stable track must not load tester fixes');
-          if(!loader.includes("'6.5.2-r3':'6.6.8'")) throw new Error('Stable/tester asset versions mismatch');
+          if(!loader.includes("'6.5.2-r4':'6.6.9'")) throw new Error('Stable/tester asset versions mismatch');
           for(const i of fixes){if(!loader.includes(String(i)))throw new Error('Tester loader missing fix '+i)}
           for(const forbidden of ['part25.txt','part26.txt','part31.txt']){if(loader.includes(forbidden))throw new Error('Unwanted module loaded: '+forbidden)}
           const sw=fs.readFileSync('cacciatraccia/sw.js','utf8');new Function(sw);
           if(!sw.includes('STABLE_CORE')||!sw.includes('ACTIVE_CORE'))throw new Error('Dual offline cache missing');
           JSON.parse(fs.readFileSync('cacciatraccia/data/normativa-italia.json','utf8'));
-          console.log('PASS: stable 6.5.2 isolated; tester 6.6.8 syntax/order/data OK');
+          console.log('PASS: stable 6.5.2 isolated; tester 6.6.9 syntax/order/data OK');
           NODE
