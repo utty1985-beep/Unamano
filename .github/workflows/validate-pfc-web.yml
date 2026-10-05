@@ -18,26 +18,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate active loader and concatenated JavaScript
+      - name: Validate stable and tester tracks
         run: |
           node - <<'NODE'
           const fs=require('fs');
-          const active=[...Array.from({length:25},(_,i)=>i),27,28,29,30,32,33,34,35,36];
-          const paths=active.map(i=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
-          const missing=paths.filter(p=>!fs.existsSync(p));
-          if(missing.length) throw new Error('Missing active files: '+missing.join(', '));
-          const src=paths.map(p=>fs.readFileSync(p,'utf8')).join('');
-          new Function(src);
+          const core=[...Array.from({length:25},(_,i)=>i)];
+          const fixes=[27,28,29,30,32,33,34,35,36];
+          const read=i=>fs.readFileSync('cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt','utf8');
+          const stableSrc=core.map(read).join('');
+          const testerSrc=[...core,...fixes].map(read).join('');
+          new Function(stableSrc);
+          new Function(testerSrc);
           const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
-          for(const i of [27,28,29,30,32,33,34,35,36]){
-            if(!loader.includes(String(i))) throw new Error('Loader missing fix '+i);
-          }
-          for(const forbidden of ['part25.txt','part26.txt','part31.txt']){
-            if(loader.includes(forbidden)) throw new Error('Unwanted module loaded: '+forbidden);
-          }
-          if(!loader.includes('v=6.6.5')) throw new Error('Loader cache version is not 6.6.5');
-          const sw=fs.readFileSync('cacciatraccia/sw.js','utf8');
-          new Function(sw);
+          if(!loader.includes("requestedVersion==='6502'")) throw new Error('Stable 6502 routing missing');
+          if(!loader.includes("stable6502?[]")) throw new Error('Stable track must not load tester fixes');
+          if(!loader.includes("'6.5.2':'6.6.6'")) throw new Error('Stable/tester asset versions mismatch');
+          for(const i of fixes){if(!loader.includes(String(i)))throw new Error('Tester loader missing fix '+i)}
+          for(const forbidden of ['part25.txt','part26.txt','part31.txt']){if(loader.includes(forbidden))throw new Error('Unwanted module loaded: '+forbidden)}
+          const sw=fs.readFileSync('cacciatraccia/sw.js','utf8');new Function(sw);
+          if(!sw.includes('STABLE_CORE')||!sw.includes('ACTIVE_CORE'))throw new Error('Dual offline cache missing');
           JSON.parse(fs.readFileSync('cacciatraccia/data/normativa-italia.json','utf8'));
-          console.log('PASS: active PFC v6.6.5 syntax/order/data');
+          console.log('PASS: stable 6.5.2 isolated; tester 6.6.6 syntax/order/data OK');
           NODE
