@@ -1,6 +1,6 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
 const stable6502=requestedVersion==='6502';
-const assetVersion=stable6502?'6.5.2-r4':'6.6.9';
+const assetVersion=stable6502?'6.5.2-r5':'6.6.10';
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const fixes=stable6502?[]:[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const parts=[...core,...fixes];
