@@ -1,0 +1,21 @@
+// V6.6.0 - diagnostica tester non bloccante
+(function(){
+'use strict';
+const VER='6.6.0';
+const IDS=['locateBtn','followBtn','northBtn','rotateLeftBtn','rotateRightBtn','layersBtn','quickSightingBtn','quickMushroomBtn','quickSpeciesBtn','quickSaveHereBtn','quickTrackBtn','quickCarBtn','quickARBtn','savePointBtn','navigateBtn','shareSelectedBtn','weatherRefreshBtn','parkHereBtn','moveCarBtn','returnCarBtn','clearCarBtn','fitPointsBtn','startTrackBtn','stopTrackBtn','centerTrackBtn','trackToCarBtn','addDiaryBtn','exportJsonBtn','exportTxtBtn','makeSnapshotBtn','persistBtn','pfcAreaOpen','pfcCalOpen'];
+function report(){
+ const rows=IDS.map(id=>{const el=document.getElementById(id);return {id,exists:!!el,onclick:!!el&&typeof el.onclick==='function',disabled:!!el&&!!el.disabled}});
+ const missing=rows.filter(x=>!x.exists),unwired=rows.filter(x=>x.exists&&!x.onclick&&!['layersBtn'].includes(x.id));
+ return {version:VER,checkedAt:new Date().toISOString(),total:rows.length,missing:missing.map(x=>x.id),unwired:unwired.map(x=>x.id),rows};
+}
+function ensureBadge(){
+ const host=document.querySelector('.topActions');if(!host||document.getElementById('pfcTesterBadge'))return;
+ const b=document.createElement('button');b.id='pfcTesterBadge';b.type='button';b.className='ghost';b.textContent='🧪 TESTER';
+ b.title='Versione completa senza blocchi Free/PRO · tocca per diagnostica';
+ b.onclick=()=>{const r=report();alert('Passione Funghi e Caccia '+VER+' TESTER\n\nComandi controllati: '+r.total+'\nMancanti: '+(r.missing.join(', ')||'nessuno')+'\nSenza collegamento diretto: '+(r.unwired.join(', ')||'nessuno')+'\n\nI permessi GPS/fotocamera restano richiesti normalmente.');};
+ host.insertBefore(b,host.firstChild);
+}
+setTimeout(ensureBadge,800);
+const obs=new MutationObserver(()=>ensureBadge());obs.observe(document.documentElement,{childList:true,subtree:true});
+window.PFCDiagnostics={version:VER,run:report};
+})();
