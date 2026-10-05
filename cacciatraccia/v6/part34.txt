@@ -1,0 +1,71 @@
+// V6.6.3 - hardening territorio/ATC e aree protette senza bloccare la mappa
+(function(){
+  const VER='6.6.3';
+  const CFG_KEY='pfc-v661-settings';
+  const REGIONS=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria','Valle d’Aosta','Veneto'];
+  const qs=id=>document.getElementById(id);
+  let officialImage=null,osmLayer=null,officialActive=false,officialTimer=0,detectBusy663=false;
+
+  function readCfg(){try{return{mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:'',...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}}catch{return{mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:''}}}
+  function writeCfg(c){try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch{}}
+  function normRegion(s){const v=String(s||'').trim().toLowerCase().replace(/\s+/g,' ');return REGIONS.find(r=>r.toLowerCase()===v)||REGIONS.find(r=>v.includes(r.toLowerCase()))||String(s||'').trim()}
+  function cleanProvince(s){return String(s||'').replace(/^provincia\s+di\s+/i,'').replace(/^città\s+metropolitana\s+di\s+/i,'').trim()}
+  function pugliaAtc663(province){const p=cleanProvince(province).toLowerCase();if(p.includes('foggia')||p==='fg')return 'ATC Foggia';if(p.includes('barletta')||p.includes('andria')||p.includes('trani')||p==='bt')return 'ATC BAT';if(p.includes('bari')||p==='ba')return 'ATC Bari';if(p.includes('brindisi')||p==='br')return 'ATC Brindisi';if(p.includes('taranto')||p==='ta')return 'ATC Taranto';if(p.includes('lecce')||p==='le')return 'ATC Lecce';return province?`ATC da verificare · ${cleanProvince(province)}`:'ATC da rilevare'}
+  function regionNow663(c=readCfg()){return c.region==='auto'?(c.detectedRegion||''):c.region}
+  function setStatus(t){const e=qs('ctGeoStatus');if(e)e.textContent=t}
+  function render663(){const c=readCfg(),reg=regionNow663(c),atc=reg==='Puglia'?(c.atc||pugliaAtc663(c.province)):(c.province?`Provincia: ${cleanProvince(c.province)}`:'Da rilevare');const rs=qs('ctRegion');if(rs&&rs.value!==c.region)rs.value=c.region;if(qs('ctAtcStatus'))qs('ctAtcStatus').innerHTML=reg?`<b>${esc(atc)}</b><br><span class="muted">${esc(reg)}</span>`:'Da rilevare';if(qs('ctGeoStatus'))qs('ctGeoStatus').textContent=reg?`${c.region==='auto'?'GPS automatico':'Regione manuale'} · ${reg}${c.province?' · '+cleanProvince(c.province):''}`:'Territorio non ancora rilevato';if(qs('ctCalendarText'))qs('ctCalendarText').textContent=reg==='Puglia'?'Puglia · stagione venatoria 2026/2027 · DGR 995 del 17/07/2026.':(reg?`${reg} · apri la fonte ufficiale per il calendario aggiornato.`:'Seleziona o rileva la Regione.');}
+
+  async function fetchJsonTimeout(url,ms=9000){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'},signal:ac.signal});if(!r.ok)throw Error(`HTTP ${r.status}`);return await r.json()}finally{clearTimeout(tm)}}
+  async function reverseTerritory(lat,lng){
+    try{const j=await fetchJsonTimeout(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=10&addressdetails=1&accept-language=it`,8000),a=j.address||{};return{region:normRegion(a.state||a.region||''),province:cleanProvince(a.province||a.county||a.state_district||'')}}catch(e){console.warn('Nominatim territorio',e)}
+    try{const j=await fetchJsonTimeout(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&localityLanguage=it`,8000);return{region:normRegion(j.principalSubdivision||j.localityInfo?.administrative?.find?.(x=>/region/i.test(x.description||''))?.name||''),province:cleanProvince(j.city||j.locality||j.localityInfo?.administrative?.find?.(x=>/province/i.test(x.description||''))?.name||'')}}catch(e){console.warn('Fallback territorio',e)}
+    return null;
+  }
+  async function detect663(force=false){
+    if(detectBusy663)return;detectBusy663=true;try{
+      let p=lastPos;
+      if((!p||force)&&navigator.geolocation){try{p=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(x=>ok({lat:x.coords.latitude,lng:x.coords.longitude,acc:x.coords.accuracy}),no,{enableHighAccuracy:true,timeout:12000,maximumAge:2500}))}catch(e){if(!p)throw e}}
+      if(!p){toast('Attiva il GPS per rilevare Regione e ATC');return}
+      setStatus('GPS acquisito · rilevo Regione e provincia…');
+      const t=await reverseTerritory(p.lat,p.lng);if(!t?.region){setStatus('GPS attivo · territorio non ottenuto dalla rete. Puoi scegliere la Regione manualmente.');return}
+      const c=readCfg();c.detectedRegion=t.region;c.province=t.province||c.province;c.atc=t.region==='Puglia'?pugliaAtc663(c.province):'';writeCfg(c);render663();
+    }catch(e){console.warn('Rilevamento territorio 6.6.3',e);setStatus('GPS non disponibile o servizio territorio temporaneamente non raggiungibile.');}finally{detectBusy663=false}
+  }
+
+  function ensurePanel(){
+    let p=qs('ct663ProtectedPanel');if(p)return p;
+    const wrap=document.querySelector('.mapWrap');if(!wrap)return null;
+    p=document.createElement('div');p.id='ct663ProtectedPanel';p.style.cssText='display:none;position:absolute;left:10px;right:10px;bottom:10px;z-index:1250;background:#fffef7f2;border:1px solid #bdc9bb;border-radius:14px;padding:10px;box-shadow:0 8px 28px #0004;backdrop-filter:blur(7px);max-height:48%;overflow:auto';
+    p.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>🛡 Aree protette</b><button id="ct663ProtClose" class="iconBtn" type="button">✕</button></div><div id="ct663ProtStatus" class="muted" style="font-size:11px;margin:7px 0">La mappa resta utilizzabile. Nessun controllo lungo blocca l'interfaccia.</div><div class="actionGrid"><button id="ct663Official" class="primary" type="button">Ufficiale Puglia</button><button id="ct663Osm" class="secondary" type="button">Aree visibili OSM</button><button id="ct663Portal" class="secondary" type="button">Portale ufficiale</button><button id="ct663Clear" class="danger" type="button">Togli strati</button></div>`;
+    wrap.appendChild(p);qs('ct663ProtClose').onclick=()=>{p.style.display='none'};qs('ct663Official').onclick=toggleOfficial663;qs('ct663Osm').onclick=loadOsm663;qs('ct663Portal').onclick=()=>openOfficial663('map');qs('ct663Clear').onclick=clearProtected663;return p;
+  }
+  function protStatus(t){const e=qs('ct663ProtStatus');if(e)e.textContent=t}
+  function openProtected663(){const p=ensurePanel();if(!p)return toast('Mappa non pronta');p.style.display=p.style.display==='none'||!p.style.display?'block':'none'}
+  function clearOfficial(){officialActive=false;clearTimeout(officialTimer);if(officialImage){try{map.removeLayer(officialImage)}catch{}officialImage=null}}
+  function clearProtected663(){clearOfficial();if(osmLayer){try{map.removeLayer(osmLayer)}catch{}osmLayer=null}protStatus('Strati rimossi. Mappa completamente libera.')}
+  function officialUrl(){const b=map.getBounds(),w=Math.min(1400,Math.max(700,Math.round(map.getSize().x*1.4))),h=Math.min(1400,Math.max(700,Math.round(map.getSize().y*1.4)));return `https://webapps.sit.puglia.it/arcgis/rest/services/Operationals/AreeProtetteReteNatura2000/MapServer/export?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&bboxSR=4326&imageSR=4326&size=${w},${h}&format=png32&transparent=true&layers=show%3A0%2C1%2C2%2C3&f=image&_=${Date.now()}`}
+  function refreshOfficial(){if(!officialActive||!map||!window.L)return;clearTimeout(officialTimer);officialTimer=setTimeout(()=>{try{const b=map.getBounds(),u=officialUrl();if(officialImage)map.removeLayer(officialImage);officialImage=L.imageOverlay(u,b,{opacity:.58,interactive:false,crossOrigin:false});officialImage.on?.('load',()=>protStatus('✅ Cartografia ufficiale Puglia caricata: Aree protette, SIC/ZPS, Ramsar e IBA.'));officialImage.on?.('error',()=>protStatus('Server ufficiale lento/non disponibile. Usa “Aree visibili OSM” o il portale ufficiale.'));officialImage.addTo(map)}catch(e){console.warn('Overlay ufficiale 6.6.3',e);protStatus('Cartografia ufficiale non disponibile ora. La mappa principale resta attiva.')}},180)}
+  function toggleOfficial663(){const c=readCfg(),reg=regionNow663(c);if(reg&&reg!=='Puglia')return toast('Lo strato integrato è disponibile per Puglia; per le altre Regioni usa il portale ufficiale');if(!map||!window.L)return toast('Mappa non pronta');if(officialActive){clearOfficial();protStatus('Strato ufficiale Puglia nascosto.');return}officialActive=true;protStatus('Carico cartografia ufficiale Puglia…');refreshOfficial()}
+
+  async function overpassRequest(query){const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];let last;for(const ep of endpoints){try{return await fetchJsonTimeout(ep+'?data='+encodeURIComponent(query),12000)}catch(e){last=e;console.warn('Overpass',ep,e)}}throw last||Error('Overpass non disponibile')}
+  async function loadOsm663(){
+    if(!map||!window.L)return toast('Mappa non pronta');if(map.getZoom()<9){protStatus('🔎 Ingrandisci la mappa almeno a livello 9: evito ricerche troppo grandi che possono bloccare il telefono.');return}
+    const b=map.getBounds(),bbox=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()].join(',');protStatus('Cerco i confini protetti nell’area visibile…');
+    try{const query=`[out:json][timeout:12][maxsize:8000000];(way["boundary"="protected_area"](${bbox});relation["boundary"="protected_area"](${bbox});way["leisure"="nature_reserve"](${bbox});relation["leisure"="nature_reserve"](${bbox}););out geom 300;`;const j=await overpassRequest(query);if(osmLayer)try{map.removeLayer(osmLayer)}catch{}osmLayer=L.layerGroup().addTo(map);let n=0;const draw=(g,t)=>{if(n>=300||!g?.length)return;const ll=g.filter(x=>Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)).map(x=>[+x.lat,+x.lon]);if(ll.length<3)return;const poly=L.polygon(ll,{color:'#2b6b44',weight:2,fillColor:'#4b8a5c',fillOpacity:.13});poly.bindPopup(`<b>🛡 ${esc(t?.name||'Area protetta')}</b><br><small>Fonte: OpenStreetMap</small>`);poly.addTo(osmLayer);n++};(j.elements||[]).forEach(el=>{if(el.geometry)draw(el.geometry,el.tags);(el.members||[]).forEach(m=>m.geometry&&draw(m.geometry,el.tags))});protStatus(n?`✅ ${n} confini caricati nell’area visibile. La mappa resta attiva.`:'Nessun confine protetto trovato nell’area visibile.');}
+    catch(e){console.warn('Aree OSM 6.6.3',e);protStatus('Ricerca aree protette interrotta senza bloccare la mappa. Riprova più tardi o usa il portale ufficiale.')}
+  }
+  function officialUrl663(kind){const c=readCfg(),reg=regionNow663(c)||'Puglia';if(reg==='Puglia'){if(kind==='calendar')return 'https://www.regione.puglia.it/web/foreste-biodiversita/stagione-venatoria';if(kind==='atc')return 'https://www.regione.puglia.it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc';return 'https://webapps.sit.puglia.it/arcgis/rest/services/Operationals/AreeProtetteReteNatura2000/MapServer'}const topic=kind==='calendar'?'calendario venatorio 2026 2027':kind==='atc'?'ATC ambiti territoriali di caccia':'geoportale aree protette cartografia';return 'https://www.google.com/search?q='+encodeURIComponent(`Regione ${reg} ${topic} sito ufficiale`)}
+  function openOfficial663(kind){const u=officialUrl663(kind);try{window.open(u,'_blank','noopener')}catch{location.href=u}}
+
+  function rewire(){
+    const d=qs('ctDetectTerritory');if(d)d.onclick=()=>detect663(true);
+    const r=qs('ctRegion');if(r)r.onchange=e=>{const c=readCfg();c.region=e.target.value;writeCfg(c);render663();if(c.region==='auto')detect663(true)};
+    const p=qs('ctProtectedBtn');if(p)p.onclick=openProtected663;
+    const cal=qs('ctCalendarOpen');if(cal)cal.onclick=()=>openOfficial663('calendar');const atc=qs('ctAtcOpen');if(atc)atc.onclick=()=>openOfficial663('atc');
+    render663();if(map?.on)map.on('moveend',()=>{if(officialActive)refreshOfficial()});
+    const old=qs('ctProtectedModal');if(old)old.remove();
+    const pill=qs('ct661ModePill');if(pill)pill.title=`Territorio fix ${VER}`;
+  }
+  function boot(){let tries=0;const tm=setInterval(()=>{tries++;if(qs('ct661Card')&&map){clearInterval(tm);rewire();const c=readCfg();if(c.region==='auto'&&!c.detectedRegion)setTimeout(()=>detect663(false),500)}else if(tries>40)clearInterval(tm)},150)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
