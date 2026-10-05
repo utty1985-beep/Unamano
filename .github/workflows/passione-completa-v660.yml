@@ -45,6 +45,16 @@ jobs:
           new Function(src);
           if(!src.includes('ctARFlatMode') || !src.includes('telefono piatto')) throw new Error('Radar flat-phone code missing');
           if(loader.includes('part27.txt')) throw new Error('Free/PRO blocking module must not be loaded in tester build');
+          for (const req of ['part28.txt','part29.txt','part30.txt','part31.txt','part32.txt','part33.txt','part34.txt']) {
+            if(!loader.includes(req)) throw new Error('Required complete module missing: '+req);
+          }
+          if(!src.includes("cal.hidden=areaMode!=='hunt'")) throw new Error('Hunting calendar mode filter missing');
+          if(!src.includes('Regione e ATC vengono rilevati insieme dal GPS')) throw new Error('GPS/ATC sync missing');
+          if(!src.includes('protectedTimeoutGuard')) throw new Error('Protected-area anti-block timeout missing');
+          if(!src.includes('pfcHuntCompare')) throw new Error('Hunting weather compare missing');
+          if(!src.includes('Miglior punto adesso')) throw new Error('Smart outing module missing');
+          if(!src.includes('PFCDiagnostics')) throw new Error('Tester diagnostics missing');
+          if(src.includes('Questa funzione avanzata è inclusa in Passione PRO')) throw new Error('PRO feature block still present');
           console.log('Loaded modules:',paths.join(', '));
           console.log('Syntax and no-block checks: OK');
           NODE
@@ -52,9 +62,28 @@ jobs:
       - name: Build APK
         run: gradle --no-daemon :app:assembleRelease --stacktrace
 
+      - name: Verify Android identity
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/pfc6600-badging.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6600' versionName='6.6.0'" /tmp/pfc6600-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.6.0-COMPLETA-TESTER-UNSIGNED.apk
+          cp /tmp/pfc6600-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.6.0-badging.txt
+
+      - name: Bundle signing tool
+        run: |
+          mkdir -p app/build/signing-tools/lib
+          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" app/build/signing-tools/apksigner
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/signing-tools/lib/apksigner.jar
+
       - uses: actions/upload-artifact@v4
         with:
-          name: passione-completa-v6.6.0-current
-          path: cacciatraccia/android-wrapper/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: Passione-Funghi-e-Caccia-v6.6.0-COMPLETA-TESTER-build
+          path: |
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.6.0-COMPLETA-TESTER-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.6.0-badging.txt
+            cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
+            cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
