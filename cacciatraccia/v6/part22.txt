@@ -1,7 +1,7 @@
 
 // V6.1.9 - verifica condizioni appostamenti, pioggia/cambio vento, Favugna, GPS orientato, area offline, backup automatico, condivisione completa punti
 (function(){
-  const CT_VER='6.1.9';
+  const CT_VER='6.1.10';
   const AUTO_SNAP_KEY='cacciatraccia-auto-snapshot-v1';
   const OFFLINE_TILE_CACHE='cacciatraccia-offline-tiles-v1';
   let ctHeadingFollow=true,conditionLayer=null;
@@ -150,9 +150,15 @@
     const date=$('ctConditionDate').value,time=$('ctConditionTime').value||'08:00';if(!date)return toast('Scegli la data');
     const target=new Date(`${date}T${time}:00`);if(Number.isNaN(target.getTime()))return toast('Data o ora non valida');
     const focus=lastPos&&Number.isFinite(+lastPos.lat)&&Number.isFinite(+lastPos.lng)?[+lastPos.lat,+lastPos.lng]:(()=>{const m=map?.getCenter?.();return m?[m.lat,m.lng]:null})();
-    let pts=(state.points||[]).filter(p=>p.type!=='Avvistamento'&&p.type!=='Parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
-    if(focus)pts=pts.map(p=>({p,d:haveSafe(focus,[+p.lat,+p.lng])})).filter(x=>x.d<=20).sort((a,b)=>a.d-b.d).slice(0,12).map(x=>x.p);
-    const out=$('ctConditionResults');if(!pts.length){out.innerHTML='<div class="empty">Non hai ancora appostamenti/punti salvati da verificare.</div>';return}
+    let pts=(state.points||[]).filter(p=>{
+      const t=String(p?.type||'').toLowerCase();
+      return t!=='avvistamento'&&t!=='parcheggio'&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng);
+    });
+    // "Verifica tutti" deve davvero controllare TUTTI i punti salvati.
+    // Prima venivano esclusi i punti oltre 20 km (e tagliati a 12), facendo apparire
+    // erroneamente "nessun punto salvato" quando gli appostamenti erano lontani dal GPS.
+    if(focus)pts=pts.map(p=>({p,d:haveSafe(focus,[+p.lat,+p.lng])})).sort((a,b)=>a.d-b.d).map(x=>x.p);
+    const out=$('ctConditionResults');if(!pts.length){out.innerHTML='<div class="empty">Non risultano appostamenti/punti salvati. Salva prima almeno un punto dalla mappa.</div>';return}
     if(!navigator.onLine){out.innerHTML='<div class="empty">Per controllare una previsione nuova serve Internet. I punti e i dati salvati restano comunque disponibili offline.</div>';return}
     out.innerHTML='<div class="empty">Controllo gli appostamenti…</div>';$('ctConditionRun').disabled=true;clearConditionLayer();conditionLayer=L.layerGroup().addTo(map);
     const rows=[];
