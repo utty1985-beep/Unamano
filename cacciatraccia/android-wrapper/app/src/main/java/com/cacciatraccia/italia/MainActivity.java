@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
 
     private static final String APP_HOST = "utty1985-beep.github.io";
     private static final String APP_PATH = "/Unamano/cacciatraccia/";
-    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6500";
+    private static final String START_URL = "https://" + APP_HOST + APP_PATH + "?v=6501&tester=1";
     private static final String PRIVACY_URL = "https://" + APP_HOST + APP_PATH + "privacy.html";
     private static final String PRO_PRODUCT_ID = "passione_pro_annuale";
     private static final int FREE_DAILY_EXTERNAL_SEARCHES = 5;
@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             s.setSafeBrowsingEnabled(true);
         }
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.5.0");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.5.1");
 
         webView.addJavascriptInterface(new NativeBridge(), "PassioneNative");
 
@@ -192,15 +192,15 @@ public class MainActivity extends Activity {
 
         initBilling();
 
-        boolean firstRecovery6500 = !getSharedPreferences("pfc_release_state", MODE_PRIVATE)
-                .getBoolean("web_6500_recovery_loaded", false);
-        if (firstRecovery6500) {
+        boolean firstTester6501 = !getSharedPreferences("pfc_release_state", MODE_PRIVATE)
+                .getBoolean("web_6501_tester_loaded", false);
+        if (firstTester6501) {
             webView.clearCache(true);
             getSharedPreferences("pfc_release_state", MODE_PRIVATE)
-                    .edit().putBoolean("web_6500_recovery_loaded", true).apply();
+                    .edit().putBoolean("web_6501_tester_loaded", true).apply();
         }
 
-        if (!firstRecovery6500 && state != null && webView.restoreState(state) != null) {
+        if (!firstTester6501 && state != null && webView.restoreState(state) != null) {
             String saved = state.getString("cameraUri");
             if (saved != null) cameraUri = Uri.parse(saved);
         } else {
