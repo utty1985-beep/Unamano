@@ -1,7 +1,7 @@
 
 // V6.1.9 - verifica condizioni appostamenti, pioggia/cambio vento, Favugna, GPS orientato, area offline, backup automatico, condivisione completa punti
 (function(){
-  const CT_VER='6.1.11';
+  const CT_VER='6.1.12';
   const AUTO_SNAP_KEY='cacciatraccia-auto-snapshot-v1';
   const OFFLINE_TILE_CACHE='cacciatraccia-offline-tiles-v1';
   let ctHeadingFollow=true,conditionLayer=null;
@@ -254,19 +254,22 @@
     if($('rotateRightBtn'))$('rotateRightBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(getBearing()+15))toast('Rotazione non disponibile su questo browser')};
     if($('northBtn'))$('northBtn').onclick=()=>{ctHeadingFollow=false;if(!setBearing(0))toast('Rotazione non disponibile su questo browser')};
     const stopFollowForManualMap=()=>{
-      if(!follow)return;
+      // Blocca immediatamente anche un'eventuale animazione GPS già partita.
+      try{map?.stop?.()}catch{}
       follow=false;
       $('followBtn')?.classList.remove('active');
     };
     map?.on('dragstart',stopFollowForManualMap);
-    // Disattiva "Seguimi" appena l'utente appoggia il dito sulla mappa, prima ancora
-    // che arrivi il prossimo aggiornamento GPS: niente più ritorno forzato al pallino blu.
+    // Al primo contatto manuale con la mappa esci SEMPRE da "Seguimi".
+    // Capture=true fa scattare il blocco prima dei gestori touch di Leaflet.
     const mapEl=map?.getContainer?.();
-    if(mapEl&&!mapEl.dataset.ctManualPanFix){
-      mapEl.dataset.ctManualPanFix='1';
-      mapEl.addEventListener('pointerdown',stopFollowForManualMap,{passive:true});
-      mapEl.addEventListener('touchstart',stopFollowForManualMap,{passive:true});
-      mapEl.addEventListener('wheel',stopFollowForManualMap,{passive:true});
+    if(mapEl&&!mapEl.dataset.ctManualPanFix2){
+      mapEl.dataset.ctManualPanFix2='1';
+      mapEl.addEventListener('pointerdown',stopFollowForManualMap,{capture:true,passive:true});
+      mapEl.addEventListener('touchstart',stopFollowForManualMap,{capture:true,passive:true});
+      mapEl.addEventListener('touchmove',stopFollowForManualMap,{capture:true,passive:true});
+      mapEl.addEventListener('mousedown',stopFollowForManualMap,{capture:true,passive:true});
+      mapEl.addEventListener('wheel',stopFollowForManualMap,{capture:true,passive:true});
     }
     window.addEventListener('pagehide',()=>autoSnapshot(true));document.addEventListener('visibilitychange',()=>{if(document.hidden)autoSnapshot(false)});
     const v=$('ctVersionBadge');if(v)v.textContent='• V'+CT_VER;
