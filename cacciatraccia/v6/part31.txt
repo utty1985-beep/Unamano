@@ -1,0 +1,40 @@
+e);window.removeEventListener('deviceorientation',radarListener,true);radarListener=null}}
+  let lastTilt=null,lastRaw=null,lastAccepted=null;
+  function circularSmooth(prev,next,f=.22){if(prev==null)return next;let d=(((next-prev)+540)%360)-180;return clamp360(prev+d*f)}
+  function onOrientation(e){
+    if(!radarOpen)return;
+    const beta=Number(e.beta||0),gamma=Number(e.gamma||0),flat=Math.abs(beta)<=28&&Math.abs(gamma)<=28;
+    const raw=Number.isFinite(+e.webkitCompassHeading)?clamp360(+e.webkitCompassHeading):(Number.isFinite(+e.alpha)?clamp360(360-(+e.alpha)):null);
+    if(raw==null)return;
+    if(!flat){if(q('ctRadarFlat'))q('ctRadarFlat').textContent='📱 Rimetti il telefono piatto: direzione bloccata';lastTilt={beta,gamma};return;}
+    if(lastTilt&&lastRaw!=null){const tiltMove=Math.hypot(beta-lastTilt.beta,gamma-lastTilt.gamma),yawMove=diffAngle(raw,lastRaw);if(tiltMove>3.5&&yawMove<9){lastTilt={beta,gamma};lastRaw=raw;return;}}
+    lastTilt={beta,gamma};lastRaw=raw;lastAccepted=circularSmooth(lastAccepted,raw,.28);radarHeading=lastAccepted;
+    if(q('ctRadarFlat'))q('ctRadarFlat').textContent='✅ Telefono piatto · ruota a sinistra/destra';renderRadar();
+  }
+  function renderRadar(){
+    if(!radarOpen)return;const deg=q('ctRadarDeg'),comp=q('ctRadarCompass'),list=q('ctRadarList');if(!list)return;
+    if(radarHeading==null){deg.textContent='—°';list.innerHTML='<div class="ctRadarItem">Muovi lentamente il telefono a sinistra/destra per iniziare.</div>';return}
+    deg.textContent=Math.round(radarHeading)+'°';comp?.style.setProperty('--radar-rot',radarHeading+'deg');
+    const origin=lastPos,arr=(state.points||[]).map(p=>{const d=kmDist(origin,{lat:+p.lat,lng:+p.lng}),br=bearing(origin,{lat:+p.lat,lng:+p.lng});return{p,d,br,delta:diffAngle(br,radarHeading)}}).filter(x=>Number.isFinite(x.d)&&x.d<=10&&x.delta<=28).sort((a,b)=>a.d-b.d);
+    if(!arr.length){list.innerHTML='<div class="ctRadarItem"><b>Nessun punto in questa direzione</b><span>Ruota lentamente a sinistra o destra.</span></div>';return}
+    list.innerHTML=arr.slice(0,8).map(x=>{const prev=radarPrevDistances.get(x.p.id),away=prev!=null&&x.d>prev+.03;radarPrevDistances.set(x.p.id,x.d);const label=x.p.species||x.p.name||x.p.type||'Punto';const dist=x.d<1?Math.round(x.d*1000)+' m':x.d.toFixed(1)+' km';return `<div class="ctRadarItem"><b>${x.p.type==='Avvistamento'?'🕊':String(label).toLowerCase().includes('fung')?'🍄':'📍'} ${esc(label)}</b><span>Direzione ${Math.round(x.br)}° · scarto ${Math.round(x.delta)}°</span>${away?'<div class="ctRadarAway">↩ Ti stai allontanando: distanza nascosta</div>':`<div style="font-size:18px;font-weight:900;margin-top:3px">${dist}</div>`}</div>`}).join('');
+  }
+
+  // GPS filtrato: riduce il “ballo” da fermo e scarta salti poco affidabili.
+  let stableFix=null;
+  startGps=function(){
+    if(gpsWatch!=null||!navigator.geolocation)return;
+    gpsWatch=navigator.geolocation.watchPosition(p=>{
+      const raw={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),heading:p.coords.heading,speed:p.coords.speed};
+      if(!Number.isFinite(raw.lat)||!Number.isFinite(raw.lng))return;
+      if(stableFix){const jump=kmDist(stableFix,raw)*1000;if(jump>Math.max(90,(raw.acc||0)*2.2)&&(!raw.speed||raw.speed<2))return;const d=jump;if(d<35){const k=d<8?.12:.28;raw.lat=stableFix.lat+(raw.lat-stableFix.lat)*k;raw.lng=stableFix.lng+(raw.lng-stableFix.lng)*k;}}
+      stableFix={...raw};lastPos={...raw};
+      if(q('gpsBadge'))q('gpsBadge').textContent=`GPS ±${lastPos.acc} m`;
+      try{if(!userMarker)userMarker=L.circleMarker([lastPos.lat,lastPos.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);else userMarker.setLatLng([lastPos.lat,lastPos.lng]);if(follow)map.setView([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});updateCar?.();}catch(e){console.warn('GPS UI',e)}
+      if(cfg.region==='auto'&&!cfg.detectedRegion)detectTerritory(false);if(radarOpen)renderRadar();
+    },()=>{if(q('gpsBadge'))q('gpsBadge').textContent='GPS non disponibile';},{enableHighAccuracy:true,maximumAge:1200,timeout:20000});
+  };
+
+  function boot661(){addStyles();ensureControlCard();ensureCalendarCard();applyMode();setTimeout(()=>{applyMode();renderTerritory();if(cfg.region==='auto'&&!cfg.detectedRegion&&lastPos)detectTerritory(false)},600);const mo=new MutationObserver(()=>applyMode());const p=q('page-map');if(p)mo.observe(p,{childList:true,subtree:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot661,{once:true});else boot661();
+})();
