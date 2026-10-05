@@ -25,7 +25,7 @@ import java.io.IOException;
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
     private static final int REQ_FILE = 4102;
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6304";
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6502";
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.3.4");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.5.2");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
