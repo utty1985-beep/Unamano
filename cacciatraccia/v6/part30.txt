@@ -1,9 +1,4 @@
-ync function loadOsmProtected(){
-    if(!map||!window.L)return toast('Mappa non pronta');
-    const b=map.getBounds();if(!b)return;
-    if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Carico le aree protette visibili…';
-    try{
-      const bbox=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()].join(',');
+join(',');
       const query=`[out:json][timeout:20];(way["boundary"="protected_area"](${bbox});relation["boundary"="protected_area"](${bbox});way["leisure"="nature_reserve"](${bbox});relation["leisure"="nature_reserve"](${bbox}););out geom;`;
       const r=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query),{cache:'no-store'});if(!r.ok)throw Error('Overpass '+r.status);const j=await r.json();
       if(protectedOsmLayer)try{map.removeLayer(protectedOsmLayer)}catch{}
@@ -28,13 +23,17 @@ ync function loadOsmProtected(){
 
   function radarModal(){
     let m=q('ctRadarModal');if(m)return m;
-    m=document.createElement('div');m.id='ctRadarModal';m.className='modal';m.innerHTML=`<div class="dialog ctRadarDialog"><div class="sectionHead"><div><h2 style="margin-bottom:2px">📡 Radar punti salvati</h2><div class="muted" style="color:#ffffffaa">Tieni il telefono piatto e ruotalo solo a sinistra/destra.</div></div><button id="ctRadarClose" class="iconBtn ctRadarClose">✕</button></div><div id="ctRadarCompass" class="ctRadarCompass"></div><div id="ctRadarDeg" class="ctRadarDeg">—°</div><div id="ctRadarFlat" class="ctRadarFlat">Attendo sensore…</div><div class="ctRadarHint">Mostro soltanto punti entro 10 km nella direzione in cui stai guardando. Se ti stai allontanando dal punto, la distanza numerica viene nascosta.</div><div id="ctRadarList" class="ctRadarList"></div></div>`;document.body.appendChild(m);
+    m=document.createElement('div');m.id='ctRadarModal';m.className='modal';m.innerHTML=`<div class="dialog ctRadarDialog"><div class="sectionHead"><div><h2 style="margin-bottom:2px">📡 Radar punti salvati</h2><div class="muted" style="color:#ffffffaa">Fotocamera posteriore + direzione. Tieni il telefono piatto e ruotalo solo a sinistra/destra.</div></div><button id="ctRadarClose" class="iconBtn ctRadarClose">✕</button></div><div class="ctRadarStage"><video id="ctRadarVideo" class="ctRadarVideo" autoplay playsinline muted></video><div id="ctRadarCompass" class="ctRadarCompass"></div><div id="ctRadarCameraMsg" class="ctRadarCameraMsg">Attivo fotocamera…</div></div><div id="ctRadarDeg" class="ctRadarDeg">—°</div><div id="ctRadarFlat" class="ctRadarFlat">Attendo sensore…</div><div class="ctRadarHint">Mostro soltanto punti entro 10 km nella direzione in cui stai guardando. Se ti stai allontanando dal punto, la distanza numerica viene nascosta.</div><div id="ctRadarList" class="ctRadarList"></div></div>`;document.body.appendChild(m);
     q('ctRadarClose').onclick=closeRadar;m.onclick=e=>{if(e.target===m)closeRadar()};return m;
+  }
+  async function startRadarCamera(){
+    const msg=q('ctRadarCameraMsg'),video=q('ctRadarVideo');
+    if(!navigator.mediaDevices?.getUserMedia){if(msg)msg.textContent='Fotocamera non disponibile · radar direzionale attivo';return;}
+    try{radarStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});if(video){video.srcObject=radarStream;await video.play().catch(()=>{});}if(msg)msg.textContent='📷 Fotocamera attiva';setTimeout(()=>{if(msg)msg.style.display='none'},1800);}
+    catch(e){console.warn('Radar camera',e);if(msg)msg.textContent='Fotocamera non autorizzata · radar direzionale attivo';}
   }
   async function openRadar(){
     if(!lastPos){const p=await getFix?.();if(p)lastPos=p}if(!lastPos)return toast('Serve il GPS per usare il radar');
-    radarModal().classList.add('open');radarOpen=true;radarPrevDistances.clear();
+    radarModal().classList.add('open');radarOpen=true;radarPrevDistances.clear();await startRadarCamera();
     try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const ok=await DeviceOrientationEvent.requestPermission();if(ok!=='granted')throw Error('permesso orientamento negato')}}catch(e){toast(e.message||'Sensore orientamento non disponibile')}
-    radarListener=onOrientation;window.addEventListener('deviceorientationabsolute',radarListener,true);window.addEventListener('deviceorientation',radarListener,true);renderRadar();
-  }
-  function closeRadar(){radarOpen=false;q('ctRadarModal')?.classList.remove('open');if(radarListener){window.removeEventListener('deviceorientationabsolute',radarListener,tru
+    radarListener=onOrientation;window.addEventListener('deviceorientationabsolute',radarListener,true);window.addEventListener('d
