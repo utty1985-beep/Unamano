@@ -1,7 +1,8 @@
-const CACHE='passione-funghi-caccia-v6-6-5';
-const CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.5`)];
-const FIXES=[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.5`);
-const SHELL=['./','./index.html','./data/normativa-italia.json?v=6.6.5','./styles.css?v=4.1.2','./app-loader.js?v=6.6.5','./manifest.webmanifest','./icon.svg',...CORE,...FIXES];
+const CACHE='passione-funghi-caccia-v6-6-6';
+const ACTIVE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.6`)];
+const STABLE_CORE=[...Array.from({length:25},(_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.5.2`)];
+const FIXES=[27,28,29,30,32,33,34,35,36].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=6.6.6`);
+const SHELL=['./','./index.html','./data/normativa-italia.json?v=6.6.6','./styles.css?v=4.1.2','./app-loader.js?v=6.6.6','./manifest.webmanifest','./icon.svg',...ACTIVE_CORE,...STABLE_CORE,...FIXES];
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
@@ -25,7 +26,8 @@ self.addEventListener('fetch',e=>{
         const c=await caches.open(CACHE);c.put(e.request,r.clone()).catch(()=>{});
         return r;
       }catch{
-        const cached=await caches.match(e.request,{ignoreSearch:true});
+        let cached=await caches.match(e.request);
+        if(!cached&&!u.searchParams.has('v'))cached=await caches.match(e.request,{ignoreSearch:true});
         if(cached)return cached;
         if(e.request.mode==='navigate')return (await caches.match('./index.html'))||Response.error();
         return Response.error();
