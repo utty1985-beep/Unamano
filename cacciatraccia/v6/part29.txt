@@ -1,4 +1,4 @@
-codeURIComponent(pos.lat)}&lon=${encodeURIComponent(pos.lng)}&zoom=10&addressdetails=1&accept-language=it`;
+=jsonv2&lat=${encodeURIComponent(pos.lat)}&lon=${encodeURIComponent(pos.lng)}&zoom=10&addressdetails=1&accept-language=it`;
       const r=await fetch(u,{headers:{'Accept':'application/json'},cache:'no-store'});if(!r.ok)throw Error('servizio territorio '+r.status);
       const j=await r.json(),a=j.address||{};
       const reg=a.state||a.region||'',prov=a.province||a.county||a.state_district||'';
@@ -6,6 +6,7 @@ codeURIComponent(pos.lat)}&lon=${encodeURIComponent(pos.lng)}&zoom=10&addressdet
       cfg.province=String(prov||'').replace(/^Provincia di\s+/i,'').trim();
       cfg.atc=cfg.detectedRegion==='Puglia'?pugliaAtc(cfg.province):'';persist();renderTerritory();
     }catch(e){console.warn('Territorio',e);if(q('ctGeoStatus'))q('ctGeoStatus').textContent='GPS attivo · Regione non ottenuta dalla rete';}
+    finally{detectBusy=false;}
   }
 
   function setMode(mode){cfg.mode=mode==='mushroom'?'mushroom':'hunt';persist();applyMode();}
@@ -40,4 +41,9 @@ codeURIComponent(pos.lat)}&lon=${encodeURIComponent(pos.lng)}&zoom=10&addressdet
       protectedWmsLayer.addTo(map);if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Strato ufficiale SIT Puglia attivo sopra la mappa.';
     }catch(e){console.warn(e);toast('Strato ufficiale non disponibile in questo momento')}
   }
-  as
+  async function loadOsmProtected(){
+    if(!map||!window.L)return toast('Mappa non pronta');
+    const b=map.getBounds();if(!b)return;
+    if(q('ctProtectedStatus'))q('ctProtectedStatus').textContent='Carico le aree protette visibili…';
+    try{
+      const bbox=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()].
