@@ -1,13 +1,14 @@
-// V6.5.0 - Play Store / privacy / Free + PRO
+// V6.5.1 - Play Store / privacy / Free + PRO
 (function(){
   'use strict';
 
-  const APP_VER='6.5.0';
+  const APP_VER='6.5.1';
   const FREE_DAILY_EXTERNAL_SEARCHES=5;
   const QUOTA_KEY='pfc-external-search-quota-v1';
   const MUSH_CONSENT_KEY='pfc-mush-ai-consent-v1';
   const PRO_PRICE_FALLBACK='19,99 € / anno';
   const PRO_FEATURE_IDS=new Set(['quickARBtn','ctConditionBtn','ctOfflineAreaBtn']);
+  const TESTER_MODE=(()=>{try{return new URLSearchParams(location.search).get('tester')==='1'}catch{return false}})();
 
   function localDay(){
     const d=new Date(),p=n=>String(n).padStart(2,'0');
@@ -17,6 +18,7 @@
     try{return window.PassioneNative||null}catch{return null}
   }
   function isPro(){
+    if(TESTER_MODE)return true;
     try{return !!bridge()?.isPro?.()}catch{return false}
   }
   function quota(){
@@ -158,13 +160,13 @@
     ensurePlanButton();ensureQuotaHint();
     const b=document.getElementById('pfcPlanBtn'),h=document.getElementById('pfcQuotaHint');
     const pro=isPro(),q=quota();
-    if(b){b.classList.toggle('pro',pro);b.textContent=pro?'✓ PRO attivo':('FREE · '+q.left+'/'+FREE_DAILY_EXTERNAL_SEARCHES)}
+    if(b){b.classList.toggle('pro',pro);b.textContent=TESTER_MODE?'🧪 TESTER · tutto sbloccato':(pro?'✓ PRO attivo':('FREE · '+q.left+'/'+FREE_DAILY_EXTERNAL_SEARCHES))}
     if(h){
-      h.innerHTML=pro?'<span>✓ Piano <b>PRO</b> · ricerche esterne illimitate</span><span>Google Play</span>':
-        '<span>🌐 Ricerche esterne oggi: <b>'+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+'</b></span><button id="pfcQuotaPro" class="mini" type="button">PRO illimitato</button>';
+      h.innerHTML=TESTER_MODE?'<span>🧪 <b>Modalità TESTER</b> · funzioni PRO e limiti giornalieri disattivati per le prove</span><span>6.5.1</span>':(pro?'<span>✓ Piano <b>PRO</b> · ricerche esterne illimitate</span><span>Google Play</span>':
+        '<span>🌐 Ricerche esterne oggi: <b>'+q.used+'/'+FREE_DAILY_EXTERNAL_SEARCHES+'</b></span><button id="pfcQuotaPro" class="mini" type="button">PRO illimitato</button>');
       const x=document.getElementById('pfcQuotaPro');if(x)x.onclick=()=>openPro('Con PRO le ricerche esterne non hanno limite giornaliero.');
     }
-    ['quickARBtn','ctConditionBtn','ctOfflineAreaBtn'].forEach(tagProControl);
+    ['quickARBtn','ctConditionBtn','ctOfflineAreaBtn'].forEach(id=>{tagProControl(id);const tag=document.getElementById(id)?.querySelector('.pfcProTag');if(tag&&TESTER_MODE)tag.textContent='TEST'});
     const v=document.getElementById('ctVersionBadge');if(v)v.textContent='• V'+APP_VER;
   }
   function isCoordinateQuery(q){
@@ -217,7 +219,7 @@
   window.PFCNativePlanChanged=function(){
     setTimeout(()=>{updatePlanUi();if(isPro()){document.getElementById('pfcProModal')?.classList.remove('open');try{toast('Passione PRO attivo ✓')}catch{}}},60);
   };
-  window.PFCPlayStore={version:APP_VER,isPro,quota,openPro,freeDailyExternalSearches:FREE_DAILY_EXTERNAL_SEARCHES};
+  window.PFCPlayStore={version:APP_VER,isPro,isTester:()=>TESTER_MODE,quota,openPro,freeDailyExternalSearches:FREE_DAILY_EXTERNAL_SEARCHES};
 
   const previousBind=bind;
   bind=function(){
