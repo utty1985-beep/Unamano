@@ -1,11 +1,13 @@
 const requestedVersion=new URLSearchParams(location.search).get('v')||'';
-const safeFixTester=requestedVersion==='6621';
+const longPressTester=requestedVersion==='6622';
+const safeFixTester=requestedVersion==='6621'||longPressTester;
 const fullFixTester=requestedVersion==='6620'||safeFixTester;
 const experimental=requestedVersion==='6611'||fullFixTester;
 const gpsFixTester=requestedVersion==='6600'||fullFixTester;
-const assetVersion=safeFixTester?'6.6.21-safefix':(fullFixTester?'6.6.20-fullfix':(experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7')));
+const assetVersion=longPressTester?'6.6.22-longpress':(safeFixTester?'6.6.21-safefix':(fullFixTester?'6.6.20-fullfix':(experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7'))));
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
-const enhancements=[27,28,29,30,32,33,34].map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
+const enhancementParts=[27,28,29,30,32,33,34,...(longPressTester?[37]:[])];
+const enhancements=enhancementParts.map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const radar=`./v6/part35.txt?v=${assetVersion}`;
 
 function bootError(m){
@@ -199,8 +201,11 @@ try{
     const selectedOld='selected=selected||{lat,lng};';
     const selectedCount=coreSrc.split(selectedOld).length-1;
     if(selectedCount<2)throw new Error('Guardia meteo non applicabile');
-    coreSrc=coreSrc.split(selectedOld).join("if(!selected||!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;");
-    coreSrc=coreSrc.replace("navigator.serviceWorker.register('./sw.js?v=6.3.4')","navigator.serviceWorker.register('./sw.js?v=6.6.21-safefix')");
+    const selectedGuard=longPressTester
+      ?"if(!selected){selected={lat:__pfcTargetLat,lng:__pfcTargetLng,weather:null};}else if(!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;"
+      :"if(!selected||!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;";
+    coreSrc=coreSrc.split(selectedOld).join(selectedGuard);
+    coreSrc=coreSrc.replace("navigator.serviceWorker.register('./sw.js?v=6.3.4')",`navigator.serviceWorker.register('./sw.js?v=${assetVersion}')`);
     coreSrc += "\nconst __pfc6621SafeStartGps=startGps,__pfc6621SafeGetFix=getFix,__pfc6621SafeLocate=locate;\nwindow.__PFC6621_EVAL__=(src)=>eval(src);\nwindow.__PFC6621_RESTORE_SAFE__=()=>{startGps=__pfc6621SafeStartGps;getFix=__pfc6621SafeGetFix;locate=__pfc6621SafeLocate;};\n";
   }
   new Function(coreSrc)();
@@ -214,11 +219,11 @@ try{
     runLater(async()=>{
       try{
         const extraSrc=await loadGroup(enhancements,'funzioni tester',4);
-        if(safeFixTester){const ev=window.__PFC6621_EVAL__;if(typeof ev!=='function')throw new Error('Contesto tester 6.6.21 non pronto');ev(extraSrc);window.__PFC6621_RESTORE_SAFE__?.();}else new Function(extraSrc)();
+        if(safeFixTester){const ev=window.__PFC6621_EVAL__;if(typeof ev!=='function')throw new Error('Contesto tester sicuro non pronto');ev(extraSrc);window.__PFC6621_RESTORE_SAFE__?.();}else new Function(extraSrc)();
         // Il radar NON viene più caricato in automatico.
         // Viene scaricato e attivato soltanto quando l'utente preme "Radar punti".
         const radarBtn=document.getElementById('ctRadarBtn');
-        if(pill)pill.textContent=safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta');
+        if(pill)pill.textContent=longPressTester?'● tester 6.6.22 pronta · pressione lunga attiva · radar su richiesta':(safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta'));
         if(radarBtn){
           let radarLoading=false;
           const lazyRadar=async()=>{
@@ -229,11 +234,11 @@ try{
             radarBtn.textContent='📡 Carico radar…';
             try{
               const radarSrc=await fetchPart(radar);
-              if(safeFixTester){const ev=window.__PFC6621_EVAL__;if(typeof ev!=='function')throw new Error('Contesto radar 6.6.21 non pronto');ev(radarSrc);window.__PFC6621_RESTORE_SAFE__?.();}else new Function(radarSrc)();
+              if(safeFixTester){const ev=window.__PFC6621_EVAL__;if(typeof ev!=='function')throw new Error('Contesto radar sicuro non pronto');ev(radarSrc);window.__PFC6621_RESTORE_SAFE__?.();}else new Function(radarSrc)();
               radarBtn.disabled=false;
               radarBtn.textContent=oldLabel;
               radarLoading=false;
-              if(pill)pill.textContent=safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta');
+              if(pill)pill.textContent=longPressTester?'● tester 6.6.22 completa':(safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta'));
               // part35 sostituisce onclick in modo sincrono; rilancio il click una sola volta.
               if(radarBtn.onclick!==lazyRadar)radarBtn.click();
               else throw new Error('radar non collegato');
