@@ -8,7 +8,7 @@
   function oldNav(page){const b=document.querySelector('body>nav button[data-page="'+page+'"]');if(b){b.click();return true}return false}
   function goMap(top=false){oldNav('map');setTimeout(()=>{window.dispatchEvent(new Event('resize'));(top?q('page-map'):q('map'))?.scrollIntoView({behavior:'smooth',block:top?'start':'center'})},90)}
   function getCfg(){try{return JSON.parse(localStorage.getItem('pfc-v661-settings')||'{}')}catch{return{}}}
-  function syncMode(){const mushroom=getCfg().mode==='mushroom';q('pfc676Calendar')?.toggleAttribute('hidden',mushroom);q('pfc676Hunt')?.classList.toggle('active',!mushroom);q('pfc676Mush')?.classList.toggle('active',mushroom)}
+  function syncMode(){const mushroom=getCfg().mode==='mushroom';q('pfc676Calendar')?.toggleAttribute('hidden',mushroom);q('pfc678Mushroom')?.toggleAttribute('hidden',!mushroom);q('pfc678Species')?.toggleAttribute('hidden',!mushroom);q('pfc678Sighting')?.toggleAttribute('hidden',mushroom);q('pfc676Hunt')?.classList.toggle('active',!mushroom);q('pfc676Mush')?.classList.toggle('active',mushroom)}
 
   function buildHero(){
     const page=q('page-map');if(!page||q('pfc676Hero'))return;
@@ -53,7 +53,13 @@
       const s=document.createElement('summary');s.textContent='Impostazioni meteo';d.appendChild(s);
       settings.before(d);d.appendChild(settings);
     }
-    const car=findCardById('carStatus');if(car)car.classList.add('homeCarDetail');
+    const car=findCardById('carStatus');if(car){
+      car.classList.add('homeCarDetail');
+      if(!car.parentElement.classList.contains('pfcParkingSettings')){
+        const d=document.createElement('details');d.className='pfcParkingSettings';
+        const s=document.createElement('summary');s.textContent='🚗 Segna o sposta la macchina';d.appendChild(s);car.before(d);d.appendChild(car);
+      }
+    }
     const points=findCardById('pointsList');if(points){
       points.classList.add('homePointsCard');const h=points.querySelector('h2');if(h&&h.textContent!=='📍 I tuoi appostamenti')h.textContent='📍 I tuoi appostamenti';
       const appPage=ensureAppostamentiPage();if(appPage&&points.parentElement!==appPage)appPage.appendChild(points);
@@ -66,7 +72,8 @@
         '<button id="pfc676Conditions"><b>🌦</b><span>Verifica condizioni</span><small>Meteo e territorio</small></button>'+
         '<button id="pfc676Radar"><b>🎯</b><span>Radar</span><small>Punti e direzione</small></button>'+
         '<button id="pfc676Track"><b>🥾</b><span>Camminata</span><small>Registra percorso</small></button>';
-      weather.insertAdjacentElement('afterend',box);weather.insertAdjacentElement('afterend',title);
+      box.insertAdjacentHTML('beforeend','<button id="pfc678Mushroom" hidden><b>🍄</b><span>Funghi trovati</span><small>Segna il ritrovamento</small></button><button id="pfc678Species" hidden><b>🔎</b><span>Vedi specie</span><small>Foto e descrizione</small></button><button id="pfc678Sighting"><b>🕊️</b><span>Avvistamento</span><small>Uccelli e note</small></button>');
+      weather.insertAdjacentElement('afterend',box);q('pfc678Mushroom').onclick=()=>click('quickMushroomBtn');q('pfc678Species').onclick=()=>click('quickSpeciesBtn');q('pfc678Sighting').onclick=()=>click('quickSightingBtn');weather.insertAdjacentElement('afterend',title);
       q('pfc676Save').onclick=()=>{goMap(false);setTimeout(()=>{if(!q('selectedCard')?.classList.contains('hidden'))click('savePointBtn');else if(!click('quickSaveHereBtn'))click('locateBtn')},140)};
       q('pfc676Conditions').onclick=()=>{if(!click('ctCompareMainBtn')&&!click('ctConditionBtn')){goMap(false);setTimeout(()=>click('ctCompareMainBtn')||click('ctConditionBtn'),500)}};
       q('pfc676Radar').onclick=()=>{if(!click('ctRadarBtn')){goMap(false);setTimeout(()=>click('ctRadarBtn'),700)}};

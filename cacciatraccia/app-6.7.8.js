@@ -234,7 +234,7 @@ window.CT={
 };
 window.__PFC_BOOT_READY__=(async()=>{
   try{
-    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw-6.7.8.js?v=6.7.8').catch(e=>console.warn('SW',e)); }catch(e){console.warn('SW',e);} }
+    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw-6.7.8.js?v=6.7.8-r2').catch(e=>console.warn('SW',e)); }catch(e){console.warn('SW',e);} }
     ensureModalActions(); await ensureLeaflet(); initMap(); bind();
   }catch(e){ console.error(e); throw e; const m=document.getElementById('map'); if(m)m.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore mappa: ${esc(e.message)}. Ricarica una volta con Internet attivo.</div>`; }
 })();
