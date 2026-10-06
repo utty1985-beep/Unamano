@@ -1,12 +1,13 @@
-const requestedVersion=new URLSearchParams(location.search).get('v')||'';
-const longPressTester=requestedVersion==='6622';
+const requestedVersion=new URLSearchParams(location.search).get('v')||'671';
+const finalBuild=requestedVersion==='671'||requestedVersion==='final';
+const longPressTester=requestedVersion==='6622'||finalBuild;
 const safeFixTester=requestedVersion==='6621'||longPressTester;
 const fullFixTester=requestedVersion==='6620'||safeFixTester;
 const experimental=requestedVersion==='6611'||fullFixTester;
 const gpsFixTester=requestedVersion==='6600'||fullFixTester;
-const assetVersion=longPressTester?'6.6.22-longpress':(safeFixTester?'6.6.21-safefix':(fullFixTester?'6.6.20-fullfix':(experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7'))));
+const assetVersion=finalBuild?'6.7.1-final':(longPressTester?'6.6.22-longpress':(safeFixTester?'6.6.21-safefix':(fullFixTester?'6.6.20-fullfix':(experimental?'6.6.4-test5-lazy':(gpsFixTester?'6.6.19-gpsfix':'6.5.2-r7')))));
 const core=[...Array(25)].map((_,i)=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
-const enhancementParts=[27,28,29,30,32,33,34,...(longPressTester?[37]:[])];
+const enhancementParts=[27,28,29,30,32,33,34,...(longPressTester&&!finalBuild?[37]:[]),...(finalBuild?[38,39]:[])];
 const enhancements=enhancementParts.map(i=>`./v6/part${String(i).padStart(2,'0')}.txt?v=${assetVersion}`);
 const radar=`./v6/part35.txt?v=${assetVersion}`;
 
@@ -47,7 +48,7 @@ function runLater(fn,delay=180){
 
 try{
   const pill=document.getElementById('netPill');
-  if(pill)pill.textContent=experimental?'● tester: avvio base stabile…':(gpsFixTester?'● tester GPS: avvio base stabile…':'● stabile 6.5.2…');
+  if(pill)pill.textContent=finalBuild?'● avvio 6.7.1 FINAL su base stabile…':(experimental?'● tester: avvio base stabile…':(gpsFixTester?'● tester GPS: avvio base stabile…':'● stabile 6.5.2…'));
 
   // Prima avvia SEMPRE la base stabile: la mappa diventa utilizzabile subito.
 
@@ -223,7 +224,7 @@ try{
         // Il radar NON viene più caricato in automatico.
         // Viene scaricato e attivato soltanto quando l'utente preme "Radar punti".
         const radarBtn=document.getElementById('ctRadarBtn');
-        if(pill)pill.textContent=longPressTester?'● tester 6.6.22 pronta · pressione lunga attiva · radar su richiesta':(safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta'));
+        if(pill)pill.textContent=finalBuild?'● 6.7.1 FINAL pronta · GPS/mappa consolidati · radar su richiesta':(longPressTester?'● tester 6.6.22 pronta · pressione lunga attiva · radar su richiesta':(safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta')));
         if(radarBtn){
           let radarLoading=false;
           const lazyRadar=async()=>{
@@ -238,7 +239,7 @@ try{
               radarBtn.disabled=false;
               radarBtn.textContent=oldLabel;
               radarLoading=false;
-              if(pill)pill.textContent=longPressTester?'● tester 6.6.22 completa':(safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta'));
+              if(pill)pill.textContent=finalBuild?'● 6.7.1 FINAL completa':(longPressTester?'● tester 6.6.22 completa':(safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta')));
               // part35 sostituisce onclick in modo sincrono; rilancio il click una sola volta.
               if(radarBtn.onclick!==lazyRadar)radarBtn.click();
               else throw new Error('radar non collegato');

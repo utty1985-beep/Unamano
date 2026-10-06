@@ -1,0 +1,198 @@
+// V6.7.1 FINAL - GPS/mappa/follow consolidati senza modificare le versioni precedenti
+(function(){
+  const VER='6.7.1';
+  const LAST_FIX_KEY='pfc-final-last-fix-v1';
+  const q=id=>document.getElementById(id);
+  let retryTimer=null, starting=false, retryCount=0;
+
+  function gpsText(e){
+    if(!e)return 'GPS non disponibile';
+    if(e.code===1)return 'GPS: autorizzazione negata';
+    if(e.code===2)return 'GPS: posizione non disponibile';
+    if(e.code===3)return 'GPS: aggancio lento · premi ◎';
+    return 'GPS non disponibile';
+  }
+  function badge(t){const b=q('gpsBadge');if(b)b.textContent=t}
+  function followUi(on){
+    follow=!!on;
+    const b=q('followBtn');
+    if(b){
+      b.classList.toggle('active',follow);
+      b.setAttribute('aria-pressed',follow?'true':'false');
+      b.title=follow?'Seguimi: ATTIVO':'Seguimi: DISATTIVO';
+      b.style.background='';b.style.color='';
+    }
+  }
+  function disableFollow(){if(follow)followUi(false)}
+  function validPos(p){return p&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)}
+  function remember(p){
+    try{localStorage.setItem(LAST_FIX_KEY,JSON.stringify({lat:+p.lat,lng:+p.lng,acc:+p.acc||0,ts:Date.now()}))}catch{}
+  }
+  function remembered(){
+    try{
+      const p=JSON.parse(localStorage.getItem(LAST_FIX_KEY)||'null');
+      if(!validPos(p)||!Number.isFinite(+p.ts)||Date.now()-p.ts>86400000)return null;
+      return p;
+    }catch{return null}
+  }
+  function applyFix(raw,center=false){
+    if(!raw?.coords)return null;
+    const p={
+      lat:+raw.coords.latitude,lng:+raw.coords.longitude,
+      acc:Math.round(+raw.coords.accuracy||0),
+      heading:Number.isFinite(+raw.coords.heading)?+raw.coords.heading:null,
+      speed:Number.isFinite(+raw.coords.speed)?+raw.coords.speed:null
+    };
+    if(!validPos(p))return null;
+    lastPos=p;remember(p);retryCount=0;
+    badge('GPS ±'+p.acc+' m');
+    try{
+      if(map&&window.L){
+        if(!userMarker)userMarker=L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:4,fillColor:'#2878d8',fillOpacity:1}).addTo(map);
+        else userMarker.setLatLng([p.lat,p.lng]);
+        if(center||follow)map.setView([p.lat,p.lng],Math.max(map.getZoom(),16),{animate:true});
+      }
+      updateCar?.();
+    }catch(e){console.warn('PFC '+VER+' GPS UI',e)}
+    return p;
+  }
+  function oneFix(opts){
+    return new Promise((resolve,reject)=>{
+      if(!navigator.geolocation)return reject(Object.assign(new Error('GPS non disponibile'),{code:2}));
+      let done=false;
+      const tm=setTimeout(()=>{
+        if(done)return;done=true;
+        reject(Object.assign(new Error('timeout GPS'),{code:3}));
+      },(opts.timeout||10000)+1200);
+      navigator.geolocation.getCurrentPosition(
+        p=>{if(done)return;done=true;clearTimeout(tm);resolve(p)},
+        e=>{if(done)return;done=true;clearTimeout(tm);reject(e)},
+        opts
+      );
+    });
+  }
+  function stopWatch(){
+    if(gpsWatch!=null){
+      try{navigator.geolocation.clearWatch(gpsWatch)}catch{}
+      gpsWatch=null;
+    }
+  }
+  function scheduleRetry(){
+    if(document.hidden||retryTimer||retryCount>=4)return;
+    const wait=Math.min(18000,5000+retryCount*3500);
+    retryCount++;
+    retryTimer=setTimeout(()=>{
+      retryTimer=null;
+      if(!document.hidden&&gpsWatch==null)robustFix(false,false).finally(ensureWatch);
+    },wait);
+  }
+  function ensureWatch(){
+    if(gpsWatch!=null||!navigator.geolocation)return;
+    gpsWatch=navigator.geolocation.watchPosition(
+      p=>applyFix(p,false),
+      e=>{
+        stopWatch();
+        badge(gpsText(e));
+        if(e?.code!==1)scheduleRetry();
+      },
+      {enableHighAccuracy:true,maximumAge:10000,timeout:18000}
+    );
+  }
+  async function robustFix(center=false,userAction=false){
+    if(starting)return validPos(lastPos)?lastPos:null;
+    if(!navigator.geolocation){
+      badge('GPS non disponibile');
+      if(userAction)toast('GPS non disponibile');
+      return null;
+    }
+    starting=true;badge('GPS: ricerca posizione…');
+    try{
+      try{
+        const perm=await navigator.permissions?.query?.({name:'geolocation'});
+        if(perm?.state==='denied')throw Object.assign(new Error('permesso GPS negato'),{code:1});
+      }catch(e){if(e?.code===1)throw e}
+      let raw;
+      try{
+        raw=await oneFix({enableHighAccuracy:true,timeout:9000,maximumAge:5000});
+      }catch(e){
+        if(e?.code===1)throw e;
+        raw=await oneFix({enableHighAccuracy:false,timeout:7000,maximumAge:60000});
+      }
+      const p=applyFix(raw,center);
+      ensureWatch();
+      return p;
+    }catch(e){
+      badge(gpsText(e));
+      if(userAction)toast(gpsText(e));
+      if(e?.code!==1)scheduleRetry();
+      return null;
+    }finally{starting=false}
+  }
+
+  function install(){
+    try{
+      if(retryTimer){clearTimeout(retryTimer);retryTimer=null}
+      stopWatch();
+
+      getFix=async function(){return robustFix(false,true)};
+      startGps=function(){
+        if(!navigator.geolocation){badge('GPS non disponibile');return}
+        robustFix(false,false).finally(ensureWatch);
+      };
+      locate=async function(){
+        followUi(true);
+        const p=await robustFix(true,true);
+        if(p&&map)map.setView([p.lat,p.lng],Math.max(map.getZoom(),16),{animate:true});
+        ensureWatch();
+      };
+      toggleFollow=function(){
+        followUi(!follow);
+        if(follow){
+          if(validPos(lastPos))map?.setView?.([lastPos.lat,lastPos.lng],Math.max(map.getZoom(),16),{animate:true});
+          else robustFix(true,true);
+        }
+        toast(follow?'Seguimi attivo':'Seguimi disattivato');
+      };
+
+      const locateBtn=q('locateBtn'),followBtn=q('followBtn');
+      if(locateBtn)locateBtn.onclick=locate;
+      if(followBtn)followBtn.onclick=toggleFollow;
+
+      map?.on?.('dragstart',disableFollow);
+      map?.on?.('zoomstart',e=>{if(e?.originalEvent)disableFollow()});
+
+      const old=remembered();
+      if(!validPos(lastPos)&&old&&map){
+        badge('Ultima posizione · cerco GPS…');
+        if(follow)map.setView([old.lat,old.lng],Math.max(map.getZoom(),13),{animate:false});
+      }
+
+      document.addEventListener('visibilitychange',()=>{
+        if(document.hidden)return;
+        if(gpsWatch==null)robustFix(false,false).finally(ensureWatch);
+      });
+      window.addEventListener('pageshow',()=>{
+        if(gpsWatch==null)robustFix(false,false).finally(ensureWatch);
+      });
+
+      document.documentElement.dataset.pfcVersion=VER;
+      window.__PFC_FINAL_DIAG__=()=>({
+        version:VER,follow:!!follow,lastPos:lastPos?{...lastPos}:null,
+        gpsWatchActive:gpsWatch!=null,
+        selected:selected?{lat:selected.lat,lng:selected.lng}:null,
+        center:map?.getCenter?.()?{lat:map.getCenter().lat,lng:map.getCenter().lng}:null
+      });
+
+      startGps();
+      const pill=q('netPill');
+      if(pill)pill.textContent='● Passione Funghi e Caccia '+VER+' FINAL';
+      console.info('Passione Funghi e Caccia '+VER+' FINAL GPS attivo');
+    }catch(e){
+      console.error('PFC FINAL install',e);
+      badge('GPS: errore inizializzazione');
+    }
+  }
+
+  // Il loader ripristina prima le funzioni sicure; questo livello si installa subito dopo.
+  setTimeout(install,0);
+})();
