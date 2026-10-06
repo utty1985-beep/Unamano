@@ -111,3 +111,7 @@ body.pfc676 .pfcParkingSettings[open]>.homeCarDetail{display:block!important;mar
 body.pfc676 #map{min-height:380px}
 body.pfc676 #map .leaflet-top.leaflet-left{top:auto;bottom:20px;left:auto;right:10px}
 body.pfc676 #map .leaflet-control-zoom{margin:0}
+/* Search must stay above Leaflet tile panes. */
+body.pfc676 .searchRow{z-index:1100!important}
+body.pfc676 #netPill{grid-column:1;min-width:0}
+body.pfc676 #installBtn{grid-column:2;grid-row:2;font-size:12px;padding:3px 7px}
