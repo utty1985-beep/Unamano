@@ -144,3 +144,7 @@ body.pfc676 #pfcAlertsBtn{grid-column:1/-1;grid-row:3;justify-self:start;border-
 .pfc676Hero h2{font-size:27px;line-height:1.15;margin-bottom:10px}.pfc676Hero p{line-height:1.5;color:#e5eddf}
 .pfc676Mode{margin-top:16px;background:#f5f2e8;border:1px solid #e9dbb8;box-shadow:0 4px 15px #0003}
 @media(max-width:520px){.pfc681Scene{width:100%;height:calc(100% - 76px);object-fit:cover;object-position:center center}.pfc676Hero:before{background:linear-gradient(90deg,#102e27b8,#102e2755 38%,transparent 70%)}.pfc676Hero .welcome{max-width:46%;min-height:202px}.pfc676Hero h2{font-size:24px}.pfc676Hero p{font-size:12px}}
+
+.pfc676Hero{background:linear-gradient(90deg,#102f26e8,#153a29b8 50%,#153a2930),url("assets/bosco-cervo-porcini-6.8.1.webp") center/cover no-repeat}
+.pfc681Scene{mask-image:linear-gradient(90deg,transparent,#000 28%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 28%)}
+@media(max-width:520px){.pfc681Scene{mask-image:none;-webkit-mask-image:none}}
