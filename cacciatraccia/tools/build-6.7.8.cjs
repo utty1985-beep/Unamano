@@ -41,7 +41,7 @@ const fs=require('fs');const fullFixTester=true,safeFixTester=true,longPressTest
   }
 
 
-coreSrc=coreSrc.replace("navigator.serviceWorker.register('./sw-6.7.4.js?v=6.7.4-final')","navigator.serviceWorker.register('./sw-6.7.8.js?v=6.7.8-r2')");
+coreSrc=coreSrc.replace("navigator.serviceWorker.register('./sw-6.7.4.js?v=6.7.4-final')","navigator.serviceWorker.register('./sw-6.7.8.js?v=6.7.8-final')");
 coreSrc=coreSrc.replace("window.__PFC6621_EVAL__=(src)=>eval(src);",'');
 coreSrc=coreSrc.replace("version:'6.7.4'","version:'6.7.8'").replace("dataset.pfcVersion='6.7.4'","dataset.pfcVersion='6.7.8'");
 let extras=[27,28,29,30,32,33,34,38].map(i=>fs.readFileSync(`v6/part${i}.txt`,'utf8')).join('');
