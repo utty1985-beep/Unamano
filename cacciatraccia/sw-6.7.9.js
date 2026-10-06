@@ -1,6 +1,6 @@
-const CACHE='passione-funghi-caccia-v6-7-9-forest';
+const CACHE='passione-funghi-caccia-v6-7-9-forest2';
 const TILE_CACHE='cacciatraccia-offline-tiles-v1';
-const SHELL=['./6.7.9.html','./styles.css?v=4.1.2','./home-6.7.9.css?v=6.7.9-search','./home-6.7.9.js?v=6.7.9-final','./app-6.7.9.js?v=6.7.9-final','./manifest.webmanifest','./icon.svg'];
+const SHELL=['./6.7.9.html','./styles.css?v=4.1.2','./home-6.7.9.css?v=6.7.9-search','./home-6.7.9.js?v=6.7.9-forest','./app-6.7.9.js?v=6.7.9-final','./manifest.webmanifest','./icon.svg'];
 const LIBS=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'];
 self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL);await Promise.allSettled(LIBS.map(u=>c.add(u)));await self.skipWaiting()})()));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('passione-funghi-caccia-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));
