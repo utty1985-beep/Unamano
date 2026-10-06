@@ -7,17 +7,19 @@
       "title": "Stagione venatoria 2026/2027 — Regione Puglia",
       "src": "https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria",
       "detail": "Calendario Venatorio Regionale approvato con DGR n. 995 del 17/07/2026; Programma Venatorio DGR n. 994/2026; pre-apertura DGR n. 996/2026.",
-      "checkStatus": "ok",
-      "sourceChanged": false,
-      "sourceFingerprint": "04bc1bfce8b00aa6c1029578f51c635aa961987818be4297348d20df622ce0a3"
+      "checkStatus": "changed",
+      "sourceChanged": true,
+      "sourceFingerprint": "04bc1bfce8b00aa6c1029578f51c635aa961987818be4297348d20df622ce0a3",
+      "detectedFingerprint": "d720307b910a429ce37191b79e104a63e0a81a90bb0e0ea19360f0e45eff9650"
     },
     "Puglia_ATC": {
       "title": "Ambiti Territoriali di Caccia (ATC) — Regione Puglia",
       "src": "https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc",
       "detail": "Fonte ufficiale per ambiti e collegamenti degli ATC pugliesi.",
-      "checkStatus": "ok",
-      "sourceChanged": false,
-      "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9"
+      "checkStatus": "changed",
+      "sourceChanged": true,
+      "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9",
+      "detectedFingerprint": "f282849f797025364647ec07787db1f6d007c2f7802a04437dded55786dc0559"
     }
   },
   "mushrooms": {
@@ -25,9 +27,10 @@
       "title": "Raccolta dei funghi — Ministero della Salute",
       "src": "https://www.salute.gov.it/new/it/tema/sistema-di-controllo-della-sicurezza-alimentare/raccolta-dei-funghi/",
       "detail": "Quadro nazionale e rinvio alle discipline regionali; per la commestibilità rivolgersi agli Ispettorati micologici.",
-      "checkStatus": "ok",
-      "sourceChanged": false,
-      "sourceFingerprint": "712fcb3a29aaf942ac3885802200e95f2bbe84098eaa64b2fbfdd84b797b2871"
+      "checkStatus": "changed",
+      "sourceChanged": true,
+      "sourceFingerprint": "712fcb3a29aaf942ac3885802200e95f2bbe84098eaa64b2fbfdd84b797b2871",
+      "detectedFingerprint": "b75de4985ca96f5f7207d45ff832afaa16a9d887997021a97e7f4c5d658404a7"
     },
     "Puglia": {
       "title": "L.R. Puglia 25 agosto 2003, n. 12 — funghi epigei",
