@@ -1,0 +1,128 @@
+// V6.6.22 - pressione lunga sulla mappa: seleziona il punto senza riattivare il follow GPS
+(function(){
+  const HOLD_MS=550, MOVE_PX=12;
+  let timer=null, active=false, startX=0, startY=0, suppressClickUntil=0, selectedPin=null;
+
+  function clearTimer(){
+    if(timer){ clearTimeout(timer); timer=null; }
+  }
+  function stopHold(){
+    clearTimer();
+    active=false;
+  }
+  function isMapBackground(target){
+    if(!target || !target.closest) return true;
+    return !target.closest('.leaflet-control,.leaflet-marker-icon,.leaflet-interactive');
+  }
+  function syncFollowOff(){
+    follow=false;
+    const b=$('followBtn');
+    if(b){
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed','false');
+      b.style.background='#fff';
+      b.style.color='#173f2b';
+      b.title='Seguimi: DISATTIVO';
+    }
+  }
+  function showSelectedPin(lat,lng){
+    if(!map || !window.L) return;
+    if(!selectedPin){
+      selectedPin=L.circleMarker([lat,lng],{
+        radius:9,color:'#b52f25',weight:3,fillColor:'#fff',fillOpacity:1,interactive:false
+      }).addTo(map);
+    }else{
+      selectedPin.setLatLng([lat,lng]);
+    }
+  }
+  function chooseAt(clientX,clientY){
+    if(!map || !window.L) return;
+    const el=map.getContainer(), rect=el.getBoundingClientRect();
+    const x=Math.max(0,Math.min(rect.width,clientX-rect.left));
+    const y=Math.max(0,Math.min(rect.height,clientY-rect.top));
+    const ll=map.containerPointToLatLng(L.point(x,y));
+    if(!ll || !Number.isFinite(+ll.lat) || !Number.isFinite(+ll.lng)) return;
+    syncFollowOff();
+    showSelectedPin(ll.lat,ll.lng);
+    suppressClickUntil=Date.now()+900;
+    Promise.resolve(selectMapPoint(ll.lat,ll.lng)).catch(e=>console.warn('Selezione punto pressione lunga',e));
+    try{navigator.vibrate?.(30)}catch{}
+    toast('Punto selezionato — premi “Salva punto”');
+  }
+  function pointerDown(e){
+    if(e.button!=null && e.button!==0) return;
+    if(!isMapBackground(e.target)) return;
+    startX=e.clientX||0; startY=e.clientY||0; active=true; clearTimer();
+    timer=setTimeout(()=>{ if(active){ active=false; timer=null; chooseAt(startX,startY); } },HOLD_MS);
+  }
+  function pointerMove(e){
+    if(!active) return;
+    if(Math.hypot((e.clientX||0)-startX,(e.clientY||0)-startY)>MOVE_PX) stopHold();
+  }
+  function touchStart(e){
+    const t=e.touches&&e.touches[0]; if(!t || !isMapBackground(e.target)) return;
+    startX=t.clientX; startY=t.clientY; active=true; clearTimer();
+    timer=setTimeout(()=>{ if(active){ active=false; timer=null; chooseAt(startX,startY); } },HOLD_MS);
+  }
+  function touchMove(e){
+    if(!active) return;
+    const t=e.touches&&e.touches[0]; if(!t){stopHold();return}
+    if(Math.hypot(t.clientX-startX,t.clientY-startY)>MOVE_PX) stopHold();
+  }
+  function suppressLongClick(e){
+    if(Date.now()<suppressClickUntil){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+    }
+  }
+  function bindLongPress(){
+    const el=map?.getContainer?.();
+    if(!el || el.dataset.ctMapLongPress6622==='1') return;
+    el.dataset.ctMapLongPress6622='1';
+    el.style.webkitTouchCallout='none';
+
+    if(window.PointerEvent){
+      el.addEventListener('pointerdown',pointerDown,{passive:true});
+      el.addEventListener('pointermove',pointerMove,{passive:true});
+      el.addEventListener('pointerup',stopHold,{passive:true});
+      el.addEventListener('pointercancel',stopHold,{passive:true});
+      el.addEventListener('pointerleave',stopHold,{passive:true});
+    }else{
+      el.addEventListener('touchstart',touchStart,{passive:true});
+      el.addEventListener('touchmove',touchMove,{passive:true});
+      el.addEventListener('touchend',stopHold,{passive:true});
+      el.addEventListener('touchcancel',stopHold,{passive:true});
+    }
+
+    el.addEventListener('click',suppressLongClick,true);
+    el.addEventListener('contextmenu',e=>{
+      if(isMapBackground(e.target)){
+        e.preventDefault();
+        if(active){ active=false; clearTimer(); chooseAt(e.clientX||startX,e.clientY||startY); }
+      }
+    },true);
+
+    map.on('dragstart',stopHold);
+    map.on('click',e=>{
+      if(Date.now()>=suppressClickUntil && e?.latlng){
+        showSelectedPin(e.latlng.lat,e.latlng.lng);
+      }
+    });
+    $('clearSelectedBtn')?.addEventListener('click',()=>{
+      if(selectedPin){ try{map.removeLayer(selectedPin)}catch{} selectedPin=null; }
+    });
+  }
+
+  let tries=0;
+  const boot=setInterval(()=>{
+    tries++;
+    if(map?.getContainer?.()){
+      clearInterval(boot);
+      bindLongPress();
+    }else if(tries>40){
+      clearInterval(boot);
+      console.warn('Pressione lunga mappa 6.6.22: mappa non disponibile');
+    }
+  },150);
+})();
