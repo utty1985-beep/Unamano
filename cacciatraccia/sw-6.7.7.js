@@ -1,6 +1,6 @@
-const CACHE='passione-funghi-caccia-v6-7-7';
+const CACHE='passione-funghi-caccia-v6-7-7-r2';
 const assets=[
-  './6.7.7.html','./styles.css?v=4.1.2','./home-6.7.7.css?v=6.7.7','./home-6.7.7.js?v=6.7.7','./app-loader-6.7.7.js?v=6.7.7',
+  './6.7.7.html','./styles.css?v=4.1.2','./home-6.7.7.css?v=6.7.7','./home-6.7.7.js?v=6.7.7','./app-loader-6.7.7.js?v=6.7.7-r2',
   './gps-6.7.4.js?v=6.7.4','./manifest.webmanifest','./icon.svg',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
