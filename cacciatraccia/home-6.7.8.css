@@ -107,3 +107,7 @@ body.pfc676 .leaflet-control-zoom{margin-top:70px}
 #pfc678Mushroom,#pfc678Species{background:#486e31}#pfc678Sighting{background:#8b603c}
 .pfcParkingSettings{margin:10px 0}.pfcParkingSettings>summary{cursor:pointer;padding:12px;border:1px solid #dfe5d9;background:#fffdf8;border-radius:14px;font-size:14px;font-weight:750;color:#174b2f}
 body.pfc676 .pfcParkingSettings[open]>.homeCarDetail{display:block;margin-top:8px}
+/* Keep map zoom separate from the location and layer buttons. */
+body.pfc676 #map{min-height:380px}
+body.pfc676 #map .leaflet-top.leaflet-left{top:auto;bottom:20px;left:auto;right:10px}
+body.pfc676 #map .leaflet-control-zoom{margin:0}
