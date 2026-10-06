@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#173f2b" />
+  <meta name="description" content="Passione Funghi e Caccia: GPS, caccia, funghi, meteo, vento, camminate, diario e backup offline." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=4.1.2" />
+  <link rel="stylesheet" href="home-6.7.8.css?v=6.7.8" />
+  <title>Passione Funghi e Caccia — 6.7.8</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">🧭</div><div><h1>Passione Funghi e Caccia</h1><small>GPS • caccia • funghi • meteo • diario • offline</small></div></div>
+  <div class="topActions"><span id="netPill" class="pill">● controllo rete…</span><button id="backupQuickBtn" class="ghost" title="Dati e backup">🛡</button><button id="installBtn" class="ghost" hidden>Installa</button></div>
+</header>
+
+<main>
+  <section id="page-map" class="page active">
+    <div class="searchRow card compact">
+      <input id="mapSearch" inputmode="search" autocomplete="off" placeholder="Cerca punto o coordinate (es. 41.45, 15.55)" />
+      <button id="searchBtn" class="primary">Cerca</button>
+    </div>
+    <div class="mapWrap">
+      <div id="map"></div>
+      <div class="mapTools left">
+        <button id="locateBtn" class="mapBtn" title="Mia posizione">◎</button>
+        <button id="followBtn" class="mapBtn" title="Seguimi">➤</button>
+        <button id="northBtn" class="mapBtn" title="Nord in alto">N</button>
+      </div>
+      <div class="mapTools right">
+        <button id="rotateLeftBtn" class="mapBtn" title="Ruota a sinistra">↶</button>
+        <button id="rotateRightBtn" class="mapBtn" title="Ruota a destra">↷</button>
+        <button id="layersBtn" class="mapBtn" title="Mappa / satellite">◫</button>
+      </div>
+      <div id="gpsBadge" class="gpsBadge">GPS non attivo</div>
+      <div id="layerPanel" class="layerPanel hidden">
+        <button data-basemap="satellite" class="layerChoice active">🛰 Satellite</button>
+        <button data-basemap="street" class="layerChoice">🗺 Stradale</button>
+      </div>
+    </div>
+    <div class="mapQuickActions" aria-label="Azioni rapide sulla mappa">
+      <button id="quickSightingBtn" class="quickAction sighting"><b>🕊️</b><span>Avv. uccelli</span></button>
+      <button id="quickMushroomBtn" class="quickAction mushroom"><b>🍄</b><span>Funghi trovati</span></button>
+      <button id="quickSpeciesBtn" class="quickAction identify"><b>🔎🍄</b><span>Vedi specie</span></button>
+      <button id="quickSaveHereBtn" class="quickAction"><b>📌</b><span>Salva punto</span></button>
+      <button id="quickTrackBtn" class="quickAction"><b>🔴</b><span>Camminata</span></button>
+      <button id="quickCarBtn" class="quickAction"><b>🚗</b><span>Segna auto</span></button>
+    </div>
+    <div class="hint">Sposta la mappa o tocca il punto desiderato, poi premi “Salva punto”: verrà salvata la posizione scelta sulla mappa, non la tua posizione GPS. Il GPS viene usato solo quando premi i comandi dedicati alla tua posizione.</div>
+
+    <div id="selectedCard" class="card selected hidden">
+      <div class="sectionHead"><div><h2 id="selectedTitle">Punto selezionato</h2><div id="selectedCoords" class="muted"></div></div><button id="clearSelectedBtn" class="iconBtn">✕</button></div>
+      <div class="actionGrid">
+        <button id="savePointBtn" class="primary">📌 Salva punto selezionato</button>
+        <button id="navigateBtn" class="secondary">▶ Partenza</button>
+        <button id="shareSelectedBtn" class="secondary">↗ Condividi</button>
+        <button id="weatherRefreshBtn" class="secondary">🌦 Meteo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionHead"><h2>🌦 Meteo del punto</h2><span id="weatherStamp" class="muted"></span></div>
+      <div id="weatherBody" class="empty">Tocca la mappa o cerca delle coordinate.</div>
+    </div>
+
+    <div class="card">
+      <div class="sectionHead"><h2>🚗 Auto / rientro</h2><span id="carStatus" class="pill soft">non fissata</span></div>
+      <div id="carInfo" class="muted">Fissa la macchina quando parcheggi: resterà sulla mappa mentre prosegui a piedi.</div>
+      <div class="actionGrid">
+        <button id="parkHereBtn" class="primary">📌 Fissa auto qui</button>
+        <button id="moveCarBtn" class="secondary">✥ Sposta auto</button>
+        <button id="returnCarBtn" class="secondary">🧭 Rientro auto</button>
+        <button id="clearCarBtn" class="danger">Rimuovi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionHead"><h2>📍 Punti salvati</h2><button id="fitPointsBtn" class="secondary small">Mostra tutti</button></div>
+      <div class="legend"><span>🟢 Postazione</span><span>🟤 Passaggio</span><span>🔴 Avvistamento uccelli</span><span>🍄 Funghi</span><span>🔵 Parcheggio</span></div>
+      <div id="pointsList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="page-track" class="page">
+    <div class="card">
+      <div class="sectionHead"><h2>🥾 Camminata</h2><span id="trackStatus" class="pill soft">fermo</span></div>
+      <div class="metricGrid"><div class="metric"><b id="trackDistance">0.00 km</b><span>Distanza</span></div><div class="metric"><b id="trackTime">00:00</b><span>Durata</span></div><div class="metric"><b id="trackPoints">0</b><span>Punti GPS</span></div></div>
+      <div class="field"><label>Foto di quello che hai preso / dell'uscita (fotocamera o galleria)</label><input id="trackPhoto" type="file" accept="image/*" /></div>
+      <div class="field"><label>Nota uscita</label><input id="trackNote" placeholder="es. tordi visti al rientro" /></div>
+      <div class="actionGrid"><button id="startTrackBtn" class="primary">▶ Inizia camminata</button><button id="stopTrackBtn" class="danger" disabled>■ Termina e salva</button><button id="centerTrackBtn" class="secondary">⌖ Mostra percorso</button><button id="trackToCarBtn" class="secondary">🚗 Torna all’auto</button></div>
+      <p class="note">Il percorso viene salvato sul telefono anche senza Internet. Quando termini l'uscita, puoi condividerla sui social con il tracciato percorso, i km, la data e la foto caricata dall'app. Su Android il browser può ridurre il GPS quando l’app resta a lungo in background: per il Play Store la versione nativa potrà usare il servizio di localizzazione in primo piano.</p>
+    </div>
+    <div class="card"><h2>Camminate salvate</h2><div id="outingsList" class="list"></div></div>
+  </section>
+
+  <section id="page-diary" class="page">
+    <div class="card">
+      <div class="sectionHead"><h2>📓 Diario / storico</h2><input id="historySearch" class="miniSearch" placeholder="Cerca specie, zona, note…" /></div>
+      <div class="tabs"><button class="tab active" data-history="all">Tutto</button><button class="tab" data-history="sightings">Avvistamenti</button><button class="tab" data-history="diary">Diario</button></div>
+      <div id="historyList" class="list"></div>
+    </div>
+    <div class="card">
+      <h3>Aggiungi nota al diario</h3>
+      <div class="formGrid"><div><label>Data</label><input id="diaryDate" type="date" /></div><div><label>Zona</label><input id="diaryZone" /></div><div><label>Specie</label><input id="diaryGame" /></div><div><label>Tipo uscita</label><input id="diaryType" /></div><div class="full"><label>Note</label><textarea id="diaryNotes"></textarea></div><div class="full"><label>Foto</label><input id="diaryPhoto" type="file" accept="image/*" capture="environment" /></div><div class="full"><button id="addDiaryBtn" class="primary">Salva nel diario</button></div></div>
+    </div>
+  </section>
+
+  <section id="page-backup" class="page">
+    <div class="card">
+      <div class="sectionHead"><h2>🛡 Dati e backup</h2><span id="storageStatus" class="pill soft">locale</span></div>
+      <p>I dati vengono salvati prima sul telefono. Se la rete sparisce, puoi continuare a segnare punti, auto, percorso e diario.</p>
+      <div class="actionGrid"><button id="exportJsonBtn" class="primary">Esporta backup completo</button><button id="exportTxtBtn" class="secondary">Esporta coordinate TXT</button><label class="secondary fileLabel">Ripristina backup<input id="importBackup" type="file" accept="application/json,.json" hidden /></label><button id="makeSnapshotBtn" class="secondary">Crea versione</button></div>
+      <div class="field"><label>Modalità ripristino</label><select id="importMode"><option value="merge">Unisci senza cancellare</option><option value="replace">Sostituisci tutto</option></select></div>
+    </div>
+    <div class="card"><div class="sectionHead"><h3>Versioni precedenti</h3><span class="muted">max 25</span></div><div id="snapshotsList" class="list"></div></div>
+    <div class="card">
+      <h3>☁️ Account e sincronizzazione</h3>
+      <div id="cloudStatus" class="notice">Modalità locale attiva. Il modulo cloud è predisposto ma non collegato a nessun altro tuo progetto.</div>
+      <p class="note">Per sicurezza CacciaTraccia avrà un archivio separato. Quando sarà collegato, ogni modifica fatta offline entrerà in coda e verrà sincronizzata appena torna Internet; il recupero account avverrà via e‑mail.</p>
+      <div class="actionGrid"><button id="syncNowBtn" class="secondary" disabled>Sincronizza ora</button><button id="accountBtn" class="secondary" disabled>Account / recupero</button></div>
+    </div>
+    <div class="card"><h3>📦 Uso con poco Internet</h3><ul class="plain"><li>L’app e i dati locali restano disponibili dopo il primo caricamento online.</li><li>Le porzioni di mappa già visualizzate vengono conservate nella cache del dispositivo quando il browser lo consente.</li><li>Il GPS e il salvataggio dei punti funzionano senza rete; il meteo nuovo richiede rete, ma resta visibile l’ultimo meteo già salvato.</li></ul><button id="persistBtn" class="secondary">Proteggi archiviazione locale</button></div>
+  </section>
+</main>
+
+<nav>
+  <button data-page="map" class="active"><b>🗺</b>Mappa</button>
+  <button data-page="track"><b>🥾</b>Camminata</button>
+  <button data-page="diary"><b>📓</b>Diario</button>
+</nav>
+
+<div id="pointModal" class="modal" aria-hidden="true"><div class="dialog">
+  <div class="sectionHead"><h2 id="pointModalTitle">Dettagli punto</h2><button class="iconBtn" data-close="pointModal">✕</button></div>
+  <p class="note" id="pointModalCoords"></p>
+  <div class="formGrid">
+    <div><label>Tipo</label><select id="pointType"><option>Postazione</option><option>Passaggio</option><option>Avvistamento</option><option>Parcheggio</option></select></div>
+    <div><label>Nome / zona</label><input id="pointName" placeholder="es. Vallone nord" /></div>
+    <div><label>Giorno della caccia</label><input id="pointHuntDate" type="date" /></div>
+    <div><label>Uccelli / funghi trovati</label><input id="pointSpecies" placeholder="es. tordi, colombacci, porcini" /></div>
+    <div><label>Quantità (facoltativa)</label><input id="pointQuantity" type="number" min="0" step="1" /></div>
+    <div><label>Vento</label><input id="pointWindName" placeholder="es. Maestrale" /></div>
+    <div><label>Direzione vento</label><input id="pointWindDir" placeholder="es. NO" /></div>
+    <div><label>Velocità vento km/h</label><input id="pointWindSpeed" type="number" min="0" step="1" /></div>
+    <div><label>Raffiche km/h</label><input id="pointWindGust" type="number" min="0" step="1" /></div>
+    <div class="full"><button id="pointReadWeatherBtn" class="secondary wide">🌬 Leggi meteo e vento di adesso</button></div>
+    <div class="full"><div id="pointWeatherSummary" class="snap">Puoi inserire il vento manualmente oppure leggerlo dal meteo del punto.</div></div>
+    <div class="full"><label>Note</label><textarea id="pointNotes" placeholder="passaggi, direzione, comportamento, riferimenti…"></textarea></div>
+    <div class="full"><label>Foto del punto / cattura (facoltativa)</label><input id="pointPhoto" type="file" accept="image/*" /></div>
+    <div class="full" id="pointPhotoPreview"></div>
+    <div class="full"><button id="confirmPointBtn" class="primary wide">Salva modifiche</button></div>
+  </div>
+</div></div>
+
+<div id="toast" class="toast" role="status"></div>
+<script src="app-6.7.8.js?v=6.7.8" defer></script>
+<script src="home-6.7.8.js?v=6.7.8" defer></script>
+</body>
+</html>
