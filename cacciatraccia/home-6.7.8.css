@@ -1,0 +1,104 @@
+/* Passione Funghi e Caccia 6.7.6 - Home commerciale */
+:root{--home-cream:#f7f3e8;--home-green:#174b2f;--home-green2:#287044;--home-orange:#ed8c4a;--home-blue:#2f86b9;--home-brown:#8b603c;--home-shadow:0 10px 28px rgba(35,54,37,.13)}
+body.pfc676{background:linear-gradient(#f8f4e9,#efe9da);padding-bottom:88px}
+body.pfc676 .topbar{position:sticky;top:0;background:rgba(255,253,247,.96);color:#173f2b;border-bottom:1px solid #e2dfd3;box-shadow:0 3px 16px #00000010;backdrop-filter:blur(9px)}
+body.pfc676 .topbar .brand h1{font-family:Georgia,serif;font-size:21px;color:#174b2f}
+body.pfc676 .topbar .brand small{color:#7f583b;opacity:1}
+body.pfc676 .topbar .logo{font-size:28px}
+body.pfc676 .topbar .pill{background:#edf4ec;color:#335441;border-color:#d3dfd2}
+body.pfc676 .topbar .ghost{background:#edf4ec;color:#174b2f;border-color:#d3dfd2}
+body.pfc676 main{max-width:760px}
+body.pfc676 #page-map{padding:0 10px 18px}
+.pfc676Hero{margin:0 -10px 12px;padding:28px 18px 16px;color:white;background:
+radial-gradient(circle at 83% 26%,rgba(245,184,98,.28),transparent 27%),
+linear-gradient(135deg,#173f2b 0%,#2a6641 48%,#5d744c 100%);border-radius:0 0 28px 28px;box-shadow:var(--home-shadow);position:relative;overflow:hidden}
+.pfc676Hero:after{content:"🌲   ⛰️   🌲";position:absolute;right:10px;bottom:55px;font-size:40px;opacity:.22;letter-spacing:-5px}
+.pfc676Hero .welcome{position:relative;z-index:1}
+.pfc676Hero h2{font:800 31px/1.05 Georgia,serif;margin:0 0 7px}
+.pfc676Hero p{max-width:360px;margin:0;color:#eff6ef;font-size:14px}
+.pfc676Mode{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#fffef3;padding:5px;border-radius:999px;margin-top:18px;box-shadow:0 6px 18px #0002}
+.pfc676Mode button{border:0;border-radius:999px;padding:12px 10px;font-weight:900;background:transparent;color:#27452f}
+.pfc676Mode button.active{background:linear-gradient(135deg,#1b5d35,#287044);color:#fff;box-shadow:0 4px 12px #173f2b44}
+body.pfc676 #ct661Card{display:none}
+body.pfc676 #ct661Card.pfc676AdvancedOpen{display:block}
+body.pfc676 #ctCalendarCard{display:none}
+body.pfc676 #ctCalendarCard.pfc676AdvancedOpen{display:block}
+body.pfc676 .searchRow{position:absolute;z-index:10;left:12px;right:66px;top:12px;margin:0;background:transparent;border:0;box-shadow:none;padding:0}
+body.pfc676 .searchRow input{height:46px;border:0;border-radius:15px;box-shadow:0 5px 16px #0003;padding-left:15px;background:#fffdf8ee}
+body.pfc676 .searchRow button{height:46px;border-radius:14px;padding:0 14px}
+body.pfc676 .mapWrap{margin-top:5px}
+body.pfc676 #map{height:42vh;min-height:345px;border-radius:22px;border:4px solid #fff;box-shadow:var(--home-shadow)}
+body.pfc676 .mapTools{top:70px}
+body.pfc676 .mapBtn{border-radius:14px}
+body.pfc676 .gpsBadge{bottom:12px}
+body.pfc676 .mapQuickActions{display:none!important}
+body.pfc676 .hint{display:none}
+.pfc676OpenMap{position:absolute;z-index:9;right:14px;bottom:14px;border:0;border-radius:14px;background:#173f2be8;color:white;padding:10px 13px;font-weight:900;box-shadow:0 5px 15px #0004}
+body.pfc676 .card{border:1px solid #e5e1d7;border-radius:20px;box-shadow:0 5px 18px #28402f12;background:#fffdf8}
+body.pfc676 .selected{border-color:#9fc5a9;background:#f1f7ef}
+body.pfc676 .homeWeatherCard{overflow:hidden;background:linear-gradient(135deg,#fffdf8 0%,#eff7fb 100%)}
+body.pfc676 .homeWeatherCard h2{font-size:20px}
+body.pfc676 .homeWeatherCard .weatherNow{background:#ffffffb8}
+.pfc676QuickTitle{font-size:21px;font-weight:900;margin:16px 3px 8px}
+.pfc676Quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.pfc676Quick button{border:0;border-radius:16px;padding:14px 6px 11px;min-height:94px;color:white;font-weight:900;box-shadow:0 5px 16px #0002}
+.pfc676Quick button b{display:block;font-size:27px;margin-bottom:4px}
+.pfc676Quick button small{display:block;font-size:10px;line-height:1.15;opacity:.9;margin-top:2px}
+#pfc676Save{background:linear-gradient(145deg,#f39b58,#e9793b)}
+#pfc676Conditions{background:linear-gradient(145deg,#2f7e45,#1f6034)}
+#pfc676Radar{background:linear-gradient(145deg,#3e95c5,#246d9a)}
+#pfc676Track{background:linear-gradient(145deg,#a77a52,#80583a)}
+.pfc676Return{width:100%;display:flex;align-items:center;gap:12px;border:1px solid #dfe5d9;border-radius:20px;background:linear-gradient(135deg,#fffdf8,#edf3e8);padding:13px 14px;margin:11px 0;box-shadow:0 5px 18px #28402f12;color:#26362c;text-align:left}
+.pfc676Return .car{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#2b7042;color:white;font-size:24px}
+.pfc676Return .copy{flex:1}.pfc676Return strong{display:block;font-size:17px}.pfc676Return span{font-size:11px;color:#6c746c}.pfc676Return .arrow{font-size:24px;font-weight:900}
+body.pfc676 .homeCarDetail{display:none}
+body.pfc676 .homePointsCard h2{font-size:21px}
+body.pfc676 .homePointsCard .legend{display:none}
+body.pfc676 .homePointsCard .item{border-radius:14px}
+.pfc676Advanced{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.pfc676Advanced button{border:1px solid #d8dfd4;background:#f5f7f2;color:#294d34;border-radius:14px;padding:11px 8px;font-weight:850}
+.pfc676CommercialNav{position:fixed;z-index:1600;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(6,1fr);background:#fffdf9f2;border-top:1px solid #deddd6;box-shadow:0 -5px 20px #0002;padding:5px 3px calc(6px + env(safe-area-inset-bottom));backdrop-filter:blur(10px)}
+.pfc676CommercialNav button{border:0;background:transparent;color:#6f756e;font-size:8.5px;font-weight:800;padding:5px 2px}
+.pfc676CommercialNav button b{display:block;font-size:21px;line-height:1.1;margin-bottom:2px}
+.pfc676CommercialNav button.active{color:#1d5f36}
+body.pfc676>nav{display:none!important}
+.pfc676StatusDot{position:fixed;z-index:1700;right:10px;bottom:78px;background:#1c5f36;color:#fff;border-radius:999px;padding:5px 8px;font-size:10px;box-shadow:0 4px 12px #0003;opacity:.92}
+@media(max-width:520px){.pfc676Hero h2{font-size:28px}.pfc676Quick{gap:6px}.pfc676Quick button{padding:11px 4px;min-height:88px}.pfc676Quick button span{font-size:11px}.pfc676Advanced{grid-template-columns:1fr 1fr}body.pfc676 #map{min-height:330px}}
+
+.pfc676AppostamentiPage{padding:14px 10px 24px}
+.pfc676PageHead{display:flex;align-items:flex-start;gap:12px;margin:8px 0 14px;padding:16px;border:1px solid #dfe5d9;border-radius:20px;background:linear-gradient(135deg,#fffdf8,#eef4ea);box-shadow:var(--home-shadow)}
+.pfc676PageHead button{border:0;border-radius:13px;background:#174b2f;color:#fff;padding:10px 12px;font-weight:900}
+.pfc676PageHead h2{margin:0 0 4px;color:#174b2f;font-size:24px}
+.pfc676PageHead p{margin:0;color:#6b716b;font-size:12px;line-height:1.35}
+body.pfc676 #page-appostamenti .homePointsCard{margin:0}
+@media(max-width:420px){.pfc676CommercialNav button{font-size:7.7px}.pfc676CommercialNav button b{font-size:19px}}
+
+/* Compact header for phones: status has its own row. */
+body.pfc676 .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:8px 12px}
+body.pfc676 .topbar .brand{min-width:0;align-items:center}
+body.pfc676 .topbar .brand h1{font-size:18px;line-height:1.15;margin:0;overflow-wrap:anywhere}
+body.pfc676 .topbar .brand small{font-size:10px;line-height:1.25}
+body.pfc676 .topbar .logo{font-size:22px;white-space:nowrap}
+body.pfc676 .topbar .topActions{display:contents}
+body.pfc676 #backupQuickBtn{grid-column:2;grid-row:1}
+body.pfc676 #netPill{grid-column:1/-1;grid-row:2;display:block;border-radius:7px;font-size:10px;line-height:1.3;padding:3px 7px;overflow-wrap:anywhere}
+body.pfc676 #installBtn{grid-column:2}
+
+/* 6.7.8 responsive controls */
+body.pfc676 .topbar{position:relative;z-index:1000}
+body.pfc676 .topbar .brand>div:last-child{min-width:0}
+body.pfc676 .topbar .brand h1{font-size:18px;overflow-wrap:normal}
+body.pfc676 #netPill{font-size:12px;line-height:1.25}
+body.pfc676 #ctVersionBadge{display:none}
+body.pfc676 .topbar small{font-size:12px}
+.pfc676CommercialNav button{font-size:10px;min-height:50px;overflow-wrap:anywhere}
+.pfc676Quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pfc676Quick button span{font-size:14px}
+.pfc676Quick button small{font-size:12px}
+.pfc676Hero{padding-top:18px}.pfc676Hero h2{font-size:26px}
+body.pfc676 .gpsBadge{max-width:calc(100% - 30px);white-space:normal;text-align:center;font-size:12px}
+body.pfc676 .pfc676OpenMap{display:none}
+.pfcWeatherSettings summary{cursor:pointer;font-weight:700;padding:10px 0;color:#174b2f;font-size:14px}
+body.pfc676 .layerPanel{z-index:20;top:65px}
+body.pfc676 .leaflet-control-zoom{margin-top:70px}
+@media(min-width:720px){.pfc676Quick{grid-template-columns:repeat(4,minmax(0,1fr))}}
