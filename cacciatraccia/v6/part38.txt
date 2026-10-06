@@ -1,0 +1,101 @@
+// V6.7.0 FINAL - selezione mappa robusta su Android: tolleranza al tremolio + fallback pressione lunga
+(function(){
+  const VER='6.7.0', HOLD_MS=650, MOVE_PX=16;
+  const el=map?.getContainer?.();
+  if(!el || el.dataset.ctFinalLongPress6700==='1')return;
+  el.dataset.ctFinalLongPress6700='1';
+
+  let timer=null,active=false,sx=0,sy=0,finalPin=null;
+
+  // Leaflet normalmente avvia il drag dopo pochissimi pixel: aumentiamo la tolleranza
+  // per non annullare una pressione lunga a causa del naturale tremolio del dito.
+  try{
+    const d=map?.dragging?._draggable;
+    if(d?.options)d.options.clickTolerance=Math.max(Number(d.options.clickTolerance)||3,MOVE_PX+2);
+  }catch(e){console.warn('Tolleranza drag 6.7.0',e)}
+
+  const isBackground=t=>!t?.closest?.('.leaflet-control,.leaflet-marker-icon,.leaflet-interactive');
+
+  function followOff(){
+    follow=false;
+    const b=$('followBtn');
+    if(b){
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed','false');
+      b.style.background='#fff';
+      b.style.color='#173f2b';
+      b.title='Seguimi: DISATTIVO';
+    }
+  }
+
+  const baseSelect=selectMapPoint;
+  selectMapPoint=async function(lat,lng){
+    window.__PFC_FINAL_LAST_SELECT__={lat:+lat,lng:+lng,at:Date.now()};
+    return baseSelect(lat,lng);
+  };
+
+  function recent(lat,lng){
+    const s=window.__PFC_FINAL_LAST_SELECT__;
+    return !!(s&&Date.now()-s.at<1100&&Math.abs(s.lat-lat)<2e-5&&Math.abs(s.lng-lng)<2e-5);
+  }
+
+  function mark(lat,lng){
+    try{
+      if(!finalPin){
+        finalPin=L.circleMarker([lat,lng],{radius:10,color:'#173f2b',weight:4,fillColor:'#fff',fillOpacity:1,interactive:false,dashArray:'3 2'}).addTo(map);
+      }else finalPin.setLatLng([lat,lng]);
+    }catch(e){console.warn('Marker finale 6.7.0',e)}
+  }
+
+  function coordsAt(x,y){
+    const r=el.getBoundingClientRect();
+    const px=Math.max(0,Math.min(r.width,x-r.left));
+    const py=Math.max(0,Math.min(r.height,y-r.top));
+    return map.containerPointToLatLng(L.point(px,py));
+  }
+
+  function choose(x,y){
+    const ll=coordsAt(x,y);
+    if(!ll||!Number.isFinite(+ll.lat)||!Number.isFinite(+ll.lng))return;
+    if(recent(+ll.lat,+ll.lng))return;
+    followOff();
+    mark(+ll.lat,+ll.lng);
+    Promise.resolve(selectMapPoint(+ll.lat,+ll.lng)).catch(e=>console.warn('Selezione finale 6.7.0',e));
+    try{navigator.vibrate?.(35)}catch{}
+    toast('Punto segnato — ora puoi salvarlo');
+  }
+
+  function clearTimer(){if(timer){clearTimeout(timer);timer=null}}
+  function stop(){active=false;clearTimer()}
+
+  function down(e){
+    if(e.button!=null&&e.button!==0)return;
+    if(!isBackground(e.target))return;
+    sx=e.clientX||0;sy=e.clientY||0;active=true;clearTimer();
+    timer=setTimeout(()=>{if(active){active=false;timer=null;choose(sx,sy)}},HOLD_MS);
+  }
+  function move(e){
+    if(!active)return;
+    if(Math.hypot((e.clientX||0)-sx,(e.clientY||0)-sy)>MOVE_PX)stop();
+  }
+
+  el.addEventListener('pointerdown',down,{capture:true,passive:true});
+  el.addEventListener('pointermove',move,{capture:true,passive:true});
+  el.addEventListener('pointerup',stop,{capture:true,passive:true});
+  el.addEventListener('pointercancel',stop,{capture:true,passive:true});
+  el.addEventListener('contextmenu',e=>{
+    if(!isBackground(e.target))return;
+    e.preventDefault();
+    const ll=coordsAt(e.clientX||sx,e.clientY||sy);
+    if(ll&&!recent(+ll.lat,+ll.lng))choose(e.clientX||sx,e.clientY||sy);
+  },true);
+
+  map?.on('dragstart',followOff);
+  $('clearSelectedBtn')?.addEventListener('click',()=>{
+    if(finalPin){try{map.removeLayer(finalPin)}catch{}finalPin=null}
+  });
+
+  const badge=$('ctVersionBadge');
+  if(badge)badge.textContent='• V6.7.0 FINAL';
+  console.info('Passione Funghi e Caccia '+VER+' FINAL attiva');
+})();
