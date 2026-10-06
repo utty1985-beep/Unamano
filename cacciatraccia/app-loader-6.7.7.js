@@ -48,7 +48,7 @@ function runLater(fn,delay=180){
 
 try{
   const pill=document.getElementById('netPill');
-  if(pill)pill.textContent=finalBuild?'● avvio 6.7.4 FINAL su base stabile…':(experimental?'● tester: avvio base stabile…':(gpsFixTester?'● tester GPS: avvio base stabile…':'● stabile 6.5.2…'));
+  if(pill)pill.textContent=finalBuild?'● avvio 6.7.7 su base stabile…':(experimental?'● tester: avvio base stabile…':(gpsFixTester?'● tester GPS: avvio base stabile…':'● stabile 6.5.2…'));
 
   // Prima avvia SEMPRE la base stabile: la mappa diventa utilizzabile subito.
 
@@ -113,8 +113,8 @@ try{
         // Il radar NON viene più caricato in automatico.
         // Viene scaricato e attivato soltanto quando l'utente preme "Radar punti".
         const radarBtn=document.getElementById('ctRadarBtn');
-        const versionBadge=document.getElementById('ctVersionBadge');if(versionBadge)versionBadge.textContent='• V6.7.4';
-        if(pill)pill.textContent=finalBuild?'● 6.7.4 FINAL pronta · GPS automatico recuperato · radar su richiesta':(longPressTester?'● tester 6.6.22 pronta · pressione lunga attiva · radar su richiesta':(safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta')));
+        const versionBadge=document.getElementById('ctVersionBadge');if(versionBadge)versionBadge.textContent='• V6.7.7';
+        if(pill)pill.textContent=finalBuild?'● 6.7.7 pronta · GPS automatico recuperato · radar su richiesta':(longPressTester?'● tester 6.6.22 pronta · pressione lunga attiva · radar su richiesta':(safeFixTester?'● tester 6.6.21 pronta · radar su richiesta':(fullFixTester?'● tester 6.6.20 pronta · radar su richiesta':'● tester 6.6.3 pronta · radar su richiesta')));
         if(radarBtn){
           let radarLoading=false;
           const lazyRadar=async()=>{
@@ -129,7 +129,7 @@ try{
               radarBtn.disabled=false;
               radarBtn.textContent=oldLabel;
               radarLoading=false;
-              if(pill)pill.textContent=finalBuild?'● 6.7.4 FINAL completa':(longPressTester?'● tester 6.6.22 completa':(safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta')));
+              if(pill)pill.textContent=finalBuild?'● 6.7.7 completa':(longPressTester?'● tester 6.6.22 completa':(safeFixTester?'● tester 6.6.21 completa':(fullFixTester?'● tester 6.6.20 completa':'● tester 6.6.4 pronta')));
               // part35 sostituisce onclick in modo sincrono; rilancio il click una sola volta.
               if(radarBtn.onclick!==lazyRadar)radarBtn.click();
               else throw new Error('radar non collegato');
