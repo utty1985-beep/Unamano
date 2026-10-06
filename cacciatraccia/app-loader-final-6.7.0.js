@@ -208,28 +208,6 @@ try{
     coreSrc=coreSrc.replace("navigator.serviceWorker.register('./sw.js?v=6.3.4')",`navigator.serviceWorker.register('./sw.js?v=${assetVersion}')`);
     coreSrc += "\nconst __pfc6621SafeStartGps=startGps,__pfc6621SafeGetFix=getFix,__pfc6621SafeLocate=locate;\nwindow.__PFC6621_EVAL__=(src)=>eval(src);\nwindow.__PFC6621_RESTORE_SAFE__=()=>{startGps=__pfc6621SafeStartGps;getFix=__pfc6621SafeGetFix;locate=__pfc6621SafeLocate;};\n";
   }
-  // 6.7.0 FINAL: confronto meteo coerente con i dati realmente registrati.
-  {
-    const oldDeg="let deg=Number.isFinite(+p.windDeg)?+p.windDeg:Number.isFinite(+p.weather?.windDeg)?+p.weather.windDeg:null;";
-    const newDeg="let deg=p.windDeg!=null&&p.windDeg!==''&&Number.isFinite(+p.windDeg)?+p.windDeg:(p.weather?.windDeg!=null&&p.weather.windDeg!==''&&Number.isFinite(+p.weather.windDeg)?+p.weather.windDeg:null);";
-    if(!coreSrc.includes(oldDeg))throw new Error('Guardia finale: direzione vento non trovata');
-    coreSrc=coreSrc.replace(oldDeg,newDeg);
-
-    const oldSpeed="const speed=Number.isFinite(+p.windSpeed)?+p.windSpeed:Number.isFinite(+p.weather?.windSpeed)?+p.weather.windSpeed:null;";
-    const newSpeed="const speed=p.windSpeed!=null&&p.windSpeed!==''&&Number.isFinite(+p.windSpeed)?+p.windSpeed:(p.weather?.windSpeed!=null&&p.weather.windSpeed!==''&&Number.isFinite(+p.weather.windSpeed)?+p.weather.windSpeed:null);";
-    if(!coreSrc.includes(oldSpeed))throw new Error('Guardia finale: velocità vento non trovata');
-    coreSrc=coreSrc.replace(oldSpeed,newSpeed);
-
-    const oldScore="good=dd<=45&&ds<=10&&f.rain<=55;reason=`Δ direzione ${Math.round(dd)}° · Δ velocità ${Math.round(ds)} km/h`;";
-    const newScore="const sr=p.weather?.rainProbability!=null&&Number.isFinite(+p.weather.rainProbability)?+p.weather.rainProbability:null,bg=p.windGust!=null&&p.windGust!==''&&Number.isFinite(+p.windGust)?+p.windGust:(p.weather?.windGust!=null&&p.weather.windGust!==''&&Number.isFinite(+p.weather.windGust)?+p.weather.windGust:null),dr=sr==null?null:Math.abs(sr-f.rain),dg=bg==null?null:Math.abs(bg-f.gust);good=dd<=45&&ds<=10&&(dr==null||dr<=30)&&(dg==null||dg<=15);reason=`Δ direzione ${Math.round(dd)}° · Δ velocità ${Math.round(ds)} km/h`+(dg==null?'':` · Δ raffiche ${Math.round(dg)} km/h`)+(dr==null?'':` · Δ pioggia ${Math.round(dr)}%`);";
-    if(!coreSrc.includes(oldScore))throw new Error('Guardia finale: formula confronto non trovata');
-    coreSrc=coreSrc.replace(oldScore,newScore);
-
-    const oldNow="const now=new Date();now.setMinutes(0,0,0);now.setHours(now.getHours()+1);";
-    const newNow="const now=new Date();now.setMinutes(0,0,0);";
-    if(!coreSrc.includes(oldNow))throw new Error('Guardia finale: orario verifica non trovato');
-    coreSrc=coreSrc.replace(oldNow,newNow);
-  }
   new Function(coreSrc)();
 
   if(!experimental){
