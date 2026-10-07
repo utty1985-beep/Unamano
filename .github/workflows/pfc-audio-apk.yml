@@ -37,12 +37,15 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > app/build/outputs/apk/release/metadata.txt
           grep -F "package: name='com.cacciatraccia.italia' versionCode='6804' versionName='6.8.4'" app/build/outputs/apk/release/metadata.txt
           grep -F "android.permission.RECORD_AUDIO" app/build/outputs/apk/release/metadata.txt
+      - name: Export official APK signing tool
+        run: cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" app/build/outputs/apk/release/apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
           name: Passione-Funghi-e-Caccia-v6.8.4-AUDIO-unsigned
           path: |
             cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.8.4-AUDIO-UNSIGNED.apk
             cacciatraccia/android-wrapper/app/build/outputs/apk/release/metadata.txt
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/apksigner.jar
             cacciatraccia/android-wrapper/app/build/reports/lint-results-release.html
           if-no-files-found: error
           retention-days: 30
