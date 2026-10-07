@@ -1,4 +1,4 @@
-// Passione Funghi e Caccia 6.9.3: generated from preserved stable modules.
+// Passione Funghi e Caccia 6.9.4: generated from preserved stable modules.
 (()=>{
 const $ = id => document.getElementById(id);
 function activityMode(){try{return JSON.parse(localStorage.getItem('pfc-v661-settings')||'{}').mode==='mushroom'?'mushroom':'hunt';}catch{return 'hunt';}}
@@ -1795,8 +1795,8 @@ window.dispatchEvent(new CustomEvent('pfc:position',{detail:{...lastPos}}));
     else {retries=0;startGps();}
   });
   window.addEventListener('pageshow',()=>{if(map&&!document.hidden&&gpsWatch==null)startGps();});
-  window.__PFC_FINAL_DIAG__=()=>({version:'6.9.3',follow,lastPos:lastPos?{...lastPos}:null,gpsWatchActive:gpsWatch!=null,gpsPending:!!pending,retries,selected:selected?{lat:selected.lat,lng:selected.lng}:null,center:map?.getCenter?.()});
-  document.documentElement.dataset.pfcVersion='6.9.3';
+  window.__PFC_FINAL_DIAG__=()=>({version:'6.9.4',follow,lastPos:lastPos?{...lastPos}:null,gpsWatchActive:gpsWatch!=null,gpsPending:!!pending,retries,selected:selected?{lat:selected.lat,lng:selected.lng}:null,center:map?.getCenter?.()});
+  document.documentElement.dataset.pfcVersion='6.9.4';
 })();
 
 const __pfc6621SafeStartGps=startGps,__pfc6621SafeGetFix=getFix,__pfc6621SafeLocate=locate;
@@ -1804,10 +1804,10 @@ const __pfc6621SafeStartGps=startGps,__pfc6621SafeGetFix=getFix,__pfc6621SafeLoc
 window.__PFC6621_RESTORE_SAFE__=()=>{startGps=__pfc6621SafeStartGps;getFix=__pfc6621SafeGetFix;locate=__pfc6621SafeLocate;};
 
 
-window.__PFC_APP_STATUS__={version:'6.9.3',state:'loading'};
+window.__PFC_APP_STATUS__={version:'6.9.4',state:'loading'};
 const setBootStatus=(state,error=null)=>{
-  window.__PFC_APP_STATUS__={version:'6.9.3',state,error};
-  const pill=$('netPill');if(pill){pill.textContent=state==='ready'?'v6.9.3':state==='error'?'Avvio da riprovare':'Caricamento…';pill.title=error||'Passione Funghi e Caccia 6.9.3';}
+  window.__PFC_APP_STATUS__={version:'6.9.4',state,error};
+  const pill=$('netPill');if(pill){pill.textContent=state==='ready'?'v6.9.4':state==='error'?'Avvio da riprovare':'Caricamento…';pill.title=error||'Passione Funghi e Caccia 6.9.4';}
   window.dispatchEvent(new CustomEvent('pfc:ready',{detail:window.__PFC_APP_STATUS__}));
 };
 setBootStatus('loading');
@@ -2313,7 +2313,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
 })();
 
    window.__PFC_LIVE_API__={points:()=>structuredClone(state.points||[]),map:()=>map,getFix:()=>getFix(),showMap:()=>{follow=false;$('followBtn')?.classList.remove('active');showPage('map');},openSightings:()=>{showPage('diary');historyFilter='sightings';document.querySelectorAll('[data-history]').forEach(b=>b.classList.toggle('active',b.dataset.history==='sightings'));renderDiary();}};
-   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.3';
+   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.4';
    setBootStatus('ready');
  }catch(e){console.error('Avvio funzioni',e);setBootStatus('error',e.message);}
 }).catch(e=>{
