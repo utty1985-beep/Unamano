@@ -2,6 +2,10 @@ name: Deploy UnaMano to GitHub Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "cacciatraccia/**"
 
 permissions:
   contents: read
@@ -21,6 +25,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate Squadra Live controls
+        run: |
+          node scripts/test-team-runtime-6.9.2.cjs
+          for name in app home friends team sw; do node --check "cacciatraccia/${name}-6.9.2.js"; done
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
