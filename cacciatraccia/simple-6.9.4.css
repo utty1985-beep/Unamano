@@ -21,7 +21,7 @@ body.pfc676 #pfc676Save small,body.pfc676 #pfc678Mushroom small{color:#e0ecdd}
 body.pfc676 .mapBtn{width:62px;min-height:48px;height:auto;font-size:20px;padding:6px 3px}
 body.pfc676 .mapBtn small{display:block;font-size:10px;line-height:1.2;color:inherit}
 body.pfc676 .mapTools{gap:5px}
-body.pfc676 .searchRow{right:12px}
+body.pfc676 .searchRow{right:80px}
 body.pfc676 #map{min-height:360px;height:44vh}
 .pfc694Hint{margin:8px 4px 0;font-size:12px;line-height:1.4;color:#4d614c}
 .pfc694Menu{display:grid;gap:10px;margin:12px 0}
