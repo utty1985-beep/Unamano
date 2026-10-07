@@ -42,7 +42,7 @@ async function on(supplied){
  const discard=()=>supplied?.getTracks().forEach(t=>t.stop());
  if(starting){discard();return;}if(active){if(supplied){discard();return;}return off();}if(!transport?.ready()){discard();return status('Entra prima in una Squadra Live.');}if((!supplied&&!navigator.mediaDevices?.getUserMedia)||!window.RTCPeerConnection){discard();return permissionPage('Unsupported');}
  starting=true;const stamp=session;
- try{const s=supplied||await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});if(stamp!==session||!transport.ready()){s.getTracks().forEach(t=>t.stop());return;}stream=s;stream.getTracks().forEach(t=>t.enabled=false);active=true;syncBar();q('teamAudio').textContent='Spegni audio / microfono';status('Microfono pronto · tieni premuto per parlare');returnToMap();await transport.send({kind:'hello'});heartbeat=setInterval(()=>{if(!transport.ready()){off(false);return;}transport.send({kind:'hello'}).catch(()=>{});for(const [id,p] of peers)if(Date.now()-p.at>35000)remove(id);},10000);}
+ try{const s=supplied||await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});if(!s.getAudioTracks().some(t=>t.readyState==='live')){s.getTracks().forEach(t=>t.stop());throw new DOMException('Nessun microfono attivo','NotFoundError');}s.getVideoTracks().forEach(t=>t.stop());if(stamp!==session||!transport.ready()){s.getTracks().forEach(t=>t.stop());return;}stream=s;stream.getTracks().forEach(t=>t.enabled=false);active=true;syncBar();q('teamAudio').textContent='Spegni audio / microfono';status('Microfono pronto · tieni premuto per parlare');returnToMap();await transport.send({kind:'hello'});heartbeat=setInterval(()=>{if(!transport.ready()){off(false);return;}transport.send({kind:'hello'}).catch(()=>{});for(const [id,p] of peers)if(Date.now()-p.at>35000)remove(id);},10000);}
  catch(e){if(stamp!==session||!joined)return;await off(false);status(e.name==='NotAllowedError'?'Microfono non autorizzato: apri le autorizzazioni e consenti l’accesso.':'Impossibile attivare audio. Riprova.');permissionPage(e.name);}finally{starting=false;}
 }
 function mount(){
@@ -97,16 +97,15 @@ function permissionPage(error){
  const css=document.createElement('style');css.textContent='#teamPermissionModal [hidden]{display:none!important}#teamPermissionModal ol{padding-left:24px;line-height:1.5}#teamPermissionModal li{margin:10px 0}';document.head.appendChild(css);
  }
  const modern=hasNativePermission(),blocked=error==='NotAllowedError',unsupported=error==='Unsupported';
- q('teamNativePermission').hidden=!modern||unsupported;q('teamPermissionAllow').hidden=modern||unsupported;
+ q('teamNativePermission').hidden=!modern||unsupported||!blocked;q('teamPermissionAllow').hidden=unsupported;
  q('teamPermissionSteps').hidden=!blocked;
- q('teamPermissionHelp').textContent=unsupported?'Questo browser non permette di usare il microfono. Apri l’app in Chrome e riprova.':blocked?(modern?'Tocca il controllo microfono qui sotto per riaprire la richiesta di autorizzazione. Se resta bloccato, segui i passaggi.':'Il microfono è bloccato. Consenti l’accesso nelle autorizzazioni del browser, poi torna qui e riprova.'):error==='NotFoundError'?'Nessun microfono disponibile. Controlla il microfono del telefono o l’auricolare, poi riprova.':error==='NotReadableError'||error==='AbortError'?'Il microfono non è disponibile. Chiudi le altre app che lo stanno usando e riprova.':error?'Non riesco ad attivare il microfono. Controlla il dispositivo e riprova.':'Tocca il controllo microfono e scegli “Consenti” nella richiesta del telefono.';
- m.classList.add('open');if(!modern&&!unsupported)q('teamPermissionAllow').focus();return m;
+ q('teamPermissionHelp').textContent=unsupported?'Questo browser non permette di usare il microfono. Apri l’app in Chrome e riprova.':blocked?(modern?'Tocca il controllo microfono qui sotto per riaprire la richiesta di autorizzazione. Se resta bloccato, segui i passaggi.':'Il microfono è bloccato. Consenti l’accesso nelle autorizzazioni del browser, poi torna qui e riprova.'):error==='NotFoundError'?'Nessun microfono disponibile. Controlla il microfono del telefono o l’auricolare, poi riprova.':error==='NotReadableError'||error==='AbortError'?'Il microfono non è disponibile. Chiudi le altre app che lo stanno usando e riprova.':error?'Non riesco ad attivare il microfono. Controlla il dispositivo e riprova.':'Premi Riprova microfono. Dopo Consenti, l’audio si attiva e torni alla mappa.';
+ m.classList.add('open');if(!unsupported)q('teamPermissionAllow').focus();return m;
 }
 function requestAudio(){
  if(!joined||!transport?.ready()){q('pfcFriendsBtn')?.click();return status('Crea una squadra o entra con un invito prima di attivare audio.');}
  if(active)return listen();if(starting)return;
  if(!window.RTCPeerConnection||!navigator.mediaDevices?.getUserMedia)return permissionPage('Unsupported');
- if(hasNativePermission())return permissionPage();
  status('Attendo l’autorizzazione del microfono…');return on();
 }
 
