@@ -36,3 +36,5 @@ body.pfc676 #map{min-height:360px;height:44vh}
 body.pfc676 button:focus-visible,body.pfc676 summary:focus-visible{outline:3px solid #b66a23;outline-offset:3px}
 @media(min-width:700px){.pfc694Menu{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+
+body.pfc676 #pfc676Quick #dogSettingsBtn,body.pfc676 #pfc676Quick #pfcFriendsBtn{display:none!important}
