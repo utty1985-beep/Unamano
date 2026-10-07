@@ -1,6 +1,7 @@
-const CACHE='passione-funghi-caccia-v6-9-8-last-position-r2';
+const CACHE='passione-funghi-caccia-v6-9-8-background-r4';
 const TILE_CACHE='cacciatraccia-offline-tiles-v1';
-const SHELL=['./wind-engine-6.9.3.js?v=6.9.3','./wind-6.9.3-modes.js?v=6.9.3-modes1','./dog-6.9.3-pair.js?v=6.9.3-pair1','./6.9.8.html','./styles.css?v=4.1.2','./home-6.8.1.css?v=6.8.1-realistic2','./home-6.9.6.js?v=6.9.6-r1','./simple-6.9.6.css?v=6.9.6-r1','./app-6.9.8.js?v=6.9.8-map-audio1','./assets/bosco-cervo-porcini-6.8.1.webp','./vendor/supabase-2.95.3.js','./friends-6.9.8-last-position.js?v=6.9.8-last2','./team-6.9.8.js?v=6.9.8-map-audio1','./activity-6.9.3-modes.js?v=6.9.3-modes1','./manifest.webmanifest','./icon.svg'];
+const SHELL=['./wind-engine-6.9.3.js?v=6.9.3','./wind-6.9.3-modes.js?v=6.9.3-modes1','./dog-6.9.3-pair.js?v=6.9.3-pair1','./6.9.8.html','./styles.css?v=4.1.2','./home-6.8.1.css?v=6.8.1-realistic2','./home-6.9.6.js?v=6.9.6-r1','./simple-6.9.6.css?v=6.9.6-r1','./app-6.9.8.js?v=6.9.8-map-audio1','./assets/bosco-cervo-porcini-6.8.1.webp','./vendor/supabase-2.95.3.js','./native-team-6.9.9.js?v=6.9.9-background4',
+  './friends-6.9.8-reconnect.js?v=6.9.8-background4','./team-6.9.8-reconnect.js?v=6.9.8-background4','./activity-6.9.3-modes.js?v=6.9.3-modes1','./manifest.webmanifest','./icon.svg'];
 const LIBS=['https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'];
 self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL);await Promise.allSettled(LIBS.map(u=>c.add(u)));await self.skipWaiting()})()));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('passione-funghi-caccia-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));

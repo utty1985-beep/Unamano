@@ -1,4 +1,4 @@
-name: Build Passione Funghi e Caccia 6.5.2 Stable Recovery
+name: Build Passione Funghi e Caccia 6.9.9 Background
 
 on:
   workflow_dispatch:
@@ -31,26 +31,16 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Validate exact stable web core
+      - name: Validate Squadra modules
         working-directory: ${{ github.workspace }}
         run: |
-          node - <<'NODE'
-          const fs=require('fs');
-          const parts=Array.from({length:25},(_,i)=>'cacciatraccia/v6/part'+String(i).padStart(2,'0')+'.txt');
-          const missing=parts.filter(p=>!fs.existsSync(p));
-          if(missing.length) throw new Error('Missing stable parts: '+missing.join(', '));
-          const src=parts.map(p=>fs.readFileSync(p,'utf8')).join('\n');
-          new Function(src);
-          const loader=fs.readFileSync('cacciatraccia/app-loader.js','utf8');
-          const main=fs.readFileSync('cacciatraccia/android-wrapper/app/src/main/java/com/cacciatraccia/italia/MainActivity.java','utf8');
-          const gradle=fs.readFileSync('cacciatraccia/android-wrapper/app/build.gradle.kts','utf8');
-          if(!loader.includes("requestedVersion==='6502'")) throw new Error('Stable 6502 route missing');
-          if(!loader.includes("stable6502?[]")) throw new Error('Stable route must exclude tester fixes');
-          if(!loader.includes("'6.5.2':'6.6.6'")) throw new Error('Stable asset version mapping missing');
-          if(!main.includes('?v=6502')) throw new Error('Android start URL 6502 missing');
-          if(!gradle.includes('versionCode = 6502') || !gradle.includes('versionName = "6.5.2"')) throw new Error('Android identity mismatch');
-          console.log('Stable 6.5.2 route isolated and core syntax OK');
-          NODE
+          node --check cacciatraccia/friends-6.9.8-reconnect.js
+          node --check cacciatraccia/team-6.9.8-reconnect.js
+          node --check cacciatraccia/native-team-6.9.9.js
+          node scripts/test-friends-reconnect-6.9.8.cjs
+          node scripts/test-team-reconnect-6.9.8.cjs
+          node scripts/test-native-team-background-6.9.9.cjs
+          node scripts/test-team-background-6.9.9.cjs
 
       - name: Build release APK
         run: gradle --no-daemon :app:assembleRelease --stacktrace
@@ -61,9 +51,9 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/pfc-badging.txt
-          grep -F "package: name='com.cacciatraccia.italia' versionCode='6502' versionName='6.5.2'" /tmp/pfc-badging.txt
-          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.5.2-STABLE-RECOVERY-UNSIGNED.apk
-          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.5.2-badging.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6909' versionName='6.9.9'" /tmp/pfc-badging.txt
+          cp "$APK" app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.9.9-BACKGROUND-UNSIGNED.apk
+          cp /tmp/pfc-badging.txt app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.9.9-badging.txt
 
       - name: Bundle signing tool
         run: |
@@ -73,10 +63,10 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Passione-Funghi-e-Caccia-v6.5.2-STABLE-RECOVERY-build
+          name: Passione-Funghi-e-Caccia-v6.9.9-BACKGROUND-build
           path: |
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.5.2-STABLE-RECOVERY-UNSIGNED.apk
-            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.5.2-badging.txt
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.9.9-BACKGROUND-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.9.9-badging.txt
             cacciatraccia/android-wrapper/app/build/signing-tools/apksigner
             cacciatraccia/android-wrapper/app/build/signing-tools/lib/apksigner.jar
           if-no-files-found: error
