@@ -2,12 +2,15 @@ package com.cacciatraccia.italia;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
+import android.webkit.PermissionRequest;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -25,9 +28,11 @@ import java.io.IOException;
 public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 4101;
     private static final int REQ_FILE = 4102;
-    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/?v=6502";
+    private static final int REQ_AUDIO = 4103;
+    private static final String START_URL = "https://utty1985-beep.github.io/Unamano/cacciatraccia/";
 
     private WebView webView;
+    private PermissionRequest pendingAudioRequest;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraUri;
     private String pendingGeoOrigin;
@@ -48,7 +53,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.5.2");
+        s.setUserAgentString(s.getUserAgentString() + " PassioneFunghiCacciaAndroid/6.8.4");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -62,6 +67,18 @@ public class MainActivity extends Activity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                runOnUiThread(() -> requestAudio(request));
+            }
+
+            @Override
+            public void onPermissionRequestCanceled(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    if (pendingAudioRequest == request) pendingAudioRequest = null;
+                });
+            }
+
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -109,7 +126,71 @@ public class MainActivity extends Activity {
         });
 
         webView.clearCache(true);
-        webView.loadUrl(START_URL + "&t=" + System.currentTimeMillis());
+        webView.loadUrl(START_URL + "?t=" + System.currentTimeMillis());
+    }
+
+    private boolean isAppPage() {
+        Uri page = Uri.parse(webView.getUrl() == null ? "" : webView.getUrl());
+        String path = page.getPath();
+        return "https".equalsIgnoreCase(page.getScheme())
+                && "utty1985-beep.github.io".equalsIgnoreCase(page.getHost())
+                && (page.getPort() == -1 || page.getPort() == 443)
+                && path != null && path.startsWith("/Unamano/cacciatraccia/");
+    }
+
+    private boolean isTrustedAudioRequest(PermissionRequest request) {
+        Uri origin = request.getOrigin();
+        if (!isAppPage() || !"https".equalsIgnoreCase(origin.getScheme())
+                || !"utty1985-beep.github.io".equalsIgnoreCase(origin.getHost())
+                || (origin.getPort() != -1 && origin.getPort() != 443)) return false;
+        String[] resources = request.getResources();
+        return resources.length == 1
+                && PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resources[0]);
+    }
+
+    private void requestAudio(PermissionRequest request) {
+        if (!isTrustedAudioRequest(request) || pendingAudioRequest != null) {
+            request.deny();
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            return;
+        }
+        boolean asked = getPreferences(MODE_PRIVATE).getBoolean("microphoneAsked", false);
+        if (asked && !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+            request.deny();
+            showMicrophoneSettings();
+            return;
+        }
+        pendingAudioRequest = request;
+        getPreferences(MODE_PRIVATE).edit().putBoolean("microphoneAsked", true).apply();
+        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_AUDIO);
+    }
+
+    private void showMicrophoneSettings() {
+        new AlertDialog.Builder(this)
+                .setTitle("Abilita il microfono")
+                .setMessage("Apri le autorizzazioni di Passione Funghi e Caccia e consenti il microfono. Poi torna qui e premi Attiva audio o Parla.")
+                .setPositiveButton("Apri autorizzazioni", (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + getPackageName())));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Apri Impostazioni > App > Passione Funghi e Caccia > Autorizzazioni", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (pendingAudioRequest != null) {
+            pendingAudioRequest.deny();
+            pendingAudioRequest = null;
+        }
+        super.onDestroy();
     }
 
     private boolean acceptsImages(WebChromeClient.FileChooserParams params) {
@@ -157,6 +238,19 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQ_AUDIO && pendingAudioRequest != null) {
+            PermissionRequest request = pendingAudioRequest;
+            pendingAudioRequest = null;
+            boolean granted = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+            if (granted && isTrustedAudioRequest(request)) {
+                request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            } else {
+                request.deny();
+                if (!granted) {
+                    Toast.makeText(this, "Microfono non autorizzato. Premi di nuovo Attiva audio o Parla per abilitarlo.", Toast.LENGTH_LONG).show();
+                }
+            }
+        }
         if (requestCode == REQ_LOCATION && pendingGeoCallback != null) {
             boolean ok = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;

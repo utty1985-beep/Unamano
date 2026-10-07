@@ -1,0 +1,48 @@
+name: Build Passione Funghi e Caccia 6.8.4 Audio
+on:
+  push:
+    branches: [pfc-apk-6.8.4-audio]
+    paths:
+      - 'cacciatraccia/android-wrapper/**'
+      - '.github/workflows/pfc-audio-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cacciatraccia/android-wrapper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build and lint Android permissions
+        run: gradle --no-daemon :app:assembleRelease :app:lintRelease --stacktrace
+      - name: Verify and align APK
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.8.4-AUDIO-UNSIGNED.apk
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c 4 "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" > app/build/outputs/apk/release/metadata.txt
+          grep -F "package: name='com.cacciatraccia.italia' versionCode='6804' versionName='6.8.4'" app/build/outputs/apk/release/metadata.txt
+          grep -F "android.permission.RECORD_AUDIO" app/build/outputs/apk/release/metadata.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Passione-Funghi-e-Caccia-v6.8.4-AUDIO-unsigned
+          path: |
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/Passione-Funghi-e-Caccia-v6.8.4-AUDIO-UNSIGNED.apk
+            cacciatraccia/android-wrapper/app/build/outputs/apk/release/metadata.txt
+            cacciatraccia/android-wrapper/app/build/reports/lint-results-release.html
+          if-no-files-found: error
+          retention-days: 30
