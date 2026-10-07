@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastVerified": "2026-10-05",
+  "lastVerified": "2026-10-07",
   "disclaimer": "Le informazioni nell'app sono di orientamento. Per decisioni legali o di sicurezza fa fede la fonte ufficiale collegata.",
   "hunting": {
     "Puglia": {
@@ -20,6 +20,38 @@
       "sourceChanged": true,
       "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9",
       "detectedFingerprint": "7fc8e520b8117390458aec9fdefbda9e001ba9340af44e281b0db6ae4450ff16"
+    },
+    "Sardegna": {
+      "title": "Calendario venatorio 2026/2027 — Regione Autonoma della Sardegna",
+      "src": "https://www.regione.sardegna.it/atti-bandi-archivi/atti-amministrativi/tutti-gli-atti/178653298707630",
+      "detail": "Calendario approvato con Decreto dell'Assessora della Difesa dell'Ambiente n. 20 del 07/08/2026. Per Pernice sarda, Lepre sarda, Coniglio selvatico, Moriglione e Pavoncella la Regione indica come obbligatoria la registrazione digitale dei prelievi tramite l'app Caccia Sardegna.",
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "verifiedOn": "2026-10-07"
+    },
+    "Liguria": {
+      "title": "Calendario venatorio 2026/2027 — Regione Liguria",
+      "src": "https://www.regione.liguria.it/homepage-agricoltura/come-fare-per/caccia-modulistica/calendario-venatorio.html",
+      "detail": "DGR n. 125 del 16/04/2026. Apertura generale 20/09/2026; caccia a moriglione e tortora selvatica sospesa; beccaccia 01/10/2026-20/01/2027. Pavoncella e moretta: prelievo consentito ai cacciatori che utilizzano il tesserino venatorio digitale.",
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "verifiedOn": "2026-10-07"
+    },
+    "Marche": {
+      "title": "Calendario venatorio 2026/2027 — Regione Marche",
+      "src": "https://www.regione.marche.it/Entra-in-Regione/Caccia/CALENDARIO-VENATORIO-REGIONALE-E-DEROGHE",
+      "detail": "DGR n. 503 del 30/04/2026; Allegato A modificato con DD n. 343/IFO del 08/06/2026. Verificare la pagina ufficiale prima dell'uscita per eventuali ulteriori provvedimenti o modifiche.",
+      "checkStatus": "warning",
+      "sourceChanged": false,
+      "verifiedOn": "2026-10-07"
+    },
+    "Piemonte": {
+      "title": "Calendario venatorio 2026/2027 — Regione Piemonte",
+      "src": "https://www.regione.piemonte.it/web/temi/agricoltura/tutela-della-fauna-caccia-pesca/stagione-venatoria-corrente",
+      "detail": "DGR 09/06/2026 n. 2-2646. Il calendario ha ricevuto modifiche successive, incluse quelle della DGR 31/08/2026 n. 2-2986 relative al cinghiale e alla PSA. Verificare sempre gli ultimi provvedimenti regionali e le restrizioni territoriali prima dell'uscita.",
+      "checkStatus": "warning",
+      "sourceChanged": false,
+      "verifiedOn": "2026-10-07"
     }
   },
   "mushrooms": {
@@ -47,6 +79,14 @@
       "checkStatus": "ok",
       "sourceChanged": false,
       "sourceFingerprint": "0f78e855fac5a97a444625afd4bf800c740a76eaad76c285cb6efc34ce30251a"
+    },
+    "Lazio": {
+      "title": "Raccolta funghi — Regione Lazio",
+      "src": "https://www.regione.lazio.it/cittadini/agricoltura/Funghi",
+      "detail": "Non è più necessario il tesserino. Occorrono attestato di corso micologico di almeno 14 ore (salve le esenzioni previste), contributo annuale di €25 per residenti o €40 per non residenti e documento di riconoscimento. Residenti over 65 esentati dal contributo. Dal 2024 la raccolta è consentita tutti i giorni della settimana. Restano ferme eventuali ulteriori limitazioni territoriali applicabili.",
+      "checkStatus": "ok",
+      "sourceChanged": false,
+      "verifiedOn": "2026-10-07"
     }
   }
 }
