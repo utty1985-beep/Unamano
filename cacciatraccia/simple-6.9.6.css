@@ -1,0 +1,56 @@
+/* Simplified interface 6.9.6 */
+body.pfc676 .pfc676Hero{min-height:0;padding:18px 16px 14px}
+body.pfc676 .pfc676Hero .welcome{min-height:80px;max-width:70%}
+body.pfc676 .pfc676Hero h2{font-size:25px;max-width:260px}
+body.pfc676 .pfc676Hero p{font-size:13px;max-width:250px}
+body.pfc676 .pfc676Mode{margin-top:12px}
+body.pfc676 .pfc681Scene{height:calc(100% - 70px)}
+body.pfc676 .pfc676CommercialNav{grid-template-columns:repeat(5,minmax(0,1fr))!important;padding-top:8px}
+body.pfc676 #pfc676NavHome,body.pfc676 #pfc676NavRadar{display:none!important}
+body.pfc676 .pfc676CommercialNav button{font-size:12px;min-height:54px}
+body.pfc676 .pfc676CommercialNav button b{font-size:23px}
+body.pfc676 .pfc676CommercialNav button.active{background:#e8f0e4;border-radius:12px}
+body.pfc676 .pfc676Advanced{display:none}
+body.pfc676 #pfc676Quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.pfc676 #pfc676Quick button{min-height:100px;padding:14px 10px;text-align:left;background:#fffdf8;color:#193f2b;border:1px solid #d2ddcf;box-shadow:0 3px 10px #173f2b0b}
+body.pfc676 #pfc676Quick button b{font-size:24px}
+body.pfc676 #pfc676Quick button span{font-size:16px;line-height:1.25}
+body.pfc676 #pfc676Quick button small{font-size:12px;color:#596657;line-height:1.35}
+body.pfc676 #pfc676Save,body.pfc676 #pfc678Mushroom{background:#1d5538;color:white}
+body.pfc676 #pfc676Save small,body.pfc676 #pfc678Mushroom small{color:#e0ecdd}
+body.pfc676 .mapBtn{width:62px;min-height:48px;height:auto;font-size:20px;padding:6px 3px}
+body.pfc676 .mapBtn small{display:block;font-size:10px;line-height:1.2;color:inherit}
+body.pfc676 .mapTools{gap:5px}
+body.pfc676 .searchRow{right:80px}
+body.pfc676 #map{min-height:360px;height:44vh}
+.pfc694Hint{margin:8px 4px 0;font-size:12px;line-height:1.4;color:#4d614c}
+.pfc694Menu{display:grid;gap:10px;margin:12px 0}
+.pfc694MenuItem{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:1px solid #d6dfd0;border-radius:16px;background:#fffdf8;color:#1b442e;padding:16px;min-height:76px}
+.pfc694MenuItem>b{font-size:26px;width:32px;text-align:center}
+.pfc694MenuItem>span:nth-child(2){flex:1}
+.pfc694MenuItem strong{display:block;font-size:16px}
+.pfc694MenuItem small{display:block;margin-top:4px;font-size:12px;color:#586756;line-height:1.4}
+.pfc694Guide{line-height:1.6}.pfc694Guide summary{cursor:pointer;font-weight:750;padding:6px 0;font-size:16px}
+.pfc694Guide li{margin-bottom:10px}.pfc694Version{color:#5e6b5a;text-align:center;font-size:12px;margin:20px 0}
+.pfc694Back{margin:12px 0}
+body.pfc676 button:focus-visible,body.pfc676 summary:focus-visible{outline:3px solid #b66a23;outline-offset:3px}
+@media(min-width:700px){.pfc694Menu{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+
+body.pfc676 #pfc676Quick #dogSettingsBtn,body.pfc676 #pfc676Quick #pfcFriendsBtn{display:none!important}
+
+/* Primary hunting tools stay visible before the map, even before joining. */
+body.pfc676 #pfc695HuntTools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+body.pfc676 #pfc695HuntTools button{display:grid;place-items:center;gap:5px;min-height:76px;padding:10px 4px;border:1px solid #c9d8c8;border-radius:16px;background:#fffdf8;color:#193f2b;font-size:16px;font-weight:800}
+body.pfc676 #pfc695HuntTools button b{font-size:28px;line-height:1.15}
+body.pfc676 #pfc695Squad{background:#1d5538;color:#fff}
+body.pfc676 .pfc676CommercialNav button{overflow-wrap:normal!important;word-break:normal;font-size:clamp(10px,2.7vw,12px);padding-inline:1px}
+body.pfc676 .pfc676Hero .welcome{min-height:64px!important;max-width:72%!important}
+body.pfc676 .pfc676Hero h2{font-size:24px!important;line-height:1.12!important;margin-bottom:6px}
+body.pfc676 .pfc676Hero p{font-size:12px!important;line-height:1.35!important}
+body.pfc676 .topbar .brand h1{font-size:22px!important;line-height:1.1}
+body.pfc676 .topbar .brand small{font-size:12px!important}
+body.pfc676 .topbar{padding-block:10px!important}
+
+body.pfc676 #pfc696NavCar span{display:block;line-height:1.15}
+body.pfc676 #northBtn.active{background:#173f2b;color:#fff}
