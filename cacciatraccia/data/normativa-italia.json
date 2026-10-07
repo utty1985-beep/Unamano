@@ -10,7 +10,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "04bc1bfce8b00aa6c1029578f51c635aa961987818be4297348d20df622ce0a3",
-      "detectedFingerprint": "d720307b910a429ce37191b79e104a63e0a81a90bb0e0ea19360f0e45eff9650"
+      "detectedFingerprint": "97a845c0f58eb7f036ab6c0f8b90e16c8af03a883da89bec6d842c16987bad67"
     },
     "Puglia_ATC": {
       "title": "Ambiti Territoriali di Caccia (ATC) — Regione Puglia",
@@ -19,7 +19,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9",
-      "detectedFingerprint": "f282849f797025364647ec07787db1f6d007c2f7802a04437dded55786dc0559"
+      "detectedFingerprint": "7fc8e520b8117390458aec9fdefbda9e001ba9340af44e281b0db6ae4450ff16"
     }
   },
   "mushrooms": {
@@ -30,7 +30,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "712fcb3a29aaf942ac3885802200e95f2bbe84098eaa64b2fbfdd84b797b2871",
-      "detectedFingerprint": "b75de4985ca96f5f7207d45ff832afaa16a9d887997021a97e7f4c5d658404a7"
+      "detectedFingerprint": "00f61041e52c5b357d7143efb4b0f919d663fe858f5f2fa6a138cae508237a25"
     },
     "Puglia": {
       "title": "L.R. Puglia 25 agosto 2003, n. 12 — funghi epigei",
