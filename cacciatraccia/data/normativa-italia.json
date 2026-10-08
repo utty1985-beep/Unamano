@@ -93,6 +93,14 @@
       "sourceChanged": false,
       "verifiedOn": "2026-10-07",
       "sourceFingerprint": "ecdf8c9c80d1ccd11ab4f5764dbe475b9799ea40f20d797aaff4a0f450076615"
+    },
+    "Toscana": {
+      "title": "Raccolta funghi — Regione Toscana",
+      "src": "https://www.regione.toscana.it/it/-/raccolta-funghi-ecco-le-disposizioni",
+      "detail": "Dal 2026 non è più ammesso il versamento su conto corrente postale per l'autorizzazione. La Regione indica IRIS e bonifico come canali disponibili. Verificare le limitazioni territoriali prima della raccolta.",
+      "checkStatus": "ok",
+      "verifiedOn": "2026-10-08",
+      "sourceChanged": false
     }
   }
 }
