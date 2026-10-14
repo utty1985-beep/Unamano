@@ -10,7 +10,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "04bc1bfce8b00aa6c1029578f51c635aa961987818be4297348d20df622ce0a3",
-      "detectedFingerprint": "902f42b601b6623e3612f3dc73ea9070619c1d1da6957daa20d34e393d6516bf"
+      "detectedFingerprint": "957f7ac0e762d14fc1f25727fd64f314241b73227de74be668965c7b1f4e8df6"
     },
     "Puglia_ATC": {
       "title": "Ambiti Territoriali di Caccia (ATC) — Regione Puglia",
@@ -19,7 +19,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "7bade6b77f849b5a6caf62e0a42a7358c558be822cd7954b9f54a91ab52bb2c9",
-      "detectedFingerprint": "9d35f8b101870a35b30335b35bd82d8bb4cd71888ed0002c77eb75b6163b18bd"
+      "detectedFingerprint": "9a8c4cf00166bbfa77cfbd9bfc3b95da0ac2bee6d1d7fcc2332d213147f5c998"
     },
     "Sardegna": {
       "title": "Calendario venatorio 2026/2027 — Regione Autonoma della Sardegna",
@@ -38,7 +38,7 @@
       "sourceChanged": true,
       "verifiedOn": "2026-10-07",
       "sourceFingerprint": "1f53a046b4f57cbd5585a8fea06785434a104044c4d90d48a509f1aadf567f1f",
-      "detectedFingerprint": "17e0f2fcb0f0ffcca529b548dd7f5df129183e1e62a4539af89b8f31eb7d7042"
+      "detectedFingerprint": "5025827af3776c5d57b2a6d584d264f79b268d5e7b58f4a5941184afdaa50351"
     },
     "Marche": {
       "title": "Calendario venatorio 2026/2027 — Regione Marche",
@@ -48,7 +48,7 @@
       "sourceChanged": true,
       "verifiedOn": "2026-10-07",
       "sourceFingerprint": "18dcea84d8a5e337af4bce242b99bee4d5aa7024ff537e470511669e5cdade3f",
-      "detectedFingerprint": "5560e5c49c6f9b5198b586c569c15d18ccb2e121baa681d9ac171d10cfe0a972"
+      "detectedFingerprint": "57532d5060cba4b49fa31b629f7ec160dd610363a4536ab4107b90a1decbc7d2"
     },
     "Piemonte": {
       "title": "Calendario venatorio 2026/2027 — Regione Piemonte",
@@ -58,7 +58,7 @@
       "sourceChanged": true,
       "verifiedOn": "2026-10-07",
       "sourceFingerprint": "a0a3062b8c88af6a830da9aafdcbfd6004aab1a7abf939d7134b51c53c57e51e",
-      "detectedFingerprint": "035b330d032b6b14180d85c6a7cfc415c0f0d073321fd6feebe8fd0e3824725b"
+      "detectedFingerprint": "f2797d2e3e7a7eaebf70c333cdbd1ef67e062d08b3783b1b03af5444c4ebb400"
     }
   },
   "mushrooms": {
@@ -69,7 +69,7 @@
       "checkStatus": "changed",
       "sourceChanged": true,
       "sourceFingerprint": "712fcb3a29aaf942ac3885802200e95f2bbe84098eaa64b2fbfdd84b797b2871",
-      "detectedFingerprint": "47037d25cbf7734b6e8b55199ae7b1ca094114aa8789a519e239b396becfb827"
+      "detectedFingerprint": "471ccc84d64a082ac3301c668ea621b81fdfa6a89136cbeb15f0b22cf95cc64c"
     },
     "Puglia": {
       "title": "L.R. Puglia 25 agosto 2003, n. 12 — funghi epigei",
@@ -96,7 +96,7 @@
       "sourceChanged": true,
       "verifiedOn": "2026-10-07",
       "sourceFingerprint": "ecdf8c9c80d1ccd11ab4f5764dbe475b9799ea40f20d797aaff4a0f450076615",
-      "detectedFingerprint": "6fcb2642c55d0a59e7e98c87dfad1acf589963408b3c1d2c50aca112599ec1ef"
+      "detectedFingerprint": "d84e0249b6cb799b58d0bb4b0f2fd3e8c102572766fdb96b351445d78087e57d"
     },
     "Toscana": {
       "title": "Raccolta funghi — Regione Toscana",
@@ -106,7 +106,7 @@
       "verifiedOn": "2026-10-08",
       "sourceChanged": true,
       "sourceFingerprint": "3365397be7403bf0ce8a3ffbcf352f5cabd753231529488a7d0d86864de3afd5",
-      "detectedFingerprint": "d8618f6858a052b974aa7d39666bd6e95b2648a3015d68851fcd6ea61ce842f4"
+      "detectedFingerprint": "04cc50edd4c738491133577bc34856ecc67ba788516835e66426fa5edd5ce7f2"
     }
   }
 }
