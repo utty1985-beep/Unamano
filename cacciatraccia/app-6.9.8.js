@@ -21,7 +21,7 @@ const wtext = c => ({0:'Sereno',1:'Prevalentemente sereno',2:'Parzialmente nuvol
 const when = iso => { try { return new Date(iso).toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso||''; } };
 function toast(t){ const x=$('toast'); if(!x) return alert(t); x.textContent=t; x.classList.add('show'); setTimeout(()=>x.classList.remove('show'),2400); }
 function loadScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=no; document.head.appendChild(s); }); }
-function loadCss(href){ const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+function loadCss(href){ return new Promise((resolve,reject)=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; l.onload=resolve; l.onerror=()=>reject(new Error('Stile mappa non disponibile')); document.head.appendChild(l); }); }
 async function ensureLeaflet(){
   const waitScript=(src,ms=5000)=>new Promise((ok,no)=>{
     const s=document.createElement('script');let done=false;
@@ -29,9 +29,11 @@ async function ensureLeaflet(){
     const tm=setTimeout(()=>finish(new Error('timeout '+src)),ms);
     s.src=src;s.async=true;s.onload=()=>finish();s.onerror=()=>finish(new Error('errore caricamento '+src));document.head.appendChild(s);
   });
+  // Tile positioning must be styled before creating the map, including with an existing L.
+  await loadCss('vendor/leaflet/leaflet.css?v=1.9.4');
   if(!window.L){
-    loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
     const cdn=[
+      'vendor/leaflet/leaflet.js?v=1.9.4',
       'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
@@ -42,8 +44,7 @@ async function ensureLeaflet(){
     }
     if(!window.L)throw Error('Leaflet non disponibile'+(lastErr?' · controlla la rete':''));
   }
-  loadCss('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.css');
-  await waitScript('https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js',4500)
+  await waitScript('vendor/leaflet-rotate.js?v=0.3.0',4500)
     .catch(e=>console.warn('Rotazione avanzata non caricata',e));
 }
 function icon(type){ const color=type==='Avvistamento'?'#a9342a':type==='Passaggio'?'#80582b':type==='Parcheggio'?'#315d80':'#2f6c42'; return L.divIcon({className:'',html:`<div style="width:25px;height:25px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:3px solid #fff;box-shadow:0 2px 6px #0006"></div>`,iconSize:[28,34],iconAnchor:[14,30]}); }
@@ -55,7 +56,18 @@ function initMap(){
   markerLayer=L.layerGroup().addTo(map);
   map.on('click',e=>selectMapPoint(e.latlng.lat,e.latlng.lng));
   $('followBtn')?.classList.add('active');
-  startGps(); renderAll(); setTimeout(()=>map.invalidateSize(),150);
+  // Login and navigation can initialize the map inside a display:none ancestor.
+  // Observe its actual visible size instead of relying on a fixed startup delay.
+  const refreshSize=()=>{
+    if(!map.getContainer().clientWidth || !map.getContainer().clientHeight)return;
+    map.invalidateSize({pan:false,debounceMoveend:true});
+  };
+  const scheduleSize=()=>requestAnimationFrame(refreshSize);
+  if(window.ResizeObserver){const observer=new ResizeObserver(scheduleSize);observer.observe(map.getContainer());}
+  window.addEventListener('pfc:authenticated',scheduleSize);
+  window.addEventListener('pageshow',scheduleSize);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleSize();});
+  startGps(); renderAll(); scheduleSize();
 }
 function setLayer(k){ if(k==='street'){ map.removeLayer(sat); street.addTo(map); } else { map.removeLayer(street); sat.addTo(map); } document.querySelectorAll('.layerChoice').forEach(b=>b.classList.toggle('active',b.dataset.basemap===k)); }
 function setBearing(deg){ if(map?.setBearing){ map.setBearing(northLocked ? 0 : deg); return true; } return false; }
@@ -282,7 +294,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   try{
     if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw-6.9.8.js?v=6.9.8').catch(e=>console.warn('SW',e)); }catch(e){console.warn('SW',e);} }
     ensureModalActions(); await ensureLeaflet(); initMap(); bind();
-  }catch(e){ console.error(e); throw e; const m=document.getElementById('map'); if(m)m.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore mappa: ${esc(e.message)}. Ricarica una volta con Internet attivo.</div>`; }
+  }catch(e){ console.error(e); const m=document.getElementById('map'); if(m)m.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore mappa: ${esc(e.message)}. Ricarica una volta con Internet attivo.</div>`; throw e; }
 })();
 
 // V6.0.1 - ricerca luoghi, controlli mappa visibili, fonte/sito meteo configurabili
