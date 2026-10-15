@@ -1,5 +1,4 @@
-name: Check normative Passione Funghi e Caccia
-
+name: Aggiorna fonti e aree ufficiali Puglia
 on:
   workflow_dispatch:
   push:
@@ -8,10 +7,11 @@ on:
       - '.github/workflows/check-pfc-regulations.yml'
   schedule:
     - cron: '17 4 * * *'
-
 permissions:
   contents: write
-
+concurrency:
+  group: puglia-official-data
+  cancel-in-progress: false
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,16 +20,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Check official regulation sources
+      - name: Controlla le fonti Puglia e scarica i confini ufficiali
         run: python scripts/check_pfc_regulations.py
-      - name: Commit source-state changes
+      - name: Pubblica dati e stato delle fonti
         run: |
-          if git diff --quiet -- cacciatraccia/data/normativa-italia.json; then
-            echo "No changes to publish"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cacciatraccia/data/normativa-italia.json
-          git commit -m "Monitor official hunting and mushroom regulation sources"
+          git add cacciatraccia/data/normativa-puglia.json cacciatraccia/data/aree-protette-puglia.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Aggiorna confini SIT e stato fonti Puglia"
           git push

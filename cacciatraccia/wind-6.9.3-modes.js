@@ -11,7 +11,7 @@ function html(z){if(z.error)return '<p class="pfcWindMissing">'+esc(z.error)+'</
 }
 async function forecast(p,target){
  const d=new Date(target*1000),day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),next=new Date(d);next.setDate(next.getDate()+1);const end=next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
- const url=new URL('https://api.open-meteo.com/v1/forecast');Object.entries({latitude:p.lat,longitude:p.lng,hourly:'wind_speed_10m,wind_direction_10m,wind_gusts_10m',current:'wind_speed_10m,wind_direction_10m,wind_gusts_10m',wind_speed_unit:'kmh',timezone:'auto',timeformat:'unixtime',start_date:day,end_date:end}).forEach(([k,v])=>url.searchParams.set(k,v));
+ const url=new URL('https://pfc-weather.invalid/forecast');Object.entries({latitude:p.lat,longitude:p.lng,hourly:'wind_speed_10m,wind_direction_10m,wind_gusts_10m',current:'wind_speed_10m,wind_direction_10m,wind_gusts_10m',wind_speed_unit:'kmh',timezone:'auto',timeformat:'unixtime',start_date:day,end_date:end}).forEach(([k,v])=>url.searchParams.set(k,v));
  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),15000);try{const r=await fetch(url,{cache:'no-store',signal:ac.signal});if(!r.ok)throw Error('Previsione non disponibile per questa data.');return PFC_WIND_ENGINE.analyze(await r.json(),p,target);}finally{clearTimeout(timer);}
 }
 function target(date,time){const n=new Date(date+'T'+time+':00').getTime()/1000;if(!Number.isFinite(n))throw Error('Scegli giorno e ora validi.');return n;}
@@ -26,3 +26,4 @@ function decorate(){
 function boot(){if(api||!window.__PFC_LIVE_API__)return;api=window.__PFC_LIVE_API__;const css=document.createElement('style');css.textContent='.pfcWindButton{background:#dcefe5!important;color:#173f2b!important;font-weight:850!important}.pfcWindResult{margin:10px 0;padding:12px;border:1px solid #c8ded0;border-radius:12px;font-size:13px}.pfcWindGood{color:#176135}.pfcWindDifferent{color:#a33b23}.pfcWindMissing{color:#74603c}#pfcWindOutput{margin-top:14px}#pfcWindOutput p{margin:9px 0}';document.head.appendChild(css);new MutationObserver(decorate).observe(q('page-diary'),{childList:true,subtree:true});decorate();window.PFC_WIND_UI={open,all};}
 window.addEventListener('pfc:ready',boot);boot();
 })();
+

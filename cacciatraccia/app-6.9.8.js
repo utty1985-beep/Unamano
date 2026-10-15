@@ -17,7 +17,7 @@ const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); renderA
 const hav = (a,b) => { const R=6371,r=x=>x*Math.PI/180,d1=r(b[0]-a[0]),d2=r(b[1]-a[1]),q=Math.sin(d1/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(q)); };
 const wname = d => ['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((+d||0)%360)+360)%360/45)%8];
 const wdir = d => ['N','NE','E','SE','S','SO','O','NO'][Math.round((((+d||0)%360)+360)%360/45)%8];
-const wtext = c => ({0:'Sereno',1:'Prevalentemente sereno',2:'Parzialmente nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia',51:'Pioviggine',53:'Pioviggine',55:'Pioviggine forte',61:'Pioggia debole',63:'Pioggia',65:'Pioggia forte',80:'Rovesci',81:'Rovesci',82:'Rovesci forti',95:'Temporale',96:'Temporale',99:'Temporale forte'})[c] || 'Variabile';
+const wtext = c => ({0:'Sereno',1:'Prevalentemente sereno',2:'Parzialmente nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia',51:'Pioviggine',53:'Pioviggine',55:'Pioviggine forte',61:'Pioggia debole',63:'Pioggia',65:'Pioggia forte',80:'Rovesci',81:'Rovesci',82:'Rovesci forti',95:'Temporale',96:'Temporale',99:'Temporale forte'})[c] || 'Dato non disponibile';
 const when = iso => { try { return new Date(iso).toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso||''; } };
 function toast(t){ const x=$('toast'); if(!x) return alert(t); x.textContent=t; x.classList.add('show'); setTimeout(()=>x.classList.remove('show'),2400); }
 function loadScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=no; document.head.appendChild(s); }); }
@@ -91,11 +91,11 @@ async function weather(lat,lng){
   const __pfcTargetLat=+lat,__pfcTargetLng=+lng;
   $('weatherBody').innerHTML='<div class="empty">Carico meteo…</div>';
   try{
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
+    const u=`https://pfc-weather.invalid/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
     const r=await fetch(u); if(!r.ok) throw Error('Meteo non disponibile'); const j=await r.json(), c=j.current||{};
     if(!selected){selected={lat:__pfcTargetLat,lng:__pfcTargetLng,weather:null};}else if(!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;
-    selected.weather={fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m};
-    $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${wname(c.wind_direction_10m)} ${wdir(c.wind_direction_10m)}</b><small>${Math.round(c.wind_speed_10m||0)} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${Math.round(c.wind_gusts_10m||0)} km/h</b></div></div>`;
+    selected.weather={source:j.source||'Meteo Aeronautica Militare',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m};
+    $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${wname(c.wind_direction_10m)} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div></div>`;
     $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   }catch(e){ $('weatherBody').innerHTML=`<div class="empty">${esc(e.message)}${navigator.onLine?'':' · ultimo dato salvato resta nel punto'}</div>`; }
 }
@@ -331,7 +331,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   }
 
   // ---------- fonte/modello meteo ----------
-  const WEATHER_KEY='cacciatraccia-weather-v2',defaults={model:'best_match',site:'windy',custom:''};
+  const WEATHER_KEY='cacciatraccia-weather-v2',defaults={model:'meteoam',site:'meteoam',custom:''};
   let weatherCfg=defaults;try{weatherCfg={...defaults,...JSON.parse(localStorage.getItem(WEATHER_KEY)||'{}')}}catch{}
   const saveWeatherCfg=()=>localStorage.setItem(WEATHER_KEY,JSON.stringify(weatherCfg));
   if(!window.__ctWeatherFetchPatched){
@@ -339,14 +339,14 @@ window.__PFC_BOOT_READY__=(async()=>{
     window.fetch=(input,init)=>{try{const raw=typeof input==='string'?input:input?.url;if(raw&&raw.includes('api.open-meteo.com/v1/forecast')){const u=new URL(raw,location.href);if(weatherCfg.model&&weatherCfg.model!=='best_match')u.searchParams.set('models',weatherCfg.model);else u.searchParams.delete('models');input=typeof input==='string'?u.toString():new Request(u.toString(),input)}}catch(e){console.warn('Weather model patch',e)}return nativeFetch(input,init)};
   }
   function currentMapCenter(){try{const c=map?.getCenter?.();if(c)return {lat:c.lat,lng:c.lng}}catch{}return {lat:41.46,lng:15.55}}
-  function openWeatherSite(){const {lat,lng}=currentMapCenter();let url='';if(weatherCfg.site==='windy')url=`https://www.windy.com/?${lat.toFixed(5)},${lng.toFixed(5)},10`;else if(weatherCfg.site==='meteoam')url='https://www.meteoam.it/it/home';else if(weatherCfg.site==='3bmeteo')url='https://www.3bmeteo.com/';else if(weatherCfg.site==='custom'){url=(weatherCfg.custom||'').trim();if(!url)return toast('Inserisci prima il sito meteo personalizzato');if(!/^https?:\/\//i.test(url))url='https://'+url}if(url)window.open(url,'_blank','noopener')}
+  function openWeatherSite(){window.open('https://www.meteoam.it/it/puglia','_blank','noopener');return;const {lat,lng}=currentMapCenter();let url='';if(weatherCfg.site==='windy')url=`https://www.windy.com/?${lat.toFixed(5)},${lng.toFixed(5)},10`;else if(weatherCfg.site==='meteoam')url='https://www.meteoam.it/it/home';else if(weatherCfg.site==='3bmeteo')url='https://www.3bmeteo.com/';else if(weatherCfg.site==='custom'){url=(weatherCfg.custom||'').trim();if(!url)return toast('Inserisci prima il sito meteo personalizzato');if(!/^https?:\/\//i.test(url))url='https://'+url}if(url)window.open(url,'_blank','noopener')}
   function initWeatherSettingsUI(){
     if(document.getElementById('ctWeatherSettings'))return;const body=$('weatherBody'),card=body?.closest('.card');if(!card)return;
     const box=document.createElement('div');box.id='ctWeatherSettings';box.className='ctWeatherSettings';box.innerHTML=`
-      <div><label>Fonte/modello usato dall'app</label><select id="ctWeatherModel"><option value="best_match">Automatico (miglior modello)</option><option value="italia_meteo_arpae_icon_2i">ItaliaMeteo ARPAE ICON 2I</option><option value="ecmwf_ifs025">ECMWF IFS 0.25°</option><option value="icon_eu">DWD ICON Europa</option></select><div class="ctWeatherNote">La lettura automatica passa dall'API Open-Meteo; qui scegli il modello.</div></div>
-      <div><label>Sito meteo preferito per confronto</label><select id="ctWeatherSite"><option value="windy">Windy</option><option value="meteoam">Meteo Aeronautica Militare</option><option value="3bmeteo">3B Meteo</option><option value="custom">Altro sito personalizzato</option></select></div>
+      <div><label>Fonte meteo</label><select id="ctWeatherModel" disabled><option value="meteoam">Aeronautica Militare</option></select><div class="ctWeatherNote">Previsioni del servizio Meteo Aeronautica Militare, senza fornitori alternativi.</div></div>
+      <div><label>Bollettino ufficiale</label><select id="ctWeatherSite" disabled><option value="meteoam">Meteo Aeronautica Militare</option></select></div>
       <div class="full" id="ctWeatherCustomWrap" style="display:none"><label>Indirizzo del sito meteo</label><input id="ctWeatherCustom" type="url" placeholder="https://www.miositometeo.it"></div>
-      <div class="full"><button id="ctOpenWeatherSite" class="secondary">🌦 Apri sito meteo preferito</button></div>`;
+      <div class="full"><button id="ctOpenWeatherSite" class="secondary">🌦 Apri Meteo Aeronautica Militare</button></div>`;
     body.insertAdjacentElement('beforebegin',box);
     const model=$('ctWeatherModel'),site=$('ctWeatherSite'),custom=$('ctWeatherCustom'),wrap=$('ctWeatherCustomWrap');model.value=weatherCfg.model;site.value=weatherCfg.site;custom.value=weatherCfg.custom||'';const syncCustom=()=>wrap.style.display=site.value==='custom'?'block':'none';syncCustom();
     model.onchange=()=>{weatherCfg.model=model.value;saveWeatherCfg();toast('Fonte meteo aggiornata');if(selected)weather(selected.lat,selected.lng)};site.onchange=()=>{weatherCfg.site=site.value;saveWeatherCfg();syncCustom()};custom.onchange=()=>{weatherCfg.custom=custom.value.trim();saveWeatherCfg()};$('ctOpenWeatherSite').onclick=openWeatherSite;
@@ -523,7 +523,7 @@ window.__PFC_BOOT_READY__=(async()=>{
 
 // V6.1.0 - livello Venti separato con animazione e dati Open-Meteo
 (function(){
-  const WIND_CACHE='cacciatraccia-wind-grid-v1';
+  const WIND_CACHE='meteoam-cacciatraccia-wind-grid-v1';
   let windMode=false,windCanvas=null,windCtx=null,windParticles=[],windPoints=[],windAnim=0,windTimer=null,windLastLoad=0,windLoading=false;
 
   function ensureWindUI(){
@@ -577,9 +577,9 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(!windMode||!map||windLoading)return;const now=Date.now();if(!force&&now-windLastLoad<5*60*1000&&windPoints.length){updateWindHud(centerWindLabel());return}windLoading=true;updateWindHud('💨 Aggiorno venti…');
     try{
       const g=gridForBounds(),lats=g.map(p=>p.lat.toFixed(5)).join(','),lngs=g.map(p=>p.lng.toFixed(5)).join(',');
-      const u=`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lats)}&longitude=${encodeURIComponent(lngs)}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=GMT&forecast_days=1`;
+      const u=`https://pfc-weather.invalid/forecast?latitude=${encodeURIComponent(lats)}&longitude=${encodeURIComponent(lngs)}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=GMT&forecast_days=1`;
       const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('dati vento non disponibili');const j=await r.json(),arr=Array.isArray(j)?j:[j];
-      const pts=[];arr.forEach((o,i)=>{const c=o?.current||{};if(Number.isFinite(+c.wind_speed_10m))pts.push({lat:+(o.latitude??g[i]?.lat),lng:+(o.longitude??g[i]?.lng),speed:+c.wind_speed_10m,dir:+c.wind_direction_10m,gust:Number.isFinite(+c.wind_gusts_10m)?+c.wind_gusts_10m:null})});
+      const pts=[];arr.forEach((o,i)=>{const c=o?.current||{};if(Number.isFinite(+c.wind_speed_10m))pts.push({lat:+(o.latitude??g[i]?.lat),lng:+(o.longitude??g[i]?.lng),speed:+c.wind_speed_10m,dir:+c.wind_direction_10m,gust:c.wind_gusts_10m!=null&&Number.isFinite(+c.wind_gusts_10m)?+c.wind_gusts_10m:null})});
       if(!pts.length)throw Error('nessun dato vento ricevuto');windPoints=pts;windLastLoad=now;saveWindCache();updateWindHud(centerWindLabel());seedParticles();
     }catch(e){const cached=loadWindCache();updateWindHud(cached?'💨 Venti · ultimo dato salvato':'💨 Venti non disponibili');console.warn('Wind layer',e)}finally{windLoading=false}
   }
@@ -1015,7 +1015,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   // ---------- nomi locali del vento ----------
   function localWindName(name){
     const n=String(name||'').trim();
-    return n==='Libeccio'?'Libeccio (Favugna)':n;
+    return window.PFC_WIND_LABELS?.name(n)||n;
   }
   function angleDiff(a,b){
     const x=Math.abs((((+a||0)-(+b||0)+540)%360)-180);return x;
@@ -1027,15 +1027,10 @@ window.__PFC_BOOT_READY__=(async()=>{
     return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
   }
   function decorateLocalWind(root=document){
-    try{
-      root.querySelectorAll('.snap,.weatherNow,#historyList,#pointsList,#pointWeatherSummary,#weatherBody').forEach(el=>{
-        if(el.dataset?.ctWindDecorated==='1'&&el.textContent.includes('Favugna'))return;
-        const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
-        const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-        nodes.forEach(n=>{if(/Libeccio(?! \(Favugna\))/.test(n.nodeValue||''))n.nodeValue=n.nodeValue.replace(/Libeccio(?! \(Favugna\))/g,'Libeccio (Favugna)')});
-        if(el.dataset)el.dataset.ctWindDecorated='1';
-      });
-    }catch{}
+    try{root.querySelectorAll('.snap,.weatherNow,#historyList,#pointsList,#pointWeatherSummary,#weatherBody').forEach(el=>{
+      const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+      nodes.forEach(node=>{const old=node.nodeValue||'';if(old.includes('Voria (')||old.includes('Favugna ('))return;const next=old.replace(/Libeccio \(Favugna\)/g,'Libeccio').replace(/\b(Tramontana|Grecale|Ostro|Libeccio)\b/g,n=>window.PFC_WIND_LABELS?.name(n)||n);if(next!==old)node.nodeValue=next;});
+    });}catch{}
   }
 
   // ---------- meteo esteso: pioggia e prossimo cambio vento ----------
@@ -1058,16 +1053,16 @@ window.__PFC_BOOT_READY__=(async()=>{
     const __pfcTargetLat=+lat,__pfcTargetLng=+lng;
     $('weatherBody').innerHTML='<div class="empty">Carico meteo…</div>';
     try{
-      const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=7`;
+      const u=`https://pfc-weather.invalid/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=7`;
       const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),c=j.current||{},h=j.hourly||{};
       if(!selected){selected={lat:__pfcTargetLat,lng:__pfcTargetLng,weather:null};}else if(!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;
       const idx=nearestHourlyIndex(h.time,Date.now()),rain=idx>=0?(h.precipitation_probability?.[idx]??null):null,change=firstWindChange(h,idx);
-      selected.weather={fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
+      selected.weather={source:j.source||'Meteo Aeronautica Militare',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
       const cards=[];
       for(let i=Math.max(0,idx);i<Math.min((h.time||[]).length,Math.max(0,idx)+6);i++){
-        cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${Math.round(h.precipitation_probability?.[i]||0)}%</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${Math.round(h.wind_speed_10m?.[i]||0)} km/h</span></div>`);
+        cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${h.precipitation_probability?.[i]==null?'—':Math.round(h.precipitation_probability[i])+'%'}</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${Math.round(h.wind_speed_10m?.[i]||0)} km/h</span></div>`);
       }
-      $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${Math.round(c.wind_speed_10m||0)} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${Math.round(c.wind_gusts_10m||0)} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'stabile 12 h'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
+      $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'stabile 12 h'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
       $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
       decorateLocalWind();
     }catch(e){
@@ -1158,15 +1153,15 @@ window.__PFC_BOOT_READY__=(async()=>{
     const day=isoLocal(target).slice(0,10);
     const now=new Date(),sameDay=isoLocal(now).slice(0,10)===day,nearNow=Math.abs(target.getTime()-now.getTime())<=90*60*1000;
     const currentPart=sameDay&&nearNow?'&current=weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m':'';
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lng}${currentPart}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
+    const u=`https://pfc-weather.invalid/forecast?latitude=${p.lat}&longitude=${p.lng}${currentPart}&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date=${day}&end_date=${day}`;
     const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),h=j.hourly||{};const idx=nearestHourlyIndex(h.time,target.getTime());if(idx<0)throw Error('Orario non disponibile');const change=firstWindChange(h,idx);
     // Se stai verificando "adesso" (o entro circa 90 minuti), uso gli stessi dati
     // correnti usati quando salvi il punto. Così un punto appena fissato non risulta
     // falsamente "diverso" solo perché il confronto prendeva l'ora intera successiva.
     if(sameDay&&nearNow&&j.current){
-      return {time:j.current.time||h.time[idx],dir:+j.current.wind_direction_10m||0,speed:+j.current.wind_speed_10m||0,gust:+j.current.wind_gusts_10m||0,rain:+h.precipitation_probability?.[idx]||0,code:j.current.weather_code,change,live:true};
+      return {time:j.current.time||h.time[idx],dir:+j.current.wind_direction_10m||0,speed:+j.current.wind_speed_10m||0,gust:j.current.wind_gusts_10m??null,rain:h.precipitation_probability?.[idx]??null,code:j.current.weather_code,change,live:true};
     }
-    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:+h.wind_gusts_10m?.[idx]||0,rain:+h.precipitation_probability?.[idx]||0,code:h.weather_code?.[idx],change,live:false};
+    return {time:h.time[idx],dir:+h.wind_direction_10m?.[idx]||0,speed:+h.wind_speed_10m?.[idx]||0,gust:h.wind_gusts_10m?.[idx]??null,rain:h.precipitation_probability?.[idx]??null,code:h.weather_code?.[idx],change,live:false};
   }
   function clearConditionLayer(){try{conditionLayer?.clearLayers()}catch{}conditionLayer=null}
   window.__PFC_CLEAR_CONDITION_LAYER__=clearConditionLayer;
@@ -1190,7 +1185,7 @@ window.__PFC_BOOT_READY__=(async()=>{
       try{
         const f=await forecastAtPoint(p,target),base=pointBaseWind(p);let good=false,reason='';
         if(base.deg==null||base.speed==null){reason='Mancano dati meteo di riferimento salvati';}
-        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed),checks=[dd<=45,ds<=10],parts=[`Δ direzione ${Math.round(dd)}°`,`Δ velocità ${Math.round(ds)} km/h`];if(base.gust!=null&&Number.isFinite(+f.gust)){const dg=Math.abs(base.gust-(+f.gust));checks.push(dg<=15);parts.push(`Δ raffiche ${Math.round(dg)} km/h`)}if(base.rain!=null&&Number.isFinite(+f.rain)){const dr=Math.abs(base.rain-(+f.rain));checks.push(dr<=25);parts.push(`Δ pioggia ${Math.round(dr)}%`)}good=checks.every(Boolean);reason=parts.join(' · ');}
+        else{const dd=angleDiff(base.deg,f.dir),ds=Math.abs(base.speed-f.speed),checks=[dd<=45,ds<=10],parts=[`Δ direzione ${Math.round(dd)}°`,`Δ velocità ${Math.round(ds)} km/h`];if(base.gust!=null&&f.gust!=null&&Number.isFinite(+f.gust)){const dg=Math.abs(base.gust-(+f.gust));checks.push(dg<=15);parts.push(`Δ raffiche ${Math.round(dg)} km/h`)}if(base.rain!=null&&f.rain!=null&&Number.isFinite(+f.rain)){const dr=Math.abs(base.rain-(+f.rain));checks.push(dr<=25);parts.push(`Δ pioggia ${Math.round(dr)}%`)}good=checks.every(Boolean);reason=parts.join(' · ');}
         rows.push({p,f,good,reason,base});
         const color=good?'#1e8b4e':'#b74c3e';L.circleMarker([p.lat,p.lng],{radius:16,color,weight:5,fillColor:color,fillOpacity:.16}).addTo(conditionLayer);
       }catch(e){rows.push({p,error:e.message||'Errore meteo'})}
@@ -1200,7 +1195,7 @@ window.__PFC_BOOT_READY__=(async()=>{
       if(r.error)return `<div class="ctCondResult"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span>⚠️</span></div><div class="ctCondMeta">${esc(r.error)}</div></div>`;
       const change=r.f.change?`${fmtHour(r.f.change.time)} → ${esc(localWindName(wname(r.f.change.dir)))} ${Math.round(r.f.change.speed)} km/h`:'nessun cambio importante nelle 12 h successive';
       const ref=r.base.deg==null?'non registrato':`${esc(localWindName(wname(r.base.deg)))} ${Math.round(r.base.speed||0)} km/h`;
-      return `<div class="ctCondResult ${r.good?'good':'bad'}"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span class="${r.good?'ctGood':'ctBad'}">${r.good?'● SIMILE':'● DIVERSA'}</span></div><div class="ctCondMeta">Riferimento salvato: <b>${ref}</b><br>Previsione: <b>${esc(localWindName(wname(r.f.dir)))} ${wdir(r.f.dir)} · ${Math.round(r.f.speed)} km/h</b> · raffiche ${Math.round(r.f.gust)} km/h<br>🌧 Pioggia: <b>${Math.round(r.f.rain)}%</b> · 🌦 ${esc(wtext(r.f.code))}<br>↻ Cambio vento: <b>${change}</b><br><span class="muted">${esc(r.reason)}</span></div><div class="rowBtns"><button class="mini" onclick="CT.condMap('${r.p.id}')">🗺 Mappa</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Dettagli</button></div></div>`;
+      return `<div class="ctCondResult ${r.good?'good':'bad'}"><div class="ctCondTitle"><b>${esc(r.p.name||r.p.type)}</b><span class="${r.good?'ctGood':'ctBad'}">${r.good?'● SIMILE':'● DIVERSA'}</span></div><div class="ctCondMeta">Riferimento salvato: <b>${ref}</b><br>Previsione: <b>${esc(localWindName(wname(r.f.dir)))} ${wdir(r.f.dir)} · ${Math.round(r.f.speed)} km/h</b> · raffiche ${r.f.gust==null?'non disponibili':Math.round(r.f.gust)+' km/h'}<br>🌧 Pioggia: <b>${r.f.rain==null?'non disponibile':Math.round(r.f.rain)+'%'}</b> · 🌦 ${esc(wtext(r.f.code))}<br>↻ Cambio vento: <b>${change}</b><br><span class="muted">${esc(r.reason)}</span></div><div class="rowBtns"><button class="mini" onclick="CT.condMap('${r.p.id}')">🗺 Mappa</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Dettagli</button></div></div>`;
     }).join('');
     $('ctConditionRun').disabled=false;decorateLocalWind(out);
   }
@@ -1538,7 +1533,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   }
   async function checkSighting(p,target){
     const next=new Date(target);next.setDate(next.getDate()+1);
-    const url='https://api.open-meteo.com/v1/forecast?latitude='+encodeURIComponent(p.lat)+'&longitude='+encodeURIComponent(p.lng)+'&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date='+localDate(target)+'&end_date='+localDate(next);
+    const url='https://pfc-weather.invalid/forecast?latitude='+encodeURIComponent(p.lat)+'&longitude='+encodeURIComponent(p.lng)+'&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&wind_speed_unit=kmh&timezone=auto&start_date='+localDate(target)+'&end_date='+localDate(next);
     const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw Error('Meteo non disponibile');
     const j=await res.json(),h=j.hourly||{},i=nearest(h.time,target);if(i<0)throw Error('Orario non disponibile');
     const now=similar(p,h,i);if(now.missing)return {missing:true,ok:false};
@@ -2324,7 +2319,7 @@ function createPfcAlertEngine(emit){
  function points(p,list,range=100){if(!valid(p)||p.acc==null||!Number.isFinite(+p.acc)||p.acc>50)return;const present=new Set();for(const point of list){if(!valid(point))continue;const id=String(point.id);present.add(id);const d=distance(p,point),s=near.get(id)||{count:0,active:false,last:Infinity};if(d-p.acc>range*1.5){s.active=false;s.count=0}else if(d+p.acc<=range&&d<=s.last+3){s.count++;if(s.count>=2&&!s.active){s.active=true;emit({kind:'near',key:id,title:point.__car?'Auto vicina':'Punto vicino',message:(point.species||point.name||'Punto salvato')+' · circa '+Math.round(d)+' m'})}}else s.count=0;s.last=d;near.set(id,s)}for(const id of near.keys())if(!present.has(id))near.delete(id)}
  function protectedAreas(p,list){if(!valid(p)||p.acc==null||!Number.isFinite(+p.acc)||p.acc>50)return;for(const area of list){const inside=area.outer.some(r=>inRing(p,r))&&!area.inner.some(r=>inRing(p,r)),d=boundaryDistance(p,[...area.outer,...area.inner]);if(d<=Math.max(20,p.acc))continue;const s=areas.get(area.id)||{inside:false,count:0};if(inside){s.count++;if(s.count>=2&&!s.inside){s.inside=true;emit({kind:'protected',key:area.id,title:'Area protetta rilevata',message:area.name+' · confine OSM, verifica la cartografia ufficiale'})}}else{s.count=0;s.inside=false}areas.set(area.id,s)}}
  function territoryChange(t){const key=[t.region,t.province,t.atc].join('|');if(!t.region)return;if(territory&&territory.key!==key)emit({kind:'territory',key,title:'Cambio territorio / ATC indicativo',message:t.region+' · '+(t.atc||t.province||'ATC da verificare')+'. Verifica i confini ufficiali.'});territory={key,...t}}
- function weather(j,now=Date.now(),limits={wind:40,gust:60,rain:70}){const h=j.hourly||{},times=h.time||[],rows=times.map((t,i)=>({t:+t*1000,code:h.weather_code?.[i],wind:h.wind_speed_10m?.[i],gust:h.wind_gusts_10m?.[i],rain:h.precipitation_probability?.[i]})).filter(x=>x.t>=now-3600000&&x.t<=now+3*3600000);const c=j.current;if(c&&Number.isFinite(+c.time)&&Math.abs(+c.time*1000-now)<3600000)rows.push({t:+c.time*1000,code:c.weather_code,wind:c.wind_speed_10m,gust:c.wind_gusts_10m});const issues=[];if(rows.some(x=>[95,96,99].includes(x.code)))issues.push(['storm','Temporale previsto']);if(rows.some(x=>x.wind!=null&&x.wind>=limits.wind||x.gust!=null&&x.gust>=limits.gust))issues.push(['wind','Vento o raffiche oltre soglia']);if(rows.some(x=>x.rain!=null&&x.rain>=limits.rain))issues.push(['rain','Probabilità di pioggia almeno '+limits.rain+'%']);for(const [key,message]of issues){const old=weatherSeen.get(key);if(old==null||now-old>=3600000){weatherSeen.set(key,now);emit({kind:'weather',key,title:'Avviso meteo · prossime 3 ore',message:message+' · previsione Open-Meteo, non bollettino ufficiale'})}}}
+ function weather(j,now=Date.now(),limits={wind:40,gust:60,rain:70}){const h=j.hourly||{},times=h.time||[],rows=times.map((t,i)=>({t:+t*1000,code:h.weather_code?.[i],wind:h.wind_speed_10m?.[i],gust:h.wind_gusts_10m?.[i],rain:h.precipitation_probability?.[i]})).filter(x=>x.t>=now-3600000&&x.t<=now+3*3600000);const c=j.current;if(c&&Number.isFinite(+c.time)&&Math.abs(+c.time*1000-now)<3600000)rows.push({t:+c.time*1000,code:c.weather_code,wind:c.wind_speed_10m,gust:c.wind_gusts_10m});const issues=[];if(rows.some(x=>[95,96,99].includes(x.code)))issues.push(['storm','Temporale previsto']);if(rows.some(x=>x.wind!=null&&x.wind>=limits.wind||x.gust!=null&&x.gust>=limits.gust))issues.push(['wind','Vento o raffiche oltre soglia']);if(rows.some(x=>x.rain!=null&&x.rain>=limits.rain))issues.push(['rain','Probabilità di pioggia almeno '+limits.rain+'%']);for(const [key,message]of issues){const old=weatherSeen.get(key);if(old==null||now-old>=3600000){weatherSeen.set(key,now);emit({kind:'weather',key,title:'Avviso meteo · prossime 3 ore',message:message+' · previsione Meteo Aeronautica Militare'})}}}
  return {distance,valid,parseAreas,inRing,boundaryDistance,points,protectedAreas,territoryChange,weather};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngine;
@@ -2348,7 +2343,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
  async function json(url){const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),10000);try{const r=await fetch(url,{signal:ac.signal,headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(timer)}}
  function eligible(kind,p,interval,movement){const j=jobs[kind]||(jobs[kind]={});const now=Date.now();if(j.busy||j.at&&now-j.at<interval&&(!j.pos||engine.distance(j.pos,p)<movement))return false;if(j.at&&now-j.at<60000)return false;j.busy=true;j.at=now;j.pos={...p};return true}
  async function protectedLoad(p){if(!cfg.protected||!eligible('protected',p,5*60000,1000))return;statuses.protected='caricamento confini locali';render();try{const dy=3/111.32,dx=3/(111.32*Math.max(.25,Math.cos(p.lat*Math.PI/180))),bbox=[p.lat-dy,p.lng-dx,p.lat+dy,p.lng+dx].join(',');const query='[out:json][timeout:8][maxsize:3500000];(way["boundary"="protected_area"]('+bbox+');relation["boundary"="protected_area"]('+bbox+');way["leisure"="nature_reserve"]('+bbox+');relation["leisure"="nature_reserve"]('+bbox+'););out geom;is_in('+p.lat+','+p.lng+')->.here;(area.here["boundary"="protected_area"];area.here["leisure"="nature_reserve"];)->.inside;rel(pivot.inside);out geom;';const j=await json('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query));areaData=engine.parseAreas(j.elements);areaCenter={...p};areaAt=Date.now();statuses.protected=areaData.length?areaData.length+' confini OSM disponibili':'nessun confine restituito · copertura non garantita';if(cfg.protected&&lastPosition&&engine.distance(lastPosition,p)<2000)engine.protectedAreas(lastPosition,areaData)}catch{statuses.protected='rete non disponibile · verifica non aggiornata'}finally{jobs.protected.busy=false;render()}}
- async function weatherLoad(p){if(!cfg.weather||!eligible('weather',p,15*60000,5000))return;statuses.weather='caricamento previsioni';render();try{const j=await json('https://api.open-meteo.com/v1/forecast?latitude='+p.lat+'&longitude='+p.lng+'&current=weather_code,wind_speed_10m,wind_gusts_10m&hourly=weather_code,precipitation_probability,wind_speed_10m,wind_gusts_10m&wind_speed_unit=kmh&timeformat=unixtime&forecast_days=2');if(cfg.weather&&lastPosition&&engine.distance(lastPosition,p)<5000)engine.weather(j,Date.now(),cfg);statuses.weather='aggiornato '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{statuses.weather='rete non disponibile · previsione non aggiornata'}finally{jobs.weather.busy=false;render()}}
+ async function weatherLoad(p){if(!cfg.weather||!eligible('weather',p,15*60000,5000))return;statuses.weather='caricamento previsioni';render();try{const j=await json('https://pfc-weather.invalid/forecast?latitude='+p.lat+'&longitude='+p.lng+'&current=weather_code,wind_speed_10m,wind_gusts_10m&hourly=weather_code,precipitation_probability,wind_speed_10m,wind_gusts_10m&wind_speed_unit=kmh&timeformat=unixtime&forecast_days=2');if(cfg.weather&&lastPosition&&engine.distance(lastPosition,p)<5000)engine.weather(j,Date.now(),cfg);statuses.weather='aggiornato '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}catch{statuses.weather='rete non disponibile · previsione non aggiornata'}finally{jobs.weather.busy=false;render()}}
  async function territoryLoad(p){if(!cfg.territory||!eligible('territory',p,5*60000,1000))return;try{const result=await window.__PFC_TERRITORY_REFRESH__?.();statuses.territory=result?'aggiornato · ATC indicativo':'non aggiornato · verifica manuale'}finally{jobs.territory.busy=false;render()}}
  function onPosition(p){if(document.hidden||!engine.valid(p))return;lastPosition={...p};lastFixAt=Date.now();statuses.gps=p.acc==null||!Number.isFinite(+p.acc)||p.acc>50?'GPS poco preciso · avvisi di posizione sospesi':'GPS ±'+Math.round(p.acc)+' m';if(p.acc!=null&&Number.isFinite(+p.acc)&&p.acc<=50){const mode=(()=>{try{return JSON.parse(localStorage.getItem('pfc-v661-settings')||'{}').mode}catch{return 'hunt'}})();const list=(state.points||[]).filter(x=>mode==='mushroom'?x.sightingKind==='mushroom':x.sightingKind!=='mushroom');if(state.car)list.push({...state.car,id:'__car__',name:'Auto parcheggiata',__car:true});if(cfg.near)engine.points(p,list,cfg.range);if(cfg.protected&&areaCenter&&Date.now()-areaAt<30*60000&&engine.distance(areaCenter,p)<2000)engine.protectedAreas(p,areaData);Promise.allSettled([protectedLoad(p),weatherLoad(p),territoryLoad(p)]);}render()}
  window.addEventListener('pfc:position',e=>onPosition(e.detail));window.addEventListener('pfc:territory',e=>{window.__PFC_TERRITORY_LAST__=e.detail;if(cfg.territory&&Date.now()-lastFixAt<120000)engine.territoryChange(e.detail)});
@@ -2366,6 +2361,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
 });
 
 })();
+
 
 
 

@@ -3,8 +3,8 @@
 const num=v=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
 const angle=(a,b)=>Math.abs(((a-b+540)%360)-180);
 const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];
-const windName=d=>names[Math.round((((d%360)+360)%360)/45)%8];
-function baseline(p){let dir=num(p.windDeg)??num(p.weather?.windDeg);if(dir==null){const name=String(p.windName||p.weather?.windName||'').replace(/\s*\(.*?\)\s*/g,'').trim(),i=names.indexOf(name);if(i>=0)dir=i*45;}return {dir,speed:num(p.windSpeed)??num(p.weather?.windSpeed),gust:num(p.windGust)??num(p.weather?.windGust)};}
+const windName=d=>globalThis.PFC_WIND_LABELS?.fromDegrees(d)||names[Math.round((((d%360)+360)%360)/45)%8];
+function baseline(p){let dir=num(p.windDeg)??num(p.weather?.windDeg);if(dir==null){const name=String(globalThis.PFC_WIND_LABELS?.canonical(p.windName||p.weather?.windName||'')||p.windName||p.weather?.windName||'').replace(/\s*\(.*?\)\s*/g,'').trim(),i=names.indexOf(name);if(i>=0)dir=i*45;}return {dir,speed:num(p.windSpeed)??num(p.weather?.windSpeed),gust:num(p.windGust)??num(p.weather?.windGust)};}
 function sample(h,i){return {time:num(h.time?.[i]),dir:num(h.wind_direction_10m?.[i]),speed:num(h.wind_speed_10m?.[i]),gust:num(h.wind_gusts_10m?.[i])};}
 const complete=s=>s.time!=null&&s.dir!=null&&s.speed!=null&&s.dir>=0&&s.dir<=360&&s.speed>=0;
 function compare(base,now){if(base.dir==null||base.speed==null)return null;return (base.speed<3&&now.speed<3||angle(base.dir,now.dir)<=45)&&Math.abs(base.speed-now.speed)<=10;}
@@ -29,3 +29,4 @@ function analyze(data,point,targetSeconds){
 }
 const api={analyze,baseline,compare,changed,angle,windName};if(typeof module==='object'&&module.exports)module.exports=api;else root.PFC_WIND_ENGINE=api;
 })(typeof window!=='undefined'?window:globalThis);
+
