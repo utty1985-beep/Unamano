@@ -175,7 +175,7 @@ function renderDiary(){
   if(historyFilter!=='diary') rows.push(...pointRows.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
   if(historyFilter!=='sightings') rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
   rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-  el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>${esc(r.p.species||r.p.name||r.p.type)}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('') || '<div class="empty">Diario vuoto.</div>';
+  el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>${esc(r.p.species||r.p.name||r.p.type)}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('') || '<div class="empty">Diario vuoto.</div>';
 }
 function exportJSON(){ const b=new Blob([JSON.stringify({app:'Passione Funghi e Caccia',version:APP_VERSION,exportedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`CacciaTraccia_backup_${new Date().toISOString().slice(0,10)}.json`;a.click(); }
 function exportTXT(){ const t=state.points.map(p=>`${p.name||p.type}\nCoordinate: ${p.lat}, ${p.lng}\nData/ora: ${when(p.createdAt)}\nGiorno caccia: ${p.huntDate||'-'}\nUccelli: ${p.species||'-'}${p.quantity?' x '+p.quantity:''}\nVento: ${p.windName||p.weather?.windName||'-'} ${p.windDir||p.weather?.windDir||''} ${p.windSpeed??p.weather?.windSpeed??'-'} km/h\nNote: ${p.notes||'-'}\nGoogle Maps: https://www.google.com/maps?q=${p.lat},${p.lng}\n---`).join('\n'),b=new Blob([t||'Nessun punto salvato'],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='CacciaTraccia_coordinate.txt';a.click(); }
@@ -234,10 +234,44 @@ function bind(){
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').hidden=false;}); $('installBtn').onclick=async()=>{if(!installPrompt)return toast('Usa il menu del browser > Aggiungi a schermata Home');installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installBtn').hidden=true;};
   const net=()=>{$('netPill').textContent=navigator.onLine?'● online':'● offline';$('netPill').classList.toggle('soft',!navigator.onLine);}; window.addEventListener('online',net);window.addEventListener('offline',net);net();
 }
+function confirmPointDeletion(point){
+ if(document.getElementById('pfcDeletePointDialog'))return Promise.resolve(false);
+ return new Promise(resolve=>{
+  const previous=document.activeElement,overlay=document.createElement('div');
+  overlay.id='pfcDeletePointDialog';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','pfcDeletePointTitle');
+  overlay.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#0008;display:grid;place-items:center;padding:22px';
+  const box=document.createElement('div');box.style.cssText='background:white;color:#173f2b;border-radius:20px;padding:24px;width:100%;max-width:380px;box-sizing:border-box;font:16px/1.5 system-ui';
+  const title=document.createElement('h2');title.id='pfcDeletePointTitle';title.textContent=point.type==='Avvistamento'?'Eliminare questo avvistamento?':'Eliminare questo punto?';title.style.fontSize='21px';
+  const name=document.createElement('p');name.textContent=(point.species||point.name||point.type||'Punto salvato')+(point.huntDate?' · '+point.huntDate:'');
+  const note=document.createElement('p');note.textContent='Verrà rimosso dalla mappa e dalle liste dei punti salvati.';
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:12px';
+  const cancel=document.createElement('button'),remove=document.createElement('button');cancel.type=remove.type='button';cancel.textContent='Annulla';remove.textContent='Elimina';remove.dataset.confirmDelete='true';cancel.dataset.cancelDelete='true';
+  cancel.style.cssText=remove.style.cssText='flex:1;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700';remove.style.background='#ad2525';remove.style.color='white';cancel.style.background='#e9eee9';
+  function finish(confirmed){document.removeEventListener('keydown',keydown);overlay.remove();previous?.focus?.();resolve(confirmed);}
+  function keydown(event){if(event.key==='Escape'){event.preventDefault();finish(false);}if(event.key==='Tab'){event.preventDefault();(document.activeElement===cancel?remove:cancel).focus();}}
+  cancel.onclick=()=>finish(false);remove.onclick=()=>finish(true);overlay.onclick=event=>{if(event.target===overlay)finish(false);};
+  actions.append(cancel,remove);box.append(title,name,note,actions);overlay.append(box);document.body.append(overlay);document.addEventListener('keydown',keydown);cancel.focus();
+ });
+}
+async function deleteSavedPoint(id){
+ const point=state.points.find(p=>String(p.id)===String(id));
+ if(!point){toast('Punto già rimosso');return false;}
+ if(!await confirmPointDeletion(point))return false;
+ const remaining=state.points.filter(p=>String(p.id)!==String(id));
+ try{localStorage.setItem(STORE,JSON.stringify({...state,points:remaining}));}
+ catch(error){console.error('Cancellazione punto',error);toast('Impossibile salvare la cancellazione. Il punto è stato conservato.');return false;}
+ state.points=remaining;
+ if(String(editing)===String(id)){editing=null;$('pointModal')?.classList.remove('open');}
+ if(selected&&Math.abs(selected.lat-point.lat)<1e-7&&Math.abs(selected.lng-point.lng)<1e-7){selected=null;$('selectedCard')?.classList.add('hidden');}
+ for(const render of [renderMarkers,renderPoints,renderDiary])try{render();}catch(error){console.error('Aggiornamento punti',error);}
+ window.dispatchEvent(new CustomEvent('pfc:point-deleted',{detail:{id:point.id}}));
+ toast(point.type==='Avvistamento'?'Avvistamento eliminato':'Punto eliminato');return true;
+}
+
 window.CT={
   go:id=>{const p=state.points.find(x=>x.id===id);if(p){showPage('map');map.setView([p.lat,p.lng],16);selectMapPoint(p.lat,p.lng);}},
   edit:id=>{const p=state.points.find(x=>x.id===id);if(p)fillModal(p);},
-  del:id=>{if(confirm('Eliminare punto?')){state.points=state.points.filter(x=>x.id!==id);save();}},
+  del:deleteSavedPoint,
   sharePoint:id=>{const p=state.points.find(x=>x.id===id);if(p)shareText(pointShareText(p),p.name||'Passione Funghi e Caccia');},
   out:id=>{const o=state.outings.find(x=>x.id===id);if(o?.coords?.length){showPage('map');const l=L.polyline(o.coords,{color:'#7b4d19',weight:4});l.addTo(map);map.fitBounds(l.getBounds());setTimeout(()=>map.removeLayer(l),20000);}},
   share:shareOut,
@@ -626,7 +660,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
     if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
     rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
   };
 
   function renameWalking(){
@@ -956,7 +990,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
     if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
     rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.openHistoryPoint('${r.p.id}')">🗺 Mappa + vento attuale</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Modifica</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.openHistoryPoint('${r.p.id}')">🗺 Mappa + vento attuale</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Modifica</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
   };
 
   window.CT.openHistoryPoint=openHistoryPoint;
@@ -2331,5 +2365,6 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
 });
 
 })();
+
 
 
