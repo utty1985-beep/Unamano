@@ -25,7 +25,7 @@ if(typeof window!=='undefined')(()=>{
   cache.set(key,{at:Date.now(),promise});promise.catch(()=>cache.delete(key));if(cache.size>64)cache.delete(cache.keys().next().value);return promise;
  }
  window.fetch=async(input,init)=>{
-  const raw=typeof input==='string'?input:input?.url;let url;try{url=new URL(raw,location.href);}catch{return original(input,init);}
+  const raw=typeof input==='string'?input:input?.href||input?.url;let url;try{url=new URL(raw,location.href);}catch{return original(input,init);}
   if(url.hostname==='pfc-weather.invalid'&&url.pathname==='/forecast'){
    const parameters=Object.fromEntries(url.searchParams),lats=String(parameters.latitude).split(',').map(Number),lngs=String(parameters.longitude).split(',').map(Number);
    if(lats.length!==lngs.length||lats.length>49||lats.some(x=>!Number.isFinite(x)||Math.abs(x)>90)||lngs.some(x=>!Number.isFinite(x)||Math.abs(x)>180))throw Error('Coordinate meteo non valide');
@@ -42,3 +42,4 @@ if(typeof window!=='undefined')(()=>{
  function note(){const body=document.getElementById('weatherBody'),card=body?.closest('.card');if(!card||document.getElementById('pfcMeteoamSource'))return;const p=document.createElement('p');p.id='pfcMeteoamSource';p.className='note';p.textContent='Fonte unica: Meteo Aeronautica Militare. Raffiche, stato del cielo e probabilità di pioggia non disponibili nel collegamento non vengono stimati. Per il bollettino completo apri MeteoAM. I nomi locali dei venti sono indicativi: nome standard e direzione restano visibili.';body.insertAdjacentElement('beforebegin',p);}
  document.addEventListener('DOMContentLoaded',note);window.addEventListener('pfc:ready',note);new MutationObserver(note).observe(document.body,{childList:true,subtree:true});
 })();
+
