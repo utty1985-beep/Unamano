@@ -7,7 +7,7 @@
    start(){wanted=true;send({command:'sharing',enabled:sharing});send({command:'audio',enabled:audio});send({command:'start'});},
    stop(){wanted=false;send({command:'stop'});},
    setSharing(enabled){sharing=!!enabled;send({command:'sharing',enabled:sharing});},
-   setAudio(enabled){audio=!!enabled;send({command:'audio',enabled:audio});}
+   setAudio(){audio=false;send({command:'audio',enabled:false});}
  };
  window.addEventListener('message',e=>{
    if(!['', 'null',location.origin].includes(e.origin)||e.source!=null||e.data!=='pfc-native-team-v1'||e.ports?.length!==1)return;
@@ -24,6 +24,9 @@
      }else if(m.event==='error'&&typeof m.message==='string')window.dispatchEvent(new CustomEvent('pfc:native-error',{detail:{message:m.message}}));
    }catch{}};
    port.start();
+   // Disable any audio flag left by an earlier app session; map sharing remains available.
+   native.setAudio(false);
    if(wanted)native.start();
  });
 })();
+

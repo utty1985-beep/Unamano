@@ -108,7 +108,7 @@
     }
     if(points&&!q('pfc676Return')){
       const r=document.createElement('button');r.id='pfc676Return';r.className='pfc676Return';r.type='button';r.innerHTML='<span class="car">🚗</span><span class="copy"><strong>Ritorna alla macchina</strong><span>Segui il percorso per tornare alla tua auto</span></span><span class="arrow">›</span>';r.onclick=()=>{if(!click('returnCarBtn'))click('quickCarBtn')};(q('pfc676Quick')||weather||q('pfc676Hero')).insertAdjacentElement('afterend',r);
-      const adv=document.createElement('div');adv.className='pfc676Advanced';adv.innerHTML='<button id="pfc676Territory">🧭 Regione / ATC</button><button id="pfc676Protected">🛡 Aree protette</button><button id="pfc676Calendar">📅 Calendario</button><button id="pfc676Backup">💾 Dati / backup</button>';r.insertAdjacentElement('afterend',adv);
+      const adv=document.createElement('div');adv.className='pfc676Advanced';adv.innerHTML='<button id="pfc676Territory">🧭 Puglia / ATC</button><button id="pfc676Protected">🛡 Aree protette</button><button id="pfc676Calendar">📅 Calendario</button><button id="pfc676Backup">💾 Dati / backup</button>';r.insertAdjacentElement('afterend',adv);
       q('pfc676Territory').onclick=()=>{const c=q('ct661Card');if(c){c.classList.toggle('pfc676AdvancedOpen');c.scrollIntoView({behavior:'smooth',block:'center'})}};
       q('pfc676Protected').onclick=()=>{if(!click('ctProtectedBtn')){q('ct661Card')?.classList.add('pfc676AdvancedOpen');setTimeout(()=>click('ctProtectedBtn'),200)}};
       q('pfc676Calendar').onclick=()=>{const c=q('ctCalendarCard');if(c){c.classList.toggle('pfc676AdvancedOpen');c.scrollIntoView({behavior:'smooth',block:'center'})}};
@@ -181,7 +181,7 @@
       ['🌬','Confronta vento','Confronto e possibili cambi di direzione','compare','hunt'],
       ['🍄','Cerca fungo','Apri il riconoscimento da foto','quickSpeciesBtn','mushroom'],
       ['🚗','Parcheggio','Segna o sposta la macchina','parking'],
-      ['🧭','Territorio e regole','Regione, ATC e aree protette','pfc676Territory','hunt'],
+      ['🧭','Regole Puglia','ATC e aree protette della Puglia','pfc676Territory','hunt'],
       ['📅','Calendario caccia','Consulta le informazioni disponibili','pfc676Calendar','hunt'],
       ['🔔','Avvisi','Impostazioni e notifiche','pfcAlertsBtn'],
       ['💾','Dati e backup','Esporta o ripristina i tuoi dati','backupQuickBtn']
@@ -243,3 +243,4 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+

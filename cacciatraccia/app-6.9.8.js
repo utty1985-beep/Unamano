@@ -1859,12 +1859,13 @@ window.__PFC_BOOT_READY__.then(()=>{
 (function(){
   const FIX_VER='6.6.2';
   const CFG_KEY='pfc-v661-settings';
-  const REGIONS=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria','Valle d’Aosta','Veneto'];
-  let cfg={mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:''};
+  const REGIONS=['Puglia'];
+  let cfg={mode:'hunt',region:'Puglia',detectedRegion:'',province:'',atc:''};
   let protectedWmsLayer=null, protectedOsmLayer=null, radarOpen=false, radarHeading=null, radarListener=null, radarStream=null;
   let detectBusy=false,lastDetectTry=0;
   const radarPrevDistances=new Map();
   try{cfg={...cfg,...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}}catch{}
+  cfg.region='Puglia';try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch{}
   const q=id=>document.getElementById(id);
   const persist=()=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch{}};
   const clamp360=n=>((n%360)+360)%360;
@@ -1890,7 +1891,7 @@ window.__PFC_BOOT_READY__.then(()=>{
     const card=document.createElement('div');card.id='ct661Card';card.className='card ct661';
     card.innerHTML=`<div class="sectionHead"><div><h2 style="margin-bottom:2px">🧭 Modalità e territorio</h2><div class="muted">v${FIX_VER} · controlli indipendenti dalla mappa</div></div><span id="ct661ModePill" class="pill soft">Caccia</span></div>
       <div class="ctModeRow"><button id="ctModeHunt" class="ctModeBtn" type="button">🕊 Caccia</button><button id="ctModeMush" class="ctModeBtn" type="button">🍄 Funghi</button></div>
-      <div class="ct661Grid"><div><label>Regione</label><select id="ctRegion"><option value="auto">Automatica dal GPS</option>${REGIONS.map(r=>`<option value="${r}">${r}</option>`).join('')}</select></div><div><label>ATC / provincia</label><div id="ctAtcStatus" class="ct661Status">Da rilevare</div></div><div class="full ct661Status" id="ctGeoStatus">Premi “Rileva territorio” oppure attiva il GPS.</div></div>
+      <div class="ct661Grid"><div><label>Regolamenti</label><select id="ctRegion" aria-label="Regolamenti Puglia" disabled><option value="Puglia">Puglia</option></select></div><div><label>ATC / provincia</label><div id="ctAtcStatus" class="ct661Status">Da rilevare</div></div><div class="full ct661Status" id="ctGeoStatus">Premi “Rileva territorio” oppure attiva il GPS.</div></div>
       <div class="ct661Actions"><button id="ctDetectTerritory" class="secondary" type="button">◎ Rileva territorio</button><button id="ctProtectedBtn" class="secondary" type="button">🛡 Aree protette</button><button id="ctRadarBtn" class="secondary" type="button">📡 Radar punti</button></div>
       <button id="ctCompareMainBtn" class="ctCompareHero" type="button">❓ CONFRONTA METEO DEI PUNTI SEGNATI</button>`;
     const first=Array.from(page.children).find(e=>e.classList.contains('mapWrap'));page.insertBefore(card,first||null);
@@ -1905,12 +1906,12 @@ window.__PFC_BOOT_READY__.then(()=>{
   function ensureCalendarCard(){
     const page=q('page-map');if(!page||q('ctCalendarCard'))return;
     const card=document.createElement('div');card.id='ctCalendarCard';card.className='card ctCalendar';
-    card.innerHTML=`<div class="sectionHead"><div><h2 style="margin-bottom:2px">📅 Calendario venatorio</h2><div id="ctCalendarSub" class="muted">Fonte regionale ufficiale</div></div><span class="pill soft">Caccia</span></div><div id="ctCalendarText" style="font-size:13px">Seleziona o rileva la Regione.</div><div class="actionGrid"><button id="ctCalendarOpen" class="secondary" type="button">Apri fonte ufficiale</button><button id="ctAtcOpen" class="secondary" type="button">Apri ATC / cartografia</button></div>`;
+    card.innerHTML=`<div class="sectionHead"><div><h2 style="margin-bottom:2px">📅 Calendario venatorio</h2><div id="ctCalendarSub" class="muted">Fonte regionale ufficiale</div></div><span class="pill soft">Caccia</span></div><div id="ctCalendarText" style="font-size:13px">Consulta le fonti ufficiali della Regione Puglia.</div><div class="actionGrid"><button id="ctCalendarOpen" class="secondary" type="button">Apri fonte ufficiale</button><button id="ctAtcOpen" class="secondary" type="button">Apri ATC / cartografia</button></div>`;
     const anchor=q('ct661Card');anchor?.insertAdjacentElement('afterend',card);
     q('ctCalendarOpen').onclick=()=>openOfficial('calendar');q('ctAtcOpen').onclick=()=>openOfficial('atc');
   }
 
-  function regionNow(){return cfg.region==='auto'?(cfg.detectedRegion||''):cfg.region;}
+  function regionNow(){return 'Puglia';}
   function pugliaAtc(province){
     const p=String(province||'').toLowerCase();
     if(p.includes('foggia'))return 'ATC Foggia';
@@ -1926,8 +1927,8 @@ window.__PFC_BOOT_READY__.then(()=>{
     if(q('ctRegion')&&q('ctRegion').value!==cfg.region)q('ctRegion').value=cfg.region;
     const atc=region==='Puglia'?(cfg.atc||pugliaAtc(cfg.province)):(cfg.province?`Provincia: ${cfg.province}`:'Da rilevare');
     if(q('ctAtcStatus'))q('ctAtcStatus').innerHTML=region?`<b>${esc(atc)}</b><br><span class="muted">${esc(region)}</span>`:'Da rilevare';
-    if(q('ctGeoStatus'))q('ctGeoStatus').textContent=region?`${cfg.region==='auto'?'GPS automatico':'Regione manuale'} · ${region}${cfg.province?' · '+cfg.province:''}`:'Territorio non ancora rilevato';
-    if(q('ctCalendarText'))q('ctCalendarText').textContent=region==='Puglia'?'Puglia · stagione venatoria 2026/2027 · calendario regionale approvato con DGR 995 del 17/07/2026.':(region?`${region} · usa il collegamento per consultare il calendario regionale aggiornato.`:'Seleziona o rileva la Regione.');
+    if(q('ctGeoStatus'))q('ctGeoStatus').textContent=region?`${cfg.region==='auto'?'GPS automatico':'Regole Puglia'} · ${region}${cfg.province?' · '+cfg.province:''}`:'Territorio non ancora rilevato';
+    if(q('ctCalendarText'))q('ctCalendarText').textContent=region==='Puglia'?'Puglia · calendario venatorio e aggiornamenti nella fonte regionale ufficiale.':(region?`${region} · usa il collegamento per consultare il calendario regionale aggiornato.`:'Consulta le fonti ufficiali della Regione Puglia.');
   }
 
   async function detectTerritory(force=false){
@@ -2007,7 +2008,7 @@ window.__PFC_BOOT_READY__.then(()=>{
   function officialRegionSearch(kind){
     const reg=regionNow()||'Puglia';
     if(reg==='Puglia'){
-      if(kind==='calendar')return 'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria';
+      if(kind==='calendar')return 'https://www.regione.puglia.it/web/foreste-biodiversita/stagione-venatoria';
       if(kind==='atc')return 'https://www.regione.puglia.it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc';
       return 'https://pugliacon.regione.puglia.it/web/sit-puglia-sit/wms';
     }
@@ -2077,18 +2078,18 @@ window.__PFC_BOOT_READY__.then(()=>{
 (function(){
   const VER='6.6.3';
   const CFG_KEY='pfc-v661-settings';
-  const REGIONS=['Abruzzo','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli-Venezia Giulia','Lazio','Liguria','Lombardia','Marche','Molise','Piemonte','Puglia','Sardegna','Sicilia','Toscana','Trentino-Alto Adige','Umbria','Valle d’Aosta','Veneto'];
+  const REGIONS=['Puglia'];
   const qs=id=>document.getElementById(id);
   let officialImage=null,osmLayer=null,officialActive=false,officialTimer=0,detectBusy663=false;
 
-  function readCfg(){try{return{mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:'',...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}}catch{return{mode:'hunt',region:'auto',detectedRegion:'',province:'',atc:''}}}
-  function writeCfg(c){try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch{}}
+  function readCfg(){try{return{mode:'hunt',detectedRegion:'',province:'',atc:'',...JSON.parse(localStorage.getItem(CFG_KEY)||'{}'),region:'Puglia'}}catch{return{mode:'hunt',region:'Puglia',detectedRegion:'',province:'',atc:''}}}
+  function writeCfg(c){c.region='Puglia';try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch{}}
   function normRegion(s){const v=String(s||'').trim().toLowerCase().replace(/\s+/g,' ');return REGIONS.find(r=>r.toLowerCase()===v)||REGIONS.find(r=>v.includes(r.toLowerCase()))||String(s||'').trim()}
   function cleanProvince(s){return String(s||'').replace(/^provincia\s+di\s+/i,'').replace(/^città\s+metropolitana\s+di\s+/i,'').trim()}
   function pugliaAtc663(province,city=''){const p=cleanProvince(province).toLowerCase(),m=String(city||'').toLowerCase().replace(/[^a-zà-ÿ ]/g,' ').replace(/\\s+/g,' ').trim();if(p.includes('foggia')||p==='fg')return 'ATC Foggia';if(p.includes('bari')||p==='ba')return 'ATC Bari';if(p.includes('brindisi')||p==='br')return 'ATC Brindisi';if(p.includes('taranto')||p==='ta')return 'ATC Taranto';if(p.includes('lecce')||p==='le')return 'ATC Lecce';if(p.includes('barletta')||p.includes('andria')||p.includes('trani')||p==='bt'){const fg=['trinitapoli','san ferdinando di puglia','margherita di savoia'];const ba=['andria','barletta','bisceglie','canosa di puglia','canosa','minervino murge','spinazzola','trani'];if(fg.some(x=>m.includes(x)))return 'ATC Foggia';if(ba.some(x=>m.includes(x)))return 'ATC Bari';return 'ATC Bari / Foggia · verifica comune BAT'}return province?`ATC da verificare · ${cleanProvince(province)}`:'ATC da rilevare'}
-  function regionNow663(c=readCfg()){return c.region==='auto'?(c.detectedRegion||''):c.region}
+  function regionNow663(c=readCfg()){return 'Puglia'}
   function setStatus(t){const e=qs('ctGeoStatus');if(e)e.textContent=t}
-  function render663(){const c=readCfg(),reg=regionNow663(c),atc=reg==='Puglia'?(c.atc||pugliaAtc663(c.province,c.city)):(c.province?`Provincia: ${cleanProvince(c.province)}`:'Da rilevare');const rs=qs('ctRegion');if(rs&&rs.value!==c.region)rs.value=c.region;if(qs('ctAtcStatus'))qs('ctAtcStatus').innerHTML=reg?`<b>${esc(atc)}</b><br><span class="muted">${esc(reg)}</span>`:'Da rilevare';if(qs('ctGeoStatus'))qs('ctGeoStatus').textContent=reg?`${c.region==='auto'?'GPS automatico':'Regione manuale'} · ${reg}${c.province?' · '+cleanProvince(c.province):''}`:'Territorio non ancora rilevato';if(qs('ctCalendarText'))qs('ctCalendarText').textContent=reg==='Puglia'?'Puglia · stagione venatoria 2026/2027 · DGR 995 del 17/07/2026.':(reg?`${reg} · apri la fonte ufficiale per il calendario aggiornato.`:'Seleziona o rileva la Regione.');}
+  function render663(){const c=readCfg(),reg=regionNow663(c),atc=reg==='Puglia'?(c.atc||pugliaAtc663(c.province,c.city)):(c.province?`Provincia: ${cleanProvince(c.province)}`:'Da rilevare');const rs=qs('ctRegion');if(rs&&rs.value!==c.region)rs.value=c.region;if(qs('ctAtcStatus'))qs('ctAtcStatus').innerHTML=reg?`<b>${esc(atc)}</b><br><span class="muted">${esc(reg)}</span>`:'Da rilevare';if(qs('ctGeoStatus'))qs('ctGeoStatus').textContent=reg?`${c.region==='auto'?'GPS automatico':'Regole Puglia'} · ${reg}${c.province?' · '+cleanProvince(c.province):''}`:'Territorio non ancora rilevato';if(qs('ctCalendarText'))qs('ctCalendarText').textContent=reg==='Puglia'?'Puglia · calendario venatorio e aggiornamenti nella fonte regionale ufficiale.':(reg?`${reg} · apri la fonte ufficiale per il calendario aggiornato.`:'Consulta le fonti ufficiali della Regione Puglia.');}
 
   async function fetchJsonTimeout(url,ms=9000){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'},signal:ac.signal});if(!r.ok)throw Error(`HTTP ${r.status}`);return await r.json()}finally{clearTimeout(tm)}}
   async function reverseTerritory(lat,lng){
@@ -2137,7 +2138,7 @@ window.__PFC_BOOT_READY__.then(()=>{
     try{const query=`[out:json][timeout:10][maxsize:4500000];(way["boundary"="protected_area"](${bbox});relation["boundary"="protected_area"](${bbox});way["leisure"="nature_reserve"](${bbox});relation["leisure"="nature_reserve"](${bbox}););out geom 140;`;const j=await overpassRequest(query);if(osmLayer)try{map.removeLayer(osmLayer)}catch{}osmLayer=L.layerGroup().addTo(map);let n=0;const draw=(g,t)=>{if(n>=140||!g?.length)return;const ll=g.filter(x=>Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)).map(x=>[+x.lat,+x.lon]);if(ll.length<3)return;const poly=L.polygon(ll,{color:'#2b6b44',weight:2,fillColor:'#4b8a5c',fillOpacity:.13});poly.bindPopup(`<b>🛡 ${esc(t?.name||'Area protetta')}</b><br><small>Fonte: OpenStreetMap</small>`);poly.addTo(osmLayer);n++};(j.elements||[]).forEach(el=>{if(el.geometry)draw(el.geometry,el.tags);(el.members||[]).forEach(m=>m.geometry&&draw(m.geometry,el.tags))});protStatus(n?`✅ ${n} confini caricati solo nella zona interessata. La mappa resta attiva.`:'Nessun confine protetto trovato nell’area visibile.');}
     catch(e){console.warn('Aree OSM 6.6.3',e);protStatus('Ricerca aree protette interrotta senza bloccare la mappa. Riprova più tardi o usa il portale ufficiale.')}
   }
-  function officialUrl663(kind){const c=readCfg(),reg=regionNow663(c)||'Puglia';if(reg==='Puglia'){if(kind==='calendar')return 'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/stagione-venatoria';if(kind==='atc')return 'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc';return 'https://webapps.sit.puglia.it/arcgis/rest/services/Operationals/AreeProtetteReteNatura2000/MapServer'}const topic=kind==='calendar'?'calendario venatorio 2026 2027':kind==='atc'?'ATC ambiti territoriali di caccia':'geoportale aree protette cartografia';return 'https://www.google.com/search?q='+encodeURIComponent(`Regione ${reg} ${topic} sito ufficiale`)}
+  function officialUrl663(kind){const c=readCfg(),reg=regionNow663(c)||'Puglia';if(reg==='Puglia'){if(kind==='calendar')return 'https://www.regione.puglia.it/web/foreste-biodiversita/stagione-venatoria';if(kind==='atc')return 'https://politiche-energetiche.regione.puglia.it/it/web/foreste-biodiversita/ambiti-territoriali-di-caccia-atc';return 'https://webapps.sit.puglia.it/arcgis/rest/services/Operationals/AreeProtetteReteNatura2000/MapServer'}const topic=kind==='calendar'?'calendario venatorio 2026 2027':kind==='atc'?'ATC ambiti territoriali di caccia':'geoportale aree protette cartografia';return 'https://www.google.com/search?q='+encodeURIComponent(`Regione ${reg} ${topic} sito ufficiale`)}
   function openOfficial663(kind){const u=officialUrl663(kind);try{window.open(u,'_blank','noopener')}catch{location.href=u}}
 
   function rewire(){
@@ -2365,6 +2366,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
 });
 
 })();
+
 
 
 
