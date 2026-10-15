@@ -6,6 +6,11 @@ function pointMatchesMode(p){return activityMode()==='mushroom'?p.sightingKind==
 const STORE = 'cacciatraccia-direct-v5';
 const SNAP_STORE = 'cacciatraccia-direct-v5-snapshots';
 const APP_VERSION = 6;
+const localDay = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const uniqueId = () => crypto.randomUUID?.() || Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+const validCoords = p => p && p.lat!=null && p.lng!=null && p.lat!=='' && p.lng!=='' && Number.isFinite(+p.lat) && Math.abs(+p.lat)<=90 && Number.isFinite(+p.lng) && Math.abs(+p.lng)<=180;
+let filterPostsByDay=false;
+const matchesPostDay=(p,day)=>!filterPostsByDay||p.huntDate===day;
 let state = { points: [], outings: [], diary: [], car: null };
 let map, sat, street, markerLayer, userMarker, carMarker, returnLine, lastPos = null, gpsWatch = null;
 let northLocked = false;
@@ -13,7 +18,7 @@ let follow = true, selected = null, editing = null, historyFilter = 'all', insta
 let track = { active:false, watch:null, start:0, coords:[], km:0, timer:null, line:null };
 try { state = { ...state, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; } catch {}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); renderAll(); };
+const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); try{renderAll()}catch(e){console.error('Aggiornamento schermata',e);toast('Dati salvati. Riapri la schermata per aggiornarla.')} };
 const hav = (a,b) => { const R=6371,r=x=>x*Math.PI/180,d1=r(b[0]-a[0]),d2=r(b[1]-a[1]),q=Math.sin(d1/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(q)); };
 const wname = d => ['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((+d||0)%360)+360)%360/45)%8];
 const wdir = d => ['N','NE','E','SE','S','SO','O','NO'][Math.round((((+d||0)%360)+360)%360/45)%8];
@@ -119,10 +124,11 @@ function ensureModalActions(){
 }
 function fillModal(p){
   ensureModalActions(); editing=p?.id||null;
-  selected={lat:p?.lat??selected?.lat,lng:p?.lng??selected?.lng,weather:p?.weather||selected?.weather||null};
+  $('pointPhoto').value='';
+  selected={lat:Number(p?.lat??selected?.lat),lng:Number(p?.lng??selected?.lng),weather:p?(p.weather||null):(selected?.weather||null)};
   $('pointModalTitle').textContent=p?'Dettagli punto salvato':'Nuovo punto';
   $('pointModalCoords').textContent=selected?`${selected.lat.toFixed(6)}, ${selected.lng.toFixed(6)}`:'';
-  $('pointType').value=p?.type||'Postazione'; $('pointName').value=p?.name||''; $('pointHuntDate').value=p?.huntDate||new Date().toISOString().slice(0,10);
+  $('pointType').value=p?.type||'Postazione'; $('pointName').value=p?.name||''; $('pointHuntDate').value=p?.huntDate||localDay();
   $('pointSpecies').value=p?.species||''; $('pointQuantity').value=p?.quantity??''; $('pointWindName').value=p?.windName||p?.weather?.windName||''; $('pointWindDir').value=p?.windDir||p?.weather?.windDir||'';
   $('pointWindSpeed').value=p?.windSpeed??p?.weather?.windSpeed??''; $('pointWindGust').value=p?.windGust??p?.weather?.windGust??''; $('pointNotes').value=p?.notes||'';
   $('pointPhotoPreview').innerHTML=p?.photo?`<img src="${p.photo}" style="max-width:100%;border-radius:12px">`:'';
@@ -130,17 +136,21 @@ function fillModal(p){
   $('pointModal').classList.add('open');
   $('pointNavigateBtn').onclick=navigateSelected; $('pointShareModalBtn').onclick=shareSelected;
 }
-function fileData(f,max=1000,q=.72){ return new Promise((ok,no)=>{ const r=new FileReader(), im=new Image(); r.onload=()=>im.src=r.result; r.onerror=no; im.onload=()=>{ let w=im.width,h=im.height,k=Math.min(1,max/Math.max(w,h)); w*=k; h*=k; const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(im,0,0,w,h); ok(c.toDataURL('image/jpeg',q)); }; r.readAsDataURL(f); }); }
+function fileData(f,max=1000,q=.72){ return new Promise((ok,no)=>{ const r=new FileReader(), im=new Image(); r.onload=()=>im.src=r.result; r.onerror=()=>no(Error('Foto non leggibile')); im.onerror=()=>no(Error('Foto non valida: scegli un’immagine JPG o PNG')); im.onload=()=>{ let w=im.width,h=im.height,k=Math.min(1,max/Math.max(w,h)); w*=k; h*=k; const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(im,0,0,w,h); ok(c.toDataURL('image/jpeg',q)); }; r.readAsDataURL(f); }); }
 async function savePoint(){
-  if(!selected) return; let photo=null, f=$('pointPhoto').files[0]; if(f) photo=await fileData(f);
-  const d={type:$('pointType').value,name:$('pointName').value.trim()||'Punto GPS',huntDate:$('pointHuntDate').value||new Date().toISOString().slice(0,10),species:$('pointSpecies').value.trim(),quantity:+$('pointQuantity').value||0,windName:$('pointWindName').value.trim(),windDir:$('pointWindDir').value.trim(),windSpeed:+$('pointWindSpeed').value||null,windGust:+$('pointWindGust').value||null,notes:$('pointNotes').value.trim(),weather:selected.weather||null};
+  if(!validCoords(selected))return toast('Scegli prima una posizione valida sulla mappa');
+  let photo=null, f=$('pointPhoto').files[0];
+  if(f)try{photo=await fileData(f)}catch(e){return toast(e.message)};
+  const previousPoints=state.points.map(p=>({...p}));
+  const d={type:$('pointType').value,name:$('pointName').value.trim()||'Punto GPS',huntDate:$('pointHuntDate').value||localDay(),species:$('pointSpecies').value.trim(),quantity:+$('pointQuantity').value||0,windName:$('pointWindName').value.trim(),windDir:$('pointWindDir').value.trim(),windSpeed:$('pointWindSpeed').value.trim()===''?null:Number($('pointWindSpeed').value),windGust:$('pointWindGust').value.trim()===''?null:Number($('pointWindGust').value),notes:$('pointNotes').value.trim(),weather:selected.weather||null};
   if(editing){ const i=state.points.findIndex(x=>x.id===editing); if(i>=0) state.points[i]={...state.points[i],...d,photo:photo||state.points[i].photo||null,updatedAt:new Date().toISOString()}; }
-  else state.points.unshift({id:Date.now().toString(36),lat:selected.lat,lng:selected.lng,createdAt:new Date().toISOString(),photo,...d});
-  $('pointModal').classList.remove('open'); editing=null; save(); renderMarkers(); toast('Punto salvato');
+  else state.points.unshift({id:uniqueId(),lat:selected.lat,lng:selected.lng,createdAt:new Date().toISOString(),photo,...d});
+  try{save()}catch(e){state.points=previousPoints;return toast('Memoria piena: esporta un backup o riduci la foto. Punto non salvato.')}
+  $('pointModal').classList.remove('open'); editing=null; renderMarkers(); toast('Punto salvato in Appostamenti');
 }
 async function saveCurrent(type='Postazione',open=false){
   const p=await getFix(); if(!p) return;
-  const item={id:Date.now().toString(36),lat:p.lat,lng:p.lng,type,name:type==='Avvistamento'?'Avvistamento':'Punto GPS',huntDate:new Date().toISOString().slice(0,10),species:'',quantity:0,notes:'',weather:null,photo:null,createdAt:new Date().toISOString()};
+  const item={id:uniqueId(),lat:p.lat,lng:p.lng,type,name:type==='Avvistamento'?'Avvistamento':'Punto GPS',huntDate:localDay(),species:'',quantity:0,notes:'',weather:null,photo:null,createdAt:new Date().toISOString()};
   state.points.unshift(item); save(); renderMarkers(); map.setView([p.lat,p.lng],16); if(open) fillModal(item); else toast('Punto salvato: toccalo per aggiungere uccelli, vento e note');
 }
 function renderMarkers(){ markerLayer.clearLayers(); state.points.forEach(p=>{ const m=L.marker([p.lat,p.lng],{icon:icon(p.type)}).addTo(markerLayer); m.on('click',e=>{L.DomEvent.stopPropagation(e); fillModal(p);}); }); }
@@ -165,7 +175,13 @@ function startTrack(){
   track.timer=setInterval(trackUI,1000); $('startTrackBtn').disabled=true; $('stopTrackBtn').disabled=false; $('trackStatus').textContent='in corso'; showPage('track');
 }
 function trackUI(){ $('trackDistance').textContent=track.km.toFixed(2)+' km'; $('trackPoints').textContent=track.coords.length; const s=Math.floor((Date.now()-track.start)/1000); $('trackTime').textContent=String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0'); }
-async function stopTrack(){ if(!track.active)return; navigator.geolocation.clearWatch(track.watch); clearInterval(track.timer); let photo=null,f=$('trackPhoto').files[0]; if(f)photo=await fileData(f); state.outings.unshift({id:Date.now().toString(36),start:new Date(track.start).toISOString(),end:new Date().toISOString(),distanceKm:track.km,coords:track.coords,photo,note:$('trackNote').value.trim()}); track.active=false; $('startTrackBtn').disabled=false; $('stopTrackBtn').disabled=true; $('trackStatus').textContent='fermo'; $('trackPhoto').value=''; $('trackNote').value=''; save(); toast('Uscita salvata'); }
+async function stopTrack(){
+ if(!track.active)return;let photo=null;const f=$('trackPhoto').files[0];if(f)try{photo=await fileData(f)}catch(e){return toast(e.message)}
+ const outing={id:uniqueId(),start:new Date(track.start).toISOString(),end:new Date().toISOString(),distanceKm:track.km,coords:[...track.coords],photo,note:$('trackNote').value.trim()};
+ state.outings.unshift(outing);try{save()}catch(e){state.outings=state.outings.filter(o=>o!==outing);return toast('Memoria piena: percorso ancora attivo. Esporta un backup prima di riprovare.')}
+ navigator.geolocation.clearWatch(track.watch);clearInterval(track.timer);track.active=false;
+ $('startTrackBtn').disabled=false;$('stopTrackBtn').disabled=true;$('trackStatus').textContent='fermo';$('trackPhoto').value='';$('trackNote').value='';toast('Uscita salvata');return true;
+}
 function renderOutings(){ const el=$('outingsList'); el.innerHTML=state.outings.length?state.outings.map(o=>`<div class="item"><div class="itemTop"><div><h4>${new Date(o.start).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}</h4><div class="meta">${new Date(o.start).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</div></div><b>${(+o.distanceKm||0).toFixed(2)} km</b></div>${o.note?`<div>${esc(o.note)}</div>`:''}${o.photo?`<img class="photoPreview" src="${o.photo}">`:''}<div class="rowBtns"><button class="mini" onclick="CT.out('${o.id}')">Mostra</button><button class="mini" onclick="CT.share('${o.id}')">↗ Condividi</button><button class="mini red" onclick="CT.delOut('${o.id}')">Elimina</button></div></div>`).join(''):'<div class="empty">Nessuna uscita salvata.</div>'; }
 async function shareOut(id){
   const o=state.outings.find(x=>x.id===id); if(!o)return;
@@ -178,7 +194,14 @@ async function shareOut(id){
   if(navigator.share&&navigator.canShare?.({files:[file]})){try{return await navigator.share({title:'Passione Funghi e Caccia',text:`Percorso: ${(+o.distanceKm||0).toFixed(2)} km`,files:[file]});}catch(e){if(e.name==='AbortError')return;}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CacciaTraccia.png';a.click();
 }
-async function addDiary(){ let photo=null,f=$('diaryPhoto').files[0]; if(f)photo=await fileData(f); state.diary.unshift({id:Date.now().toString(36),date:$('diaryDate').value||new Date().toISOString().slice(0,10),createdAt:new Date().toISOString(),zone:$('diaryZone').value.trim(),game:$('diaryGame').value.trim(),type:$('diaryType').value.trim(),notes:$('diaryNotes').value.trim(),photo}); save(); toast('Nota salvata nel diario'); }
+async function addDiary(){
+  if(!['diaryZone','diaryGame','diaryType','diaryNotes'].some(id=>$(id).value.trim())&&!$('diaryPhoto').files[0])return toast('Inserisci una nota, una zona, una specie o una foto');
+  let photo=null;try{const f=$('diaryPhoto').files[0];if(f)photo=await fileData(f)}catch(e){return toast(e.message)}
+  const item={id:uniqueId(),date:$('diaryDate').value||localDay(),createdAt:new Date().toISOString(),zone:$('diaryZone').value.trim(),game:$('diaryGame').value.trim(),type:$('diaryType').value.trim(),notes:$('diaryNotes').value.trim(),photo};
+  state.diary.unshift(item);try{save()}catch(e){state.diary=state.diary.filter(d=>d!==item);return toast('Memoria piena: nota non salvata. Esporta un backup.')}
+  ['diaryZone','diaryGame','diaryType','diaryNotes','diaryPhoto'].forEach(id=>$(id).value='');
+  toast('Nota salvata nel diario. Per un appostamento usa Segna punto sulla mappa.');
+}
 function renderDiary(){
   const el=$('historyList'); if(!el)return; const q=($('historySearch')?.value||'').toLowerCase();
   let rows=[];
@@ -187,15 +210,15 @@ function renderDiary(){
   if(historyFilter!=='diary') rows.push(...pointRows.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
   if(historyFilter!=='sightings') rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
   rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-  el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>${esc(r.p.species||r.p.name||r.p.type)}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('') || '<div class="empty">Diario vuoto.</div>';
+  el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>${esc(r.p.species||r.p.name||r.p.type)}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${esc(r.p.huntDate||'')} · 💨 ${esc(r.p.windName||r.p.weather?.windName||'-')} ${r.p.windSpeed??r.p.weather?.windSpeed??'-'} km/h</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}<div class="rowBtns"><button class="mini red" onclick="CT.delDiary('${r.d.id}')">Elimina nota</button></div></div>`).join('') || '<div class="empty">Diario vuoto.</div>';
 }
-function exportJSON(){ const b=new Blob([JSON.stringify({app:'Passione Funghi e Caccia',version:APP_VERSION,exportedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`CacciaTraccia_backup_${new Date().toISOString().slice(0,10)}.json`;a.click(); }
+function exportJSON(){ const b=new Blob([JSON.stringify({app:'Passione Funghi e Caccia',version:APP_VERSION,exportedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`CacciaTraccia_backup_${localDay()}.json`;a.click(); }
 function exportTXT(){ const t=state.points.map(p=>`${p.name||p.type}\nCoordinate: ${p.lat}, ${p.lng}\nData/ora: ${when(p.createdAt)}\nGiorno caccia: ${p.huntDate||'-'}\nUccelli: ${p.species||'-'}${p.quantity?' x '+p.quantity:''}\nVento: ${p.windName||p.weather?.windName||'-'} ${p.windDir||p.weather?.windDir||''} ${p.windSpeed??p.weather?.windSpeed??'-'} km/h\nNote: ${p.notes||'-'}\nGoogle Maps: https://www.google.com/maps?q=${p.lat},${p.lng}\n---`).join('\n'),b=new Blob([t||'Nessun punto salvato'],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='CacciaTraccia_coordinate.txt';a.click(); }
 function snapshots(){ try{return JSON.parse(localStorage.getItem(SNAP_STORE)||'[]');}catch{return [];} }
-function makeSnapshot(){ const arr=snapshots(); arr.unshift({id:Date.now().toString(36),at:new Date().toISOString(),data:JSON.parse(JSON.stringify(state))}); localStorage.setItem(SNAP_STORE,JSON.stringify(arr.slice(0,25))); renderSnapshots(); toast('Versione di sicurezza creata'); }
+function makeSnapshot(){ const arr=snapshots(); arr.unshift({id:uniqueId(),at:new Date().toISOString(),data:JSON.parse(JSON.stringify(state))}); localStorage.setItem(SNAP_STORE,JSON.stringify(arr.slice(0,25))); renderSnapshots(); toast('Versione di sicurezza creata'); }
 function renderSnapshots(){ const el=$('snapshotsList'); if(!el)return; const arr=snapshots(); el.innerHTML=arr.length?arr.map((s,i)=>`<div class="item"><div class="itemTop"><b>${esc(when(s.at))}</b><button class="mini" onclick="CT.restoreSnap(${i})">Ripristina</button></div></div>`).join(''):'<div class="empty">Nessuna versione ancora.</div>'; }
 function restoreSnap(i){ const s=snapshots()[i]; if(!s)return; if(!confirm('Ripristinare questa versione? I dati attuali saranno prima salvati in una nuova versione.'))return; makeSnapshot(); state={points:[],outings:[],diary:[],car:null,...s.data}; save(); toast('Versione ripristinata'); }
-async function importBackupFile(file){ try{ const raw=JSON.parse(await file.text()); const incoming=raw.data||raw; const mode=$('importMode')?.value||'merge'; makeSnapshot(); if(mode==='replace') state={points:[],outings:[],diary:[],car:null,...incoming}; else { const merge=(a,b)=>{const m=new Map((a||[]).map(x=>[x.id||JSON.stringify(x),x]));(b||[]).forEach(x=>m.set(x.id||JSON.stringify(x),x));return [...m.values()];}; state={...state,...incoming,points:merge(state.points,incoming.points),outings:merge(state.outings,incoming.outings),diary:merge(state.diary,incoming.diary),car:incoming.car||state.car}; } save(); toast('Backup ripristinato'); }catch(e){toast('Backup non valido');console.error(e);} }
+async function importBackupFile(file){ const previousState=state;try{ const raw=JSON.parse(await file.text()); const incoming=raw.data||raw;if(!incoming||typeof incoming!=='object'||!['points','outings','diary'].every(k=>Array.isArray(incoming[k]))||incoming.points.some(p=>!validCoords(p))||(incoming.car!=null&&!validCoords(incoming.car)))throw Error('Formato backup non valido'); const mode=$('importMode')?.value||'merge'; makeSnapshot(); if(mode==='replace') state={points:[],outings:[],diary:[],car:null,...incoming}; else { const merge=(a,b)=>{const m=new Map((a||[]).map(x=>[x.id||JSON.stringify(x),x]));(b||[]).forEach(x=>m.set(x.id||JSON.stringify(x),x));return [...m.values()];}; state={...state,...incoming,points:merge(state.points,incoming.points),outings:merge(state.outings,incoming.outings),diary:merge(state.diary,incoming.diary),car:incoming.car||state.car}; } save(); toast('Backup ripristinato'); }catch(e){state=previousState;toast('Backup non valido o memoria insufficiente: dati precedenti conservati');console.error(e);} }
 async function persistStorage(){ if(!navigator.storage?.persist)return toast('Protezione memoria non disponibile'); const ok=await navigator.storage.persist(); toast(ok?'Archiviazione protetta':'Il telefono non ha concesso la protezione'); }
 function renderAll(){ if(map){renderMarkers();renderCar();} renderPoints();renderOutings();renderDiary();renderSnapshots(); }
 function showPage(n){ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+n)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===n)); if(n==='map')setTimeout(()=>map.invalidateSize(),100); }
@@ -215,15 +238,15 @@ async function saveMapPointQuick(){
   }
 
   if(navigator.onLine&&!w){
-    try{await weather(lat,lng);w=selected?.weather||null}catch(e){console.warn('Meteo punto mappa',e)}
+    try{w=await weather(lat,lng)||null}catch(e){console.warn('Meteo punto mappa',e)}
   }
 
   const item={
-    id:Date.now().toString(36),lat,lng,type:'Postazione',name:'Punto GPS',
-    huntDate:new Date().toISOString().slice(0,10),species:'',quantity:0,notes:'',
+    id:uniqueId(),lat,lng,type:'Postazione',name:'Punto GPS',
+    huntDate:localDay(),species:'',quantity:0,notes:'',
     weather:w||null,photo:null,createdAt:new Date().toISOString(),
-    windName:w?.windName||'',windDir:w?.windDir||'',windDeg:Number.isFinite(+w?.windDeg)?+w.windDeg:null,
-    windSpeed:Number.isFinite(+w?.windSpeed)?+w.windSpeed:null,windGust:Number.isFinite(+w?.windGust)?+w.windGust:null
+    windName:w?.windName||'',windDir:w?.windDir||'',windDeg:w?.windDeg!=null&&Number.isFinite(+w.windDeg)?+w.windDeg:null,
+    windSpeed:w?.windSpeed!=null&&Number.isFinite(+w.windSpeed)?+w.windSpeed:null,windGust:w?.windGust!=null&&Number.isFinite(+w.windGust)?+w.windGust:null
   };
   state.points.unshift(item);save();renderMarkers();
   toast('Punto fissato sulla mappa');
@@ -237,12 +260,12 @@ function bind(){
   $('quickSaveHereBtn').onclick=saveMapPointQuick; $('quickSightingBtn').onclick=()=>saveCurrent('Avvistamento',true); $('quickTrackBtn').onclick=startTrack; $('quickCarBtn').onclick=parkCar;
   $('parkHereBtn').onclick=parkCar; $('moveCarBtn').onclick=moveCar; $('returnCarBtn').onclick=carReturn; $('clearCarBtn').onclick=()=>{state.car=null;save();};
   $('fitPointsBtn').onclick=fitPoints; $('startTrackBtn').onclick=startTrack; $('stopTrackBtn').onclick=stopTrack; $('centerTrackBtn').onclick=()=>track.coords.length&&map.fitBounds(L.latLngBounds(track.coords),{padding:[30,30]}); $('trackToCarBtn').onclick=()=>{showPage('map');carReturn();};
-  $('confirmPointBtn').onclick=savePoint; $('pointReadWeatherBtn').onclick=async()=>{if(selected){await weather(selected.lat,selected.lng);const w=selected.weather||{};$('pointWindName').value=w.windName||'';$('pointWindDir').value=w.windDir||'';$('pointWindSpeed').value=w.windSpeed||'';$('pointWindGust').value=w.windGust||'';$('pointWeatherSummary').textContent=`${w.condition||''} · ${w.windName||''} ${w.windSpeed||''} km/h`;}};
+  $('confirmPointBtn').onclick=savePoint; $('pointReadWeatherBtn').onclick=async()=>{if(selected){await weather(selected.lat,selected.lng);const w=selected.weather||{};$('pointWindName').value=w.windName||'';$('pointWindDir').value=w.windDir||'';$('pointWindSpeed').value=w.windSpeed??'';$('pointWindGust').value=w.windGust??'';$('pointWeatherSummary').textContent=`${w.condition||''} · ${w.windName||''} ${w.windSpeed||''} km/h`;}};
   document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('pointModal').classList.remove('open'));
   $('addDiaryBtn').onclick=addDiary; $('historySearch').oninput=renderDiary; document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{historyFilter=b.dataset.history;document.querySelectorAll('[data-history]').forEach(x=>x.classList.toggle('active',x===b));renderDiary();});
   $('exportJsonBtn').onclick=exportJSON; $('exportTxtBtn').onclick=exportTXT; $('makeSnapshotBtn').onclick=makeSnapshot; $('persistBtn').onclick=persistStorage; $('importBackup').onchange=e=>{const f=e.target.files?.[0];if(f)importBackupFile(f);e.target.value='';};
   $('mapSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchBtn').click();}); $('searchBtn').onclick=()=>{const m=$('mapSearch').value.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$/);if(m){const lat=+m[1],lng=+m[2];map.setView([lat,lng],16);selectMapPoint(lat,lng);}else toast('Inserisci coordinate, es. 41.45, 15.55');};
-  $('diaryDate').value=new Date().toISOString().slice(0,10);
+  $('diaryDate').value=localDay();
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').hidden=false;}); $('installBtn').onclick=async()=>{if(!installPrompt)return toast('Usa il menu del browser > Aggiungi a schermata Home');installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installBtn').hidden=true;};
   const net=()=>{$('netPill').textContent=navigator.onLine?'● online':'● offline';$('netPill').classList.toggle('soft',!navigator.onLine);}; window.addEventListener('online',net);window.addEventListener('offline',net);net();
 }
@@ -281,6 +304,7 @@ async function deleteSavedPoint(id){
 }
 
 window.CT={
+  delDiary:async id=>{const item=state.diary.find(d=>d.id===id);if(!item||!await confirmPointDeletion({name:item.game||item.zone||'Nota del diario'}))return false;const previous=state.diary;state.diary=previous.filter(d=>d.id!==id);try{save()}catch(e){state.diary=previous;toast('Eliminazione non salvata: memoria non disponibile');return false}return true;},
   go:id=>{const p=state.points.find(x=>x.id===id);if(p){showPage('map');map.setView([p.lat,p.lng],16);selectMapPoint(p.lat,p.lng);}},
   edit:id=>{const p=state.points.find(x=>x.id===id);if(p)fillModal(p);},
   del:deleteSavedPoint,
@@ -441,7 +465,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   const originalStartTrack=startTrack;
   startTrack=function(){clearRecovered();originalStartTrack();setTimeout(persistActiveTrack,300)};
   const originalStopTrack=stopTrack;
-  stopTrack=async function(){await originalStopTrack();clearRecovered()};
+  stopTrack=async function(){const saved=await originalStopTrack();if(saved)clearRecovered();return saved};
   function resumeRecovered(){
     const r=recoveredTrack();if(!r?.coords?.length)return toast('Nessun percorso da recuperare');
     originalStartTrack();
@@ -454,7 +478,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   }
   function saveRecovered(){
     const r=recoveredTrack();if(!r?.coords?.length)return toast('Nessun percorso da recuperare');
-    state.outings.unshift({id:Date.now().toString(36),start:new Date(r.start||Date.now()).toISOString(),end:new Date(r.savedAt||Date.now()).toISOString(),distanceKm:+r.km||0,coords:r.coords,photo:null,note:(r.note||'')+(r.note?' · ':'')+'uscita recuperata automaticamente'});
+    state.outings.unshift({id:uniqueId(),start:new Date(r.start||Date.now()).toISOString(),end:new Date(r.savedAt||Date.now()).toISOString(),distanceKm:+r.km||0,coords:r.coords,photo:null,note:(r.note||'')+(r.note?' · ':'')+'uscita recuperata automaticamente'});
     clearRecovered();save();toast('Uscita recuperata e salvata');
   }
   function showRecovery(){
@@ -615,7 +639,7 @@ window.__PFC_BOOT_READY__=(async()=>{
 // V6.1.1 - Camminata + punti legati al giorno di caccia + avvistamenti nello storico
 (function(){
   const HUNT_DAY_KEY='cacciatraccia-hunt-day-v1';
-  const today=()=>new Date().toISOString().slice(0,10);
+  const today=()=>localDay();
   function huntDay(){return localStorage.getItem(HUNT_DAY_KEY)||today()}
   function setHuntDay(v){const d=v||today();localStorage.setItem(HUNT_DAY_KEY,d);const i=document.getElementById('ctHuntDay');if(i)i.value=d;renderMarkers();renderPoints()}
 
@@ -624,10 +648,11 @@ window.__PFC_BOOT_READY__=(async()=>{
     const list=$('pointsList'),card=list?.closest('.card');if(!card)return;
     const head=card.querySelector('.sectionHead');
     const bar=document.createElement('div');bar.id='ctHuntDayBar';bar.style.cssText='display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:8px 0 12px';
-    bar.innerHTML=`<label style="flex:1;min-width:170px;font-weight:800">Giorno di caccia<input id="ctHuntDay" type="date" value="${huntDay()}" style="display:block;width:100%;margin-top:5px"></label><button id="ctHuntToday" class="secondary small" type="button">Oggi</button>`;
+    bar.innerHTML=`<label style="flex:1;min-width:170px;font-weight:800">Giorno di caccia<input id="ctHuntDay" type="date" value="${huntDay()}" style="display:block;width:100%;margin-top:5px"></label><button id="ctHuntToday" class="secondary small" type="button">Oggi</button><label><input id="ctFilterPostDay" type="checkbox"> Solo questo giorno</label>`;
     head?.insertAdjacentElement('afterend',bar);
-    $('ctHuntDay').onchange=e=>setHuntDay(e.target.value);
-    $('ctHuntToday').onclick=()=>setHuntDay(today());
+    $('ctHuntDay').onchange=e=>{filterPostsByDay=true;$('ctFilterPostDay').checked=true;setHuntDay(e.target.value)};
+    $('ctFilterPostDay').onchange=e=>{filterPostsByDay=e.target.checked;renderMarkers();renderPoints()};
+    $('ctHuntToday').onclick=()=>{filterPostsByDay=true;$('ctFilterPostDay').checked=true;setHuntDay(today())};
   }
 
   const prevFillModal=fillModal;
@@ -652,7 +677,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   renderMarkers=function(){
     markerLayer.clearLayers();const day=huntDay();
     (state.points||[]).forEach(p=>{
-      if(p.type!=='Avvistamento'&&p.huntDate!==day)return;
+      if(!validCoords(p)||p.type!=='Avvistamento'&&!matchesPostDay(p,day))return;
       const m=L.marker([p.lat,p.lng],{icon:icon(p.type)}).addTo(markerLayer);
       m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
     });
@@ -661,7 +686,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   renderPoints=function(){
     ensureHuntDayUI();
     const el=$('pointsList');if(!el)return;const day=huntDay();
-    const mushroom=activityMode()==='mushroom';const pts=(state.points||[]).filter(p=>mushroom?p.sightingKind==='mushroom':p.sightingKind!=='mushroom'&&p.type!=='Avvistamento'&&p.huntDate===day);
+    const mushroom=activityMode()==='mushroom';const pts=(state.points||[]).filter(p=>mushroom?p.sightingKind==='mushroom':p.sightingKind!=='mushroom'&&p.type!=='Avvistamento'&&matchesPostDay(p,day));
     el.innerHTML=pts.length?pts.map(p=>`<div class="item"><div class="itemTop"><div><h4>${esc(p.name||p.type)}</h4><div class="meta">${mushroom?'🍄 Fungo trovato':esc(p.type)} · ${mushroom?'Giorno uscita':'Giorno di caccia'} ${esc(p.huntDate||day)}</div></div></div>${(!mushroom&&(p.windName||p.weather))?`<div class="snap">💨 ${esc(p.windName||p.weather?.windName||'')} ${p.windSpeed??p.weather?.windSpeed??'-'} km/h${p.weather?.condition?' · 🌦 '+esc(p.weather.condition):''}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.go('${p.id}')">Mappa</button><button class="mini" onclick="CT.edit('${p.id}')">✏️ Nome / giorno</button><button class="mini" onclick="CT.sharePoint('${p.id}')">↗ Condividi</button><button class="mini red" onclick="CT.del('${p.id}')">Elimina</button></div></div>`).join(''):`<div class="empty">${mushroom?'Nessun fungo salvato.':'Nessun punto per il giorno '+esc(day)+'.'}</div>`;
   };
 
@@ -672,7 +697,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
     if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
     rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.edit('${r.p.id}')">Apri</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}<div class="rowBtns"><button class="mini red" onclick="CT.delDiary('${r.d.id}')">Elimina nota</button></div></div>`).join('')||'<div class="empty">Storico vuoto.</div>';
   };
 
   function renameWalking(){
@@ -1002,7 +1027,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(historyFilter!=='diary')rows.push(...sightings.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)).map(p=>({kind:'point',ts:p.createdAt||p.huntDate,p})));
     if(historyFilter!=='sightings')rows.push(...state.diary.filter(d=>!q||JSON.stringify(d).toLowerCase().includes(q)).map(d=>({kind:'diary',ts:d.createdAt||d.date,d})));
     rows.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.openHistoryPoint('${r.p.id}')">🗺 Mappa + vento attuale</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Modifica</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}</div>`).join('')||'<div class="empty">Storico vuoto.</div>';
+    el.innerHTML=rows.map(r=>r.kind==='point'?`<div class="item"><b>🕊 ${esc(r.p.species||r.p.name||'Avvistamento')}</b><div class="meta">${esc(when(r.p.createdAt))}</div><div>${r.p.sightingKind==='mushroom'?'Giorno uscita':'Giorno caccia'} ${esc(r.p.huntDate||'')}${r.p.sightingKind==='mushroom'?'':' · 💨 '+esc(r.p.windName||r.p.weather?.windName||'-')+' '+(r.p.windSpeed??r.p.weather?.windSpeed??'-')+' km/h'}</div>${r.p.notes?`<div>${esc(r.p.notes)}</div>`:''}<div class="rowBtns"><button class="mini" onclick="CT.openHistoryPoint('${r.p.id}')">🗺 Mappa + vento attuale</button><button class="mini" onclick="CT.edit('${r.p.id}')">✏️ Modifica</button><button class="mini red" onclick="CT.del('${r.p.id}')">🗑 Elimina</button></div></div>`:`<div class="item"><b>${esc(r.d.game||r.d.type||'Diario')}</b><div class="meta">${esc(r.d.date||'')} · ${esc(r.d.zone||'')}</div>${r.d.notes?`<div>${esc(r.d.notes)}</div>`:''}${r.d.photo?`<img class="photoPreview" src="${r.d.photo}">`:''}<div class="rowBtns"><button class="mini red" onclick="CT.delDiary('${r.d.id}')">Elimina nota</button></div></div>`).join('')||'<div class="empty">Storico vuoto.</div>';
   };
 
   window.CT.openHistoryPoint=openHistoryPoint;
@@ -1077,7 +1102,9 @@ window.__PFC_BOOT_READY__=(async()=>{
       $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'stabile 12 h'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
       $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
       decorateLocalWind();
+      return selected.weather;
     }catch(e){
+      if(!selected||Math.abs(selected.lat-__pfcTargetLat)>1e-7||Math.abs(selected.lng-__pfcTargetLng)>1e-7)return null;
       $('weatherBody').innerHTML=`<div class="empty">${esc(e.message)}${navigator.onLine?'':' · ultimo dato salvato resta nel punto'}</div>`;
     }
   };
@@ -1108,9 +1135,9 @@ window.__PFC_BOOT_READY__=(async()=>{
       try{
         const oldSelected=selected;
         selected={lat:p.lat,lng:p.lng,weather:p.weather||null};
-        await weather(p.lat,p.lng);
-        if(selected?.weather){
-          p.weather=JSON.parse(JSON.stringify(selected.weather));
+        const snapshot=await weather(p.lat,p.lng);
+        if(snapshot){
+          p.weather=JSON.parse(JSON.stringify(snapshot));
           p.windName=p.weather.windName||p.windName||'';
           p.windDir=p.weather.windDir||p.windDir||'';
           p.windDeg=p.weather.windDeg;
@@ -1565,7 +1592,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   async function runSightChecks(){
     const date=$('ctSightingDate')?.value,time=$('ctSightingTime')?.value||'08:00';if(!date)return toast('Scegli il giorno');
     if(!navigator.onLine)return toast('Serve Internet per controllare le previsioni');
-    const target=new Date(date+'T'+time+':00'),pts=(state.points||[]).filter(p=>p.type==='Avvistamento'&&p.Number.isFinite(+p.lat)&&Number.isFinite(+p.lng));
+    const target=new Date(date+'T'+time+':00'),pts=(state.points||[]).filter(p=>p.type==='Avvistamento'&&p.sightingKind!=='mushroom'&&validCoords(p));
     if(!pts.length){$('ctSightingSummary').textContent='Nessun avvistamento uccelli salvato.';return}
     sightChecks.clear();let good=0;$('ctSightingRun').disabled=true;
     for(let i=0;i<pts.length;i++){
@@ -1676,9 +1703,9 @@ window.__PFC_BOOT_READY__=(async()=>{
   // conserva il filtro giorno per postazioni, ma gli avvistamenti restano sempre visibili
   renderMarkers=function(){
     if(!markerLayer)return;markerLayer.clearLayers();
-    const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||new Date().toISOString().slice(0,10);
+    const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||localDay();
     (state.points||[]).forEach(p=>{
-      if(!pointMatchesMode(p))return;if(activityMode()!=='mushroom'&&p.type!=='Avvistamento'&&p.huntDate!==day)return;
+      if(!validCoords(p)||!pointMatchesMode(p))return;if(activityMode()!=='mushroom'&&p.type!=='Avvistamento'&&!matchesPostDay(p,day))return;
       const ic=p.type==='Avvistamento'&&p.sightingKind==='mushroom'?mushIcon():icon(p.type);
       const m=L.marker([p.lat,p.lng],{icon:ic});m.addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
     });
