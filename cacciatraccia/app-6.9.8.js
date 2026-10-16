@@ -102,7 +102,7 @@ function startGps(){
 }
 async function locate(){ const p=await getFix(); if(p){ follow=true; $('followBtn').classList.add('active'); map.setView([p.lat,p.lng],16); } }
 function toggleFollow(){ follow=!follow; $('followBtn').classList.toggle('active',follow); if(follow&&lastPos) map.setView([lastPos.lat,lastPos.lng],16); toast(follow?'Seguimi attivo':'Seguimi disattivato'); }
-async function selectMapPoint(lat,lng){ selected={lat,lng,weather:null}; $('selectedCard').classList.remove('hidden'); $('selectedCoords').textContent=`${lat.toFixed(6)}, ${lng.toFixed(6)}`; await weather(lat,lng); }
+async function selectMapPoint(lat,lng){ follow=false; $('followBtn')?.classList.remove('active'); selected={lat,lng,weather:null}; $('selectedCard').classList.remove('hidden'); $('selectedCoords').textContent=`${lat.toFixed(6)}, ${lng.toFixed(6)}`; await weather(lat,lng); }
 function clearSelected(){ $('selectedCard').classList.add('hidden'); selected=null; }
 async function weather(lat,lng){
   const __pfcTargetLat=+lat,__pfcTargetLng=+lng;
@@ -146,7 +146,25 @@ async function savePoint(){
   if(editing){ const i=state.points.findIndex(x=>x.id===editing); if(i>=0) state.points[i]={...state.points[i],...d,photo:photo||state.points[i].photo||null,updatedAt:new Date().toISOString()}; }
   else state.points.unshift({id:uniqueId(),lat:selected.lat,lng:selected.lng,createdAt:new Date().toISOString(),photo,...d});
   try{save()}catch(e){state.points=previousPoints;return toast('Memoria piena: esporta un backup o riduci la foto. Punto non salvato.')}
-  $('pointModal').classList.remove('open'); editing=null; renderMarkers(); toast('Punto salvato in Appostamenti');
+  $('pointModal').classList.remove('open'); editing=null; renderMarkers(); toast(d.sightingKind==='mushroom'?'Fungo salvato nel diario':d.type==='Avvistamento'?'Salvato in Avvistamenti':'Punto salvato in Appostamenti');
+}
+// A known place can be recorded from the map without obtaining a GPS fix.
+function openSelectedObservation(mushroom){
+  const card=$('selectedCard');
+  const at=selected&&card&&!card.classList.contains('hidden')&&validCoords(selected)?selected:map?.getCenter();
+  if(!validCoords(at))return toast('Scegli prima un punto sulla mappa.');
+  follow=false;$('followBtn')?.classList.remove('active');
+  selected={lat:+at.lat,lng:+at.lng,weather:at.weather||null};
+  fillModal(null);
+  $('pointType').value=mushroom?'Postazione':'Avvistamento';
+  $('pointName').value=mushroom?'Fungo trovato':'Avvistamento';
+  $('pointModalTitle').textContent=mushroom?'🍄 Salva nel diario funghi':'🕊️ Salva avvistamento nel punto scelto';
+  const w=selected.weather;
+  if(w){
+    $('pointWindName').value=w.windName||'';$('pointWindDir').value=w.windDir||'';
+    $('pointWindSpeed').value=w.windSpeed??'';$('pointWindGust').value=w.windGust??'';
+    $('pointWeatherSummary').textContent=`${w.condition||''} · ${w.windName||''} ${w.windSpeed??'—'} km/h`;
+  }
 }
 async function saveCurrent(type='Postazione',open=false){
   const p=await getFix(); if(!p) return;
@@ -257,7 +275,7 @@ function bind(){
   $('northBtn').onclick=toggleNorthLock;
   $('layersBtn').onclick=()=>$('layerPanel').classList.toggle('hidden'); document.querySelectorAll('.layerChoice').forEach(b=>b.onclick=()=>{setLayer(b.dataset.basemap);$('layerPanel').classList.add('hidden');});
   $('clearSelectedBtn').onclick=clearSelected; $('savePointBtn').onclick=()=>fillModal(null); $('navigateBtn').onclick=navigateSelected; $('shareSelectedBtn').onclick=shareSelected; $('weatherRefreshBtn').onclick=()=>selected&&weather(selected.lat,selected.lng);
-  $('quickSaveHereBtn').onclick=saveMapPointQuick; $('quickSightingBtn').onclick=()=>saveCurrent('Avvistamento',true); $('quickTrackBtn').onclick=startTrack; $('quickCarBtn').onclick=parkCar;
+  $('selectedSightingBtn').onclick=()=>openSelectedObservation(false); $('selectedMushroomBtn').onclick=()=>openSelectedObservation(true); $('quickSaveHereBtn').onclick=saveMapPointQuick; $('quickSightingBtn').onclick=()=>openSelectedObservation(false); $('quickTrackBtn').onclick=startTrack; $('quickCarBtn').onclick=parkCar;
   $('parkHereBtn').onclick=parkCar; $('moveCarBtn').onclick=moveCar; $('returnCarBtn').onclick=carReturn; $('clearCarBtn').onclick=()=>{state.car=null;save();};
   $('fitPointsBtn').onclick=fitPoints; $('startTrackBtn').onclick=startTrack; $('stopTrackBtn').onclick=stopTrack; $('centerTrackBtn').onclick=()=>track.coords.length&&map.fitBounds(L.latLngBounds(track.coords),{padding:[30,30]}); $('trackToCarBtn').onclick=()=>{showPage('map');carReturn();};
   $('confirmPointBtn').onclick=savePoint; $('pointReadWeatherBtn').onclick=async()=>{if(selected){await weather(selected.lat,selected.lng);const w=selected.weather||{};$('pointWindName').value=w.windName||'';$('pointWindDir').value=w.windDir||'';$('pointWindSpeed').value=w.windSpeed??'';$('pointWindGust').value=w.windGust??'';$('pointWeatherSummary').textContent=`${w.condition||''} · ${w.windName||''} ${w.windSpeed||''} km/h`;}};
@@ -991,7 +1009,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   selectMapPoint=async function(lat,lng){
     if($('selectedTitle'))$('selectedTitle').textContent='Punto selezionato';
     if($('navigateBtn'))$('navigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
-    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
+    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌦 Meteo e vento del punto';
     const r=await originalSelectMapPoint(lat,lng);
     showMapNavigateButton(true);
     return r;
@@ -1038,7 +1056,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     const v=$('ctVersionBadge');if(v)v.textContent='• V6.1.7';
     if($('navigateBtn'))$('navigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
     if($('pointNavigateBtn'))$('pointNavigateBtn').innerHTML=mapsIconSvg()+'<span style="margin-left:6px">Google Maps</span>';
-    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌬 Aggiorna vento attuale';
+    if($('weatherRefreshBtn'))$('weatherRefreshBtn').textContent='🌦 Meteo e vento del punto';
   };
 })();
 
@@ -1617,12 +1635,7 @@ window.__PFC_BOOT_READY__=(async()=>{
 
   // ---------- Funghi: foto e appostamento personale, senza riconoscimento ----------
   async function quickMush(){
-    const card=$('selectedCard'),at=selected&&card&&!card.classList.contains('hidden')&&validCoords(selected)?selected:map?.getCenter();
-    if(!validCoords(at))return toast('Scegli prima un punto sulla mappa.');
-    follow=false;$('followBtn')?.classList.remove('active');
-    selected={lat:at.lat,lng:at.lng,weather:null};fillModal(null);
-    $('pointType').value='Postazione';$('pointName').value='Fungo trovato';
-    $('pointModalTitle').textContent='🍄 Salva appostamento funghi';
+    openSelectedObservation(true);
   }
   function mushIcon(){return L.divIcon({className:'',html:'<div class="ctMushPin">🍄</div>',iconSize:[39,39],iconAnchor:[19,35]})}
 

@@ -62,6 +62,8 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
     <div id="selectedCard" class="card selected hidden">
       <div class="sectionHead"><div><h2 id="selectedTitle">Punto selezionato</h2><div id="selectedCoords" class="muted"></div></div><button id="clearSelectedBtn" class="iconBtn">✕</button></div>
       <div class="actionGrid">
+        <button id="selectedSightingBtn" class="primary" data-pfc-activity-only="hunt">🕊️ Salva in Avvistamenti</button>
+        <button id="selectedMushroomBtn" class="primary" data-pfc-activity-only="mushroom">🍄 Salva nel diario funghi</button>
         <button id="savePointBtn" class="primary">📌 Salva punto selezionato</button>
         <button id="navigateBtn" class="secondary">▶ Partenza</button>
         <button id="shareSelectedBtn" class="secondary">↗ Condividi</button>
@@ -168,12 +170,12 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
 <script type="text/plain" data-pfc-src="wind-engine-6.9.3.js?v=local-wind-20261015"></script>
 <script type="text/plain" data-pfc-src="wind-6.9.3-modes.js?v=offline-20261016"></script>
 <script type="text/plain" data-pfc-src="dog-6.9.3-pair.js?v=6.9.3-pair1"></script>
-<script type="text/plain" data-pfc-src="app-6.9.8.js?v=photo-only-20261016"></script>
+<script type="text/plain" data-pfc-src="app-6.9.8.js?v=selected-point-20261016"></script>
 <script type="text/plain" data-pfc-src="home-6.9.6.js?v=photo-only-20261016"></script>
 <script src="vendor/supabase-2.95.3.js" defer></script>
 <script type="text/plain" data-pfc-src="native-team-6.9.9.js?v=position-only-20261015"></script>
 <script type="text/plain" data-pfc-src="friends-6.9.8-reconnect.js?v=position-audit-20261016"></script>
-<script type="text/plain" data-pfc-src="activity-6.9.3-modes.js?v=6.9.3-modes1"></script>
+<script type="text/plain" data-pfc-src="activity-6.9.3-modes.js?v=selected-meteo-20261016"></script>
 
 <script type="text/plain" data-pfc-src="puglia-rules.js?v=20261015"></script>
 <script type="text/plain" data-pfc-src="puglia-restrictions.js?v=20261015"></script>

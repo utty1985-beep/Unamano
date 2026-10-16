@@ -4,7 +4,7 @@
 const q=id=>document.getElementById(id);
 let previous=null,pending=false;
 const mode=()=>{try{return JSON.parse(localStorage.getItem('pfc-v661-settings')||'{}').mode==='mushroom'?'mushroom':'hunt';}catch{return 'hunt';}};
-const huntIds=['pfc676Save','quickSaveHereBtn','weatherRefreshBtn','pfc678Sighting','pfc676Conditions','pfc683AppostamentiConditions','pfc676Calendar','pfc676Territory','ct661Card','ctCalendarCard','ctHuntDayBar','ctConditionBtn','ctCompareMainBtn','ctSightingCheck','ctWindCanvas','ctWindHud','ctWindLegend','teamMapBar','dogMapBar','pfcFriendsBtn','pfcFriendsBackupBtn','dogSettingsBtn','pfc676Protected'];
+const huntIds=['pfc676Save','quickSaveHereBtn','pfc678Sighting','pfc676Conditions','pfc683AppostamentiConditions','pfc676Calendar','pfc676Territory','ct661Card','ctCalendarCard','ctHuntDayBar','ctConditionBtn','ctCompareMainBtn','ctSightingCheck','ctWindCanvas','ctWindHud','ctWindLegend','teamMapBar','dogMapBar','pfcFriendsBtn','pfcFriendsBackupBtn','dogSettingsBtn','pfc676Protected'];
 const mushroomIds=['pfc678Mushroom','pfc678Species','quickMushroomBtn','quickSpeciesBtn'];
 function text(e,value){if(e&&e.textContent!==value)e.textContent=value;}
 function apply(){
@@ -13,7 +13,7 @@ function apply(){
  for(const id of mushroomIds){const e=q(id);if(e)e.dataset.pfcActivityOnly='mushroom';}
  for(const id of ['pointWindName','pointWindDir','pointWindSpeed','pointWindGust','pointReadWeatherBtn','pointWeatherSummary','pointType']){const e=q(id)?.closest('.full, .formGrid > div');if(e)e.dataset.pfcActivityOnly='hunt';}
  document.querySelectorAll('[data-basemap="wind"],.pfcWindButton,.pfcWindResult').forEach(e=>e.dataset.pfcActivityOnly='hunt');
- document.querySelectorAll('.homeWeatherCard,.pfcWeatherSettings').forEach(e=>e.setAttribute('data-pfc-activity-only','hunt'));
+ document.querySelectorAll('.pfcWeatherSettings').forEach(e=>e.setAttribute('data-pfc-activity-only','hunt'));
  document.querySelectorAll('#page-backup > button').forEach(e=>{if(e.textContent.includes('GPS cane'))e.dataset.pfcActivityOnly='hunt';});
  text(q('pfc676NavPosts')?.lastChild,mush?'Funghi salvati':'Appostamenti');
  text(q('pfc676NavSight')?.lastChild,mush?'Ritrovamenti':'Avvistamenti');
