@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const q=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const results=new Map();let api,modalPoint=null,request=0;
-const weatherError=e=>e.name==='AbortError'||e.name==='TimeoutError'?'MeteoAM non risponde. Riprova tra poco.':/fetch|network|load failed/i.test(e.message||'')?'Vento attuale non disponibile: collegamento a MeteoAM non riuscito. Riprova.':e.message||'Vento attuale non disponibile. Riprova.';
+const weatherError=e=>e.name==='AbortError'||e.name==='TimeoutError'?'Open-Meteo non risponde. Riprova tra poco.':/fetch|network|load failed/i.test(e.message||'')?'Vento attuale non disponibile: collegamento a Open-Meteo non riuscito. Riprova.':e.message||'Vento attuale non disponibile. Riprova.';
 const clock=(t,tz)=>new Date(t*1000).toLocaleString('it-IT',{timeZone:tz,day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 const describe=s=>s.speed<3?'Calma / vento debole · '+s.speed.toFixed(1)+' km/h':PFC_WIND_ENGINE.windName(s.dir)+' · '+Math.round(s.dir)+'° · '+s.speed.toFixed(1)+' km/h';
 function html(z){if(z.error)return '<p class="pfcWindMissing">'+esc(z.error)+'</p>';const {now,base,similar,change,knownUntil,gap,timezone,similarUntil}=z;
