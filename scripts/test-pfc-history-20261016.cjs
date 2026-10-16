@@ -4,7 +4,7 @@ const html=read('index.html'),active=[...html.matchAll(/data-pfc-src="([^"?]+)/g
 for(const file of active){assert(fs.existsSync('cacciatraccia/'+file),file);new vm.Script(read(file),{filename:file});}
 assert(active.includes('meteoam-only.js'));assert(active.includes('friends-6.9.8-reconnect.js'));assert(!active.some(f=>/^team-/.test(f)),'removed voice UI cannot load');
 assert.equal((read('app-6.9.8.js').match(/<option value="meteoam">/g)||[]).length,2,'provider and external site both MeteoAM only');
-const source=read('app-6.9.8.js'),getLine=token=>source.split('\n').find(l=>l.includes(token));
+const source=read('app-6.9.8.js');assert(!source.includes('getUserMedia'),'radar must never request camera or microphone');assert(!source.includes('<video'),'radar must not contain a camera preview');const getLine=token=>source.split('\n').find(l=>l.includes(token));
 const context={heading:null,lastSample:null,stableCount:0,absoluteSeenAt:0,jumpCandidate:null,open:true,screen:{orientation:{angle:0}},window:{},performance:{now:()=>2000},render(){},setState(){}};
 vm.createContext(context);
 const helpers=['const norm=','const adiff=','const smooth='].map(t=>source.split('\n').filter(l=>l.trim().startsWith(t)).at(-1));

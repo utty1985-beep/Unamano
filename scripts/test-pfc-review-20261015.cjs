@@ -59,6 +59,10 @@ assert(!q('teamPTT')&&!q('teamAudioBtn'),'removed walkie-talkie controls stay ab
 // Dragging the map disables recentering. A held touch selects a valid point.
 const map=w.__PFC_LIVE_API__.map(),mapElement=q('map');map.fire('dragstart');assert.equal(w.__PFC_FINAL_DIAG__().follow,false);
 mapElement.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,clientX:30,clientY:30,button:0}));await new Promise(r=>setTimeout(r,700));mapElement.dispatchEvent(new w.MouseEvent('pointerup',{bubbles:true,clientX:30,clientY:30,button:0}));assert(w.__PFC_FINAL_LAST_SELECT__&&Number.isFinite(w.__PFC_FINAL_LAST_SELECT__.lat));
+// The radar opens using GPS/compass without accessing any media device.
+let mediaRequests=0;Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia(){mediaRequests++;throw Error('Camera must not be requested')}}});
+q('ctRadarBtn').click();await new Promise(r=>setTimeout(r,50));assert(q('ctRadar664').classList.contains('open'));assert.equal(q('ctRadar664').querySelectorAll('video').length,0);assert.equal(mediaRequests,0);
+for(let i=0;i<3;i++){const e=new w.Event('deviceorientationabsolute');Object.assign(e,{alpha:270,beta:0,gamma:0});w.dispatchEvent(e)}assert.equal(q('ct664Deg').textContent,'90°');q('ct664Close').click();assert(!q('ctRadar664').classList.contains('open'));assert.equal(mediaRequests,0);
 // Deletion removes the same record from persistence, map API and both lists.
 const removing=w.CT.del('bird');q('pfcDeletePointDialog').querySelector('button:last-child').click();assert(await removing);assert(!w.__PFC_LIVE_API__.points().some(p=>p.id==='bird'));assert(!JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).points.some(p=>p.id==='bird'));
 console.log(JSON.stringify({status:w.__PFC_APP_STATUS__,errors,warnings: warnings.slice(0,5),tests:'startup, saved points across dates, explicit filter, point coordinates, calm wind, diary save/delete, invalid backup, map navigation/layers, parking, walking, bird comparison'}));

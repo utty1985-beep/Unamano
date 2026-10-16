@@ -9,6 +9,7 @@ Verifica del 16 ottobre 2026. Progetto effettivo: `utty1985-beep/Unamano/cacciat
 - Normativa e territorio: Puglia. Nessuna reintroduzione dei regolamenti delle altre regioni.
 - Meteo: esclusivamente Aeronautica Militare. Conservati vento e nomi locali indicativi Favugna/Voria, insieme a direzione e nome standard.
 - Il precedente player audio delle specie resta rimosso.
+- Aggiornamento successivo del 16 ottobre: fotocamera rimossa dal radar su richiesta dell’utente. Il radar usa solo GPS e bussola; foto di punti e funghi restano disponibili.
 
 ## Riscontri voce per voce
 
@@ -33,7 +34,7 @@ Verifica del 16 ottobre 2026. Progetto effettivo: `utty1985-beep/Unamano/cacciat
 | Confronto e ora cambio vento | Motore provato per direzioni, calma, cambi, intervallo previsione e buchi temporali | Non promette continuità oltre le ore effettivamente disponibili |
 | Nomi locali | Etichette Favugna/Voria presenti, senza modificare i gradi salvati | Terminologia dialettale indicativa |
 | Radar e inclinazione | Corretto ulteriore errore: valori sensore nulli non diventano falsamente Nord; test per rotazione e blocco su inclinazione | Sensori reali e fotocamera non certificati |
-| Fotocamera radar nell'APK | Nel sorgente Android 6.9.9 manca CAMERA e la richiesta WebView accetta solo AUDIO_CAPTURE | Anomalia nativa ancora aperta: richiede modifica, compilazione e firma di un nuovo APK; non risolvibile dal solo sito |
+| Fotocamera radar | Rimossa su richiesta del 16 ottobre. Nessun elemento video o chiamata getUserMedia nel radar attuale; apertura/chiusura e direzione provate | Nessun nuovo APK richiesto per questa rimozione online |
 | Squadra Live | Test sul modulo effettivamente caricato: nomi, membri senza GPS, coordinate fresche, ultima posizione, riconnessione, pausa/uscita, ponte background; crittografia reale con trasporto simulato | Due telefoni reali, Bluetooth/Wi-Fi Direct e continuità Android non certificati. Nessun PTT da ripristinare |
 | Regolamenti Puglia e avvisi in mappa | Dati ufficiali caricati: 40 aree protette e 120 SIC/ZPS; test geometrie, buchi, precisione GPS e freschezza; controllo giornaliero configurato | Una variazione della pagina normativa non genera automaticamente nuovi divieti geolocalizzati; ordinanze locali non tutte incluse |
 | ATC automatico | Rilevamento provincia/comune e correzione BAT presenti; indicazione espressamente da verificare | Non è una verifica giuridica di ogni confine ATC |
@@ -56,4 +57,4 @@ Il workflow Pages ora richiede questi controlli prima del deploy, invece di veri
 
 ## Conclusione della verifica
 
-Non è corretto dichiarare tutte le richieste storiche già concluse. Le regressioni web riproducibili coperte dai test sono corrette; restano aperti fotocamera dell'APK, consegna email, disponibilità del riconoscimento funghi e verifiche Android reali. Offline completo, cloud dei punti, pubblicazione store e tutorial non hanno un completamento verificabile nell'ingresso attuale. Le funzioni rimosse il 15 ottobre non sono state reintrodotte.
+Non è corretto dichiarare tutte le richieste storiche già concluse. Le regressioni web riproducibili coperte dai test sono corrette; restano aperti consegna email, disponibilità del riconoscimento funghi e verifiche Android reali. La fotocamera del radar è stata successivamente rimossa su richiesta del 16 ottobre. Offline completo, cloud dei punti, pubblicazione store e tutorial non hanno un completamento verificabile nell'ingresso attuale. Le funzioni rimosse il 15 ottobre non sono state reintrodotte.
