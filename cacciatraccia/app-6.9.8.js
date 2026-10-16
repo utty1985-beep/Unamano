@@ -111,7 +111,7 @@ async function weather(lat,lng){
     const u=`https://pfc-weather.invalid/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
     const r=await fetch(u); if(!r.ok) throw Error('Meteo non disponibile'); const j=await r.json(), c=j.current||{};
     if(!selected){selected={lat:__pfcTargetLat,lng:__pfcTargetLng,weather:null};}else if(!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;
-    selected.weather={source:j.source||'Meteo Aeronautica Militare',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m};
+    selected.weather={source:j.source||'Open-Meteo',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m};
     $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${wname(c.wind_direction_10m)} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div></div>`;
     $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   }catch(e){ $('weatherBody').innerHTML=`<div class="empty">${esc(e.message)}${navigator.onLine?'':' · ultimo dato salvato resta nel punto'}</div>`; }
@@ -385,7 +385,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   }
 
   // ---------- fonte/modello meteo ----------
-  const WEATHER_KEY='cacciatraccia-weather-v2',defaults={model:'meteoam',site:'meteoam',custom:''};
+  const WEATHER_KEY='cacciatraccia-weather-v2',defaults={model:'best_match',site:'openmeteo',custom:''};
   let weatherCfg=defaults;try{weatherCfg={...defaults,...JSON.parse(localStorage.getItem(WEATHER_KEY)||'{}')}}catch{}
   const saveWeatherCfg=()=>localStorage.setItem(WEATHER_KEY,JSON.stringify(weatherCfg));
   if(!window.__ctWeatherFetchPatched){
@@ -393,14 +393,14 @@ window.__PFC_BOOT_READY__=(async()=>{
     window.fetch=(input,init)=>{try{const raw=typeof input==='string'?input:input?.url;if(raw&&raw.includes('api.open-meteo.com/v1/forecast')){const u=new URL(raw,location.href);if(weatherCfg.model&&weatherCfg.model!=='best_match')u.searchParams.set('models',weatherCfg.model);else u.searchParams.delete('models');input=typeof input==='string'?u.toString():new Request(u.toString(),input)}}catch(e){console.warn('Weather model patch',e)}return nativeFetch(input,init)};
   }
   function currentMapCenter(){try{const c=map?.getCenter?.();if(c)return {lat:c.lat,lng:c.lng}}catch{}return {lat:41.46,lng:15.55}}
-  function openWeatherSite(){window.open('https://www.meteoam.it/it/puglia','_blank','noopener');return;const {lat,lng}=currentMapCenter();let url='';if(weatherCfg.site==='windy')url=`https://www.windy.com/?${lat.toFixed(5)},${lng.toFixed(5)},10`;else if(weatherCfg.site==='meteoam')url='https://www.meteoam.it/it/home';else if(weatherCfg.site==='3bmeteo')url='https://www.3bmeteo.com/';else if(weatherCfg.site==='custom'){url=(weatherCfg.custom||'').trim();if(!url)return toast('Inserisci prima il sito meteo personalizzato');if(!/^https?:\/\//i.test(url))url='https://'+url}if(url)window.open(url,'_blank','noopener')}
+  function openWeatherSite(){window.open('https://open-meteo.com/','_blank','noopener');return;const {lat,lng}=currentMapCenter();let url='';if(weatherCfg.site==='windy')url=`https://www.windy.com/?${lat.toFixed(5)},${lng.toFixed(5)},10`;else if(weatherCfg.site==='meteoam')url='https://www.meteoam.it/it/home';else if(weatherCfg.site==='3bmeteo')url='https://www.3bmeteo.com/';else if(weatherCfg.site==='custom'){url=(weatherCfg.custom||'').trim();if(!url)return toast('Inserisci prima il sito meteo personalizzato');if(!/^https?:\/\//i.test(url))url='https://'+url}if(url)window.open(url,'_blank','noopener')}
   function initWeatherSettingsUI(){
     if(document.getElementById('ctWeatherSettings'))return;const body=$('weatherBody'),card=body?.closest('.card');if(!card)return;
     const box=document.createElement('div');box.id='ctWeatherSettings';box.className='ctWeatherSettings';box.innerHTML=`
-      <div><label>Fonte meteo</label><select id="ctWeatherModel" disabled><option value="meteoam">Aeronautica Militare</option></select><div class="ctWeatherNote">Previsioni del servizio Meteo Aeronautica Militare, senza fornitori alternativi.</div></div>
-      <div><label>Bollettino ufficiale</label><select id="ctWeatherSite" disabled><option value="meteoam">Meteo Aeronautica Militare</option></select></div>
+      <div><label>Fonte meteo</label><select id="ctWeatherModel" disabled><option value="best_match">Open-Meteo · gratuito</option></select><div class="ctWeatherNote">Open-Meteo · previsioni gratuite per uso personale, aggiornate online.</div></div>
+      <div><label>Bollettino ufficiale</label><select id="ctWeatherSite" disabled><option value="openmeteo">Open-Meteo</option></select></div>
       <div class="full" id="ctWeatherCustomWrap" style="display:none"><label>Indirizzo del sito meteo</label><input id="ctWeatherCustom" type="url" placeholder="https://www.miositometeo.it"></div>
-      <div class="full"><button id="ctOpenWeatherSite" class="secondary">🌦 Apri Meteo Aeronautica Militare</button></div>`;
+      <div class="full"><button id="ctOpenWeatherSite" class="secondary">🌦 Apri Open-Meteo</button></div>`;
     body.insertAdjacentElement('beforebegin',box);
     const model=$('ctWeatherModel'),site=$('ctWeatherSite'),custom=$('ctWeatherCustom'),wrap=$('ctWeatherCustomWrap');model.value=weatherCfg.model;site.value=weatherCfg.site;custom.value=weatherCfg.custom||'';const syncCustom=()=>wrap.style.display=site.value==='custom'?'block':'none';syncCustom();
     model.onchange=()=>{weatherCfg.model=model.value;saveWeatherCfg();toast('Fonte meteo aggiornata');if(selected)weather(selected.lat,selected.lng)};site.onchange=()=>{weatherCfg.site=site.value;saveWeatherCfg();syncCustom()};custom.onchange=()=>{weatherCfg.custom=custom.value.trim();saveWeatherCfg()};$('ctOpenWeatherSite').onclick=openWeatherSite;
@@ -1112,7 +1112,7 @@ window.__PFC_BOOT_READY__=(async()=>{
       const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Meteo non disponibile');const j=await r.json(),c=j.current||{},h=j.hourly||{};
       if(!selected){selected={lat:__pfcTargetLat,lng:__pfcTargetLng,weather:null};}else if(!Number.isFinite(+selected.lat)||!Number.isFinite(+selected.lng)||Math.abs((+selected.lat)-__pfcTargetLat)>1e-7||Math.abs((+selected.lng)-__pfcTargetLng)>1e-7)return null;
       const idx=nearestHourlyIndex(h.time,Date.now()),rain=idx>=0?(h.precipitation_probability?.[idx]??null):null,change=firstWindChange(h,idx);
-      selected.weather={source:j.source||'Meteo Aeronautica Militare',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
+      selected.weather={source:j.source||'Open-Meteo',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
       const cards=[];
       for(let i=Math.max(0,idx);i<Math.min((h.time||[]).length,Math.max(0,idx)+6);i++){
         cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${h.precipitation_probability?.[i]==null?'—':Math.round(h.precipitation_probability[i])+'%'}</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${Math.round(h.wind_speed_10m?.[i]||0)} km/h</span></div>`);
