@@ -25,6 +25,22 @@
       if(b){b.setAttribute('aria-label',label);b.setAttribute('type','button');}
     }
     setupTiles(wrap);
+    const version=document.querySelector('.pfc694Version');
+    if(version)version.textContent='Interfaccia 6.9.14 · uso privato';
+    for(const item of document.querySelectorAll('#pfc694Menu .pfc694MenuItem')){
+      const strong=item.querySelector('strong');
+      if(strong?.textContent==='Squadra e voce'){
+        strong.textContent='Squadra Live';
+        const info=item.querySelector('small');
+        if(info)info.textContent='Posizioni degli amici sulla mappa';
+      }
+    }
+    const guide=document.querySelector('.pfc694Guide');
+    for(const p of guide?.querySelectorAll('p')||[]){
+      if(p.textContent?.includes('Per parlare')){
+        p.textContent='In Caccia, usa Squadra Live per vedere nomi e distanze degli amici con Internet attivo. I tuoi punti e appostamenti restano privati.';
+      }
+    }
   }
   function setupTiles(wrap){
     const map=$('map');
