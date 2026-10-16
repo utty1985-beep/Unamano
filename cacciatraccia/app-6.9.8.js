@@ -20,7 +20,7 @@ try { state = { ...state, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); window.dispatchEvent(new Event('pfc:data-changed')); try{renderAll()}catch(e){console.error('Aggiornamento schermata',e);toast('Dati salvati. Riapri la schermata per aggiornarla.')} };
 const hav = (a,b) => { const R=6371,r=x=>x*Math.PI/180,d1=r(b[0]-a[0]),d2=r(b[1]-a[1]),q=Math.sin(d1/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(q)); };
-const wname = d => ['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((+d||0)%360)+360)%360/45)%8];
+const wname = d => d==null||d===''||!Number.isFinite(Number(d))?'Vento non disponibile':['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((Number(d)%360)+360)%360)/45)%8];
 const wdir = d => ['N','NE','E','SE','S','SO','O','NO'][Math.round((((+d||0)%360)+360)%360/45)%8];
 const wtext = c => ({0:'Sereno',1:'Prevalentemente sereno',2:'Parzialmente nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia',51:'Pioviggine',53:'Pioviggine',55:'Pioviggine forte',61:'Pioggia debole',63:'Pioggia',65:'Pioggia forte',80:'Rovesci',81:'Rovesci',82:'Rovesci forti',95:'Temporale',96:'Temporale',99:'Temporale forte'})[c] || 'Dato non disponibile';
 const when = iso => { try { return new Date(iso).toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso||''; } };
@@ -1096,11 +1096,13 @@ window.__PFC_BOOT_READY__=(async()=>{
   function firstWindChange(hourly,startIndex){
     const dirs=hourly?.wind_direction_10m||[],speeds=hourly?.wind_speed_10m||[],times=hourly?.time||[];
     if(startIndex<0||!times.length)return null;
-    const d0=+dirs[startIndex]||0,s0=+speeds[startIndex]||0;
+    const d0=dirs[startIndex]==null?NaN:Number(dirs[startIndex]);
+    const s0=speeds[startIndex]==null?NaN:Number(speeds[startIndex]);
+    if(!Number.isFinite(d0)||!Number.isFinite(s0))return null;
     for(let i=startIndex+1;i<Math.min(times.length,startIndex+13);i++){
-      if(angleDiff(d0,+dirs[i]||0)>=45||Math.abs((+speeds[i]||0)-s0)>=12){
-        return {time:times[i],dir:+dirs[i]||0,speed:+speeds[i]||0};
-      }
+      const d=dirs[i]==null?NaN:Number(dirs[i]),speed=speeds[i]==null?NaN:Number(speeds[i]);
+      if(!Number.isFinite(d)||!Number.isFinite(speed))continue;
+      if(angleDiff(d0,d)>=45||Math.abs(speed-s0)>=12)return {time:times[i],dir:d,speed};
     }
     return null;
   }
@@ -1115,9 +1117,9 @@ window.__PFC_BOOT_READY__=(async()=>{
       selected.weather={source:j.source||'Open-Meteo',fetchedAt:new Date().toISOString(),temperature:c.temperature_2m,condition:wtext(c.weather_code),windName:wname(c.wind_direction_10m),windDir:wdir(c.wind_direction_10m),windDeg:+c.wind_direction_10m||0,windSpeed:c.wind_speed_10m,windGust:c.wind_gusts_10m,rainProbability:rain,nextWindChange:change};
       const cards=[];
       for(let i=Math.max(0,idx);i<Math.min((h.time||[]).length,Math.max(0,idx)+6);i++){
-        cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${h.precipitation_probability?.[i]==null?'—':Math.round(h.precipitation_probability[i])+'%'}</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${Math.round(h.wind_speed_10m?.[i]||0)} km/h</span></div>`);
+        cards.push(`<div class="ctHour"><b>${fmtHour(h.time[i])}</b><span>🌧 ${h.precipitation_probability?.[i]==null?'—':Math.round(h.precipitation_probability[i])+'%'}</span><span>💨 ${esc(localWindName(wname(h.wind_direction_10m?.[i])))} ${(h.wind_speed_10m?.[i]==null?'—':Math.round(h.wind_speed_10m[i]))} km/h</span></div>`);
       }
-      $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'stabile 12 h'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
+      $('weatherBody').innerHTML=`<div class="weatherGrid"><div class="weatherNow"><span>Temperatura</span><b>${c.temperature_2m??'-'} °C</b></div><div class="weatherNow"><span>Condizioni</span><b>${wtext(c.weather_code)}</b></div><div class="weatherNow"><span>Vento</span><b>${esc(localWindName(wname(c.wind_direction_10m)))} ${wdir(c.wind_direction_10m)}</b><small>${(c.wind_speed_10m==null?'—':Math.round(c.wind_speed_10m))} km/h</small></div><div class="weatherNow"><span>Raffiche</span><b>${(c.wind_gusts_10m==null?'—':Math.round(c.wind_gusts_10m))} km/h</b></div><div class="weatherNow"><span>Pioggia</span><b>${rain==null?'-':Math.round(rain)+'%'}</b></div><div class="weatherNow"><span>Prossimo cambio vento</span><b>${change?fmtHour(change.time):'nessun cambio rilevato'}</b>${change?`<small>${esc(localWindName(wname(change.dir)))} ${Math.round(change.speed)} km/h</small>`:''}</div></div><div class="ctHourly">${cards.join('')}</div>`;
       $('weatherStamp').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
       decorateLocalWind();
       return selected.weather;
@@ -1198,7 +1200,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     let deg=num(p.windDeg);if(deg==null)deg=num(p.weather?.windDeg);
     if(deg==null){
       const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];
-      const n=String(p.windName||p.weather?.windName||'').replace(/\s*\(.*?\)\s*/g,'').trim(),ix=names.indexOf(n);
+      const raw=String(p.windName||p.weather?.windName||'');const n=window.PFC_WIND_LABELS?.canonical(raw)||raw.replace(/\s*\(.*?\)\s*/g,'').trim(),ix=names.indexOf(n);
       if(ix>=0)deg=ix*45;
     }
     const speed=num(p.windSpeed)??num(p.weather?.windSpeed);
@@ -1577,7 +1579,7 @@ window.__PFC_BOOT_READY__=(async()=>{
   const meteoNumber=v=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
   function baseWind(p){
     let d=meteoNumber(p.windDeg)??meteoNumber(p.weather?.windDeg);
-    if(d==null){const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];const n=String(p.windName||p.weather?.windName||'').replace(/\s*\(.*?\)\s*/g,'').trim();const i=names.indexOf(n);if(i>=0)d=i*45;}
+    if(d==null){const names=['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'];const raw=String(p.windName||p.weather?.windName||'');const n=window.PFC_WIND_LABELS?.canonical(raw)||raw.replace(/\s*\(.*?\)\s*/g,'').trim();const i=names.indexOf(n);if(i>=0)d=i*45;}
     return {d,s:meteoNumber(p.windSpeed)??meteoNumber(p.weather?.windSpeed)};
   }
   function nearest(times,t){let ix=-1,bd=Infinity;(times||[]).forEach((x,i)=>{const q=Math.abs(new Date(x).getTime()-t.getTime());if(q<bd){bd=q;ix=i}});return ix}
@@ -2309,13 +2311,13 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
      try{
        localStorage.setItem(STORE,JSON.stringify(next));
        // Only restore whitelisted application settings, never auth or group secrets.
-       if(mode==='replace')for(const key of Object.keys(settingsBefore)){let value=payload.settings?.[key];if(value==null)continue;if(typeof value!=='string')throw Error('Impostazioni backup non valide');if(key==='pfc-v661-settings'){const c=JSON.parse(value);c.region='Puglia';value=JSON.stringify(c)}if(key==='cacciatraccia-weather-v2')value=JSON.stringify({model:'meteoam',site:'meteoam',custom:''});localStorage.setItem(key,value);}
+       if(mode==='replace')for(const key of Object.keys(settingsBefore)){let value=payload.settings?.[key];if(value==null)continue;if(typeof value!=='string')throw Error('Impostazioni backup non valide');if(key==='pfc-v661-settings'){const c=JSON.parse(value);c.region='Puglia';value=JSON.stringify(c)}if(key==='cacciatraccia-weather-v2')value=JSON.stringify({model:'best_match',site:'openmeteo',custom:''});localStorage.setItem(key,value);}
        if(payload.activeTrack?.coords?.length&&!trackBefore){if(payload.activeTrack.coords.some(c=>!validCoords({lat:c[0],lng:c[1]})))throw Error('Percorso recuperato non valido');localStorage.setItem('cacciatraccia-active-track-v1',JSON.stringify(payload.activeTrack))}
        state=next;renderAll();window.dispatchEvent(new Event('pfc:data-changed'));return true;
      }catch(e){state=previous;localStorage.setItem(STORE,JSON.stringify(previous));for(const [k,v]of Object.entries(settingsBefore))if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v);if(trackBefore==null)localStorage.removeItem('cacciatraccia-active-track-v1');else localStorage.setItem('cacciatraccia-active-track-v1',trackBefore);renderAll();throw e;}
    }
    window.__PFC_LIVE_API__={backup:backupPayload,restoreBackup:restoreCloudPayload,points:()=>structuredClone(state.points||[]),map:()=>map,getFix:()=>getFix(),showMap:()=>{follow=false;$('followBtn')?.classList.remove('active');showPage('map');},openSightings:()=>{showPage('diary');historyFilter='sightings';document.querySelectorAll('[data-history]').forEach(b=>b.classList.toggle('active',b.dataset.history==='sightings'));renderDiary();}};
-   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.8';
+   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.11';
    setBootStatus('ready');
  }catch(e){console.error('Avvio funzioni',e);setBootStatus('error',e.message);}
 }).catch(e=>{
