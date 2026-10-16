@@ -18,7 +18,7 @@ let follow = true, selected = null, editing = null, historyFilter = 'all', insta
 let track = { active:false, watch:null, start:0, coords:[], km:0, timer:null, line:null };
 try { state = { ...state, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; } catch {}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); try{renderAll()}catch(e){console.error('Aggiornamento schermata',e);toast('Dati salvati. Riapri la schermata per aggiornarla.')} };
+const save = () => { localStorage.setItem(STORE, JSON.stringify(state)); window.dispatchEvent(new Event('pfc:data-changed')); try{renderAll()}catch(e){console.error('Aggiornamento schermata',e);toast('Dati salvati. Riapri la schermata per aggiornarla.')} };
 const hav = (a,b) => { const R=6371,r=x=>x*Math.PI/180,d1=r(b[0]-a[0]),d2=r(b[1]-a[1]),q=Math.sin(d1/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(q)); };
 const wname = d => ['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][Math.round((((+d||0)%360)+360)%360/45)%8];
 const wdir = d => ['N','NE','E','SE','S','SO','O','NO'][Math.round((((+d||0)%360)+360)%360/45)%8];
@@ -316,7 +316,7 @@ window.CT={
 };
 window.__PFC_BOOT_READY__=(async()=>{
   try{
-    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('./sw-6.9.8.js?v=6.9.8').catch(e=>console.warn('SW',e)); }catch(e){console.warn('SW',e);} }
+    window.PFC_OFFLINE?.register();
     ensureModalActions(); await ensureLeaflet(); initMap(); bind();
   }catch(e){ console.error(e); const m=document.getElementById('map'); if(m)m.innerHTML=`<div style="padding:22px;color:#8b1e16;font-weight:700">Errore mappa: ${esc(e.message)}. Ricarica una volta con Internet attivo.</div>`; throw e; }
 })();
@@ -1256,12 +1256,12 @@ window.__PFC_BOOT_READY__=(async()=>{
       const nw=tileXY(b.getNorth(),b.getWest(),z),se=tileXY(b.getSouth(),b.getEast(),z),n=2**z;
       for(let y=Math.max(0,nw.y-1);y<=Math.min(n-1,se.y+1);y++)for(let x=nw.x-1;x<=se.x+1;x++){const xx=((x%n)+n)%n;reqs.push(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${xx}`)}
     }
-    const urls=[...new Set(reqs)].slice(0,96);if(!urls.length)return toast('Area non disponibile');
+    const streetMode=map.hasLayer(street);const all=[...new Set(reqs)].map(u=>{if(!streetMode)return u;const [z,y,x]=u.split('/').slice(-3);return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`});if(all.length>240)return toast('Area troppo grande: ingrandisci la mappa e salva una zona più piccola.');const urls=all;if(!urls.length)return toast('Area non disponibile');
     toast(`Salvo ${urls.length} tessere mappa…`);let done=0;
     try{
       const cache=await caches.open(OFFLINE_TILE_CACHE);
-      for(let i=0;i<urls.length;i+=4){const batch=urls.slice(i,i+4);await Promise.allSettled(batch.map(async u=>{const q=new Request(u,{mode:'no-cors',cache:'reload'});const r=await fetch(q);if(r)await cache.put(q,r.clone());done++}));}
-      localStorage.setItem('cacciatraccia-offline-area-last',JSON.stringify({at:new Date().toISOString(),count:done,center:map.getCenter(),zoom:base}));toast(`Zona interessata salvata offline: ${done} tessere`);
+      for(let i=0;i<urls.length;i+=4){const batch=urls.slice(i,i+4);await Promise.allSettled(batch.map(async u=>{const q=new Request(u,{mode:'no-cors',cache:'reload'});const r=await fetch(q);if(r&&(r.ok||r.type==='opaque')){await cache.put(q,r.clone());done++}}));}
+      localStorage.setItem('cacciatraccia-offline-area-last',JSON.stringify({at:new Date().toISOString(),count:done,center:map.getCenter(),zoom:base}));toast(done===urls.length?`Zona salvata offline: ${done} tessere`:`Area incompleta: ${done} tessere su ${urls.length}. Riprova prima dell’uscita.`);
     }catch(e){console.warn(e);toast('Salvataggio area incompleto: '+done+' tessere')}
   }
   function ensureOfflineButton(){
@@ -1357,8 +1357,8 @@ window.__PFC_BOOT_READY__=(async()=>{
     exportTxtBtn:'Esporta un file di testo con le coordinate dei punti salvati.',
     makeSnapshotBtn:'Crea una copia locale dello stato attuale dei dati.',
     persistBtn:'Chiede al telefono di conservare con maggiore priorità i dati locali dell’app.',
-    syncNowBtn:'Sincronizza i dati con il cloud quando il servizio cloud sarà attivo.',
-    accountBtn:'Apre le funzioni account e recupero quando il cloud sarà attivo.',
+    syncNowBtn:'Salva una copia privata completa nel tuo account quando sei online.',
+    accountBtn:'Mostra il tuo account e consente di uscire.',
     ctOfflineAreaBtn:'Salva nella cache l’area di mappa visualizzata per usarla con poca rete.',
     ctAudioToggle:'Apre o chiude il lettore degli audio personali.',
     ctAudioPrev:'Passa all’audio personale precedente.',
@@ -2369,7 +2369,26 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
  window.__PFC_ALERT_STATUS__=()=>({version:'6.8.0',settings:{...cfg},statuses:{...statuses},count:history.length});render();if(lastPos)onPosition(lastPos);
 })();
 
-   window.__PFC_LIVE_API__={points:()=>structuredClone(state.points||[]),map:()=>map,getFix:()=>getFix(),showMap:()=>{follow=false;$('followBtn')?.classList.remove('active');showPage('map');},openSightings:()=>{showPage('diary');historyFilter='sightings';document.querySelectorAll('[data-history]').forEach(b=>b.classList.toggle('active',b.dataset.history==='sightings'));renderDiary();}};
+   function backupPayload(){
+     let activeTrack=null;try{activeTrack=JSON.parse(localStorage.getItem('cacciatraccia-active-track-v1')||'null')}catch{}
+     return structuredClone({version:1,data:state,settings:window.PFC_LOCAL?.settings()||{},activeTrack});
+   }
+   function restoreCloudPayload(payload,mode='merge'){
+     if(track.active)throw Error('Termina la camminata in corso prima di ripristinare un backup.');
+     const incoming=payload?.data;if(!incoming||!['points','outings','diary'].every(k=>Array.isArray(incoming[k]))||incoming.points.some(p=>!validCoords(p))||(incoming.car!=null&&!validCoords(incoming.car))||incoming.outings.some(o=>!o||!Array.isArray(o.coords)||o.coords.some(c=>!Array.isArray(c)||!validCoords({lat:c[0],lng:c[1]})))||incoming.diary.some(d=>!d||typeof d!=='object'))throw Error('Backup non valido: dati locali conservati');
+     const previous=structuredClone(state),settingsBefore=window.PFC_LOCAL?.settings()||{},trackBefore=localStorage.getItem('cacciatraccia-active-track-v1');
+     const merge=(current,old)=>{const m=new Map(current.map(x=>[String(x.id),x]));for(const x of old){const local=m.get(String(x.id));if(!local||Date.parse(x.updatedAt||x.createdAt||0)>Date.parse(local.updatedAt||local.createdAt||0))m.set(String(x.id),x)}return [...m.values()]};
+     const next=mode==='replace'?structuredClone(incoming):{...previous,points:merge(previous.points,incoming.points),outings:merge(previous.outings,incoming.outings),diary:merge(previous.diary,incoming.diary),car:previous.car||incoming.car||null};
+     makeSnapshot();
+     try{
+       localStorage.setItem(STORE,JSON.stringify(next));
+       // Only restore whitelisted application settings, never auth or group secrets.
+       if(mode==='replace')for(const key of Object.keys(settingsBefore)){let value=payload.settings?.[key];if(value==null)continue;if(typeof value!=='string')throw Error('Impostazioni backup non valide');if(key==='pfc-v661-settings'){const c=JSON.parse(value);c.region='Puglia';value=JSON.stringify(c)}if(key==='cacciatraccia-weather-v2')value=JSON.stringify({model:'meteoam',site:'meteoam',custom:''});localStorage.setItem(key,value);}
+       if(payload.activeTrack?.coords?.length&&!trackBefore){if(payload.activeTrack.coords.some(c=>!validCoords({lat:c[0],lng:c[1]})))throw Error('Percorso recuperato non valido');localStorage.setItem('cacciatraccia-active-track-v1',JSON.stringify(payload.activeTrack))}
+       state=next;renderAll();window.dispatchEvent(new Event('pfc:data-changed'));return true;
+     }catch(e){state=previous;localStorage.setItem(STORE,JSON.stringify(previous));for(const [k,v]of Object.entries(settingsBefore))if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v);if(trackBefore==null)localStorage.removeItem('cacciatraccia-active-track-v1');else localStorage.setItem('cacciatraccia-active-track-v1',trackBefore);renderAll();throw e;}
+   }
+   window.__PFC_LIVE_API__={backup:backupPayload,restoreBackup:restoreCloudPayload,points:()=>structuredClone(state.points||[]),map:()=>map,getFix:()=>getFix(),showMap:()=>{follow=false;$('followBtn')?.classList.remove('active');showPage('map');},openSightings:()=>{showPage('diary');historyFilter='sightings';document.querySelectorAll('[data-history]').forEach(b=>b.classList.toggle('active',b.dataset.history==='sightings'));renderDiary();}};
    const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.8';
    setBootStatus('ready');
  }catch(e){console.error('Avvio funzioni',e);setBootStatus('error',e.message);}

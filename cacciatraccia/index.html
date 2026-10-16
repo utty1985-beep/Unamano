@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <script src="online-trial.js?v=20261007-1"></script>
+  <script src="offline-support.js?v=20261016-offline1"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#173f2b" />
-  <meta name="description" content="Passione Funghi e Caccia: GPS, caccia, funghi, meteo, vento, camminate, diario e backup. Versione di prova online." />
+  <meta name="description" content="Passione Funghi e Caccia: GPS, caccia, funghi, meteo, vento, camminate, diario e backup. Uso offline dopo la prima apertura online." />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css?v=4.1.2" />
   <link rel="stylesheet" href="home-6.8.1.css?v=6.8.1-realistic2" />
@@ -23,7 +24,7 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
 <body class="pfc-auth-locked">
 <section id="pfcAuthGate" aria-label="Accesso account"><div class="auth-card"><div aria-hidden="true" style="font-size:38px">🌲</div><h1>Passione Funghi e Caccia</h1><h2 id="pfcAuthTitle">Accedi alla tua app</h2><form id="pfcAuthForm"><div id="pfcAuthEmailRow"><label for="pfcAuthEmail">Email</label><input id="pfcAuthEmail" type="email" autocomplete="username" required></div><div id="pfcAuthPasswordRow"><label for="pfcAuthPassword">Password</label><input id="pfcAuthPassword" type="password" autocomplete="current-password" required></div><button id="pfcAuthSubmit" type="submit">Accedi</button></form><div id="pfcAuthMessage" role="status" aria-live="polite"></div><div class="auth-links"><button id="pfcAuthSignup" type="button">Registrati</button><button id="pfcAuthLogin" type="button">Accedi</button><button id="pfcAuthResend" type="button">Reinvia conferma</button><button id="pfcAuthForgot" type="button">Password dimenticata?</button></div><p style="font-size:13px">Usa il tuo account personale. Per il primo accesso è necessaria una connessione Internet.</p></div></section>
 <header class="topbar">
-  <div class="brand"><div class="logo">🧭</div><div><h1>Passione Funghi e Caccia</h1><small>Versione di prova · Solo online</small></div></div>
+  <div class="brand"><div class="logo">🧭</div><div><h1>Passione Funghi e Caccia</h1><small>GPS e dati offline · backup cloud</small></div></div>
   <div class="topActions"><span id="netPill" class="pill">● controllo rete…</span><button id="backupQuickBtn" class="ghost" title="Dati e backup">🛡</button><button id="installBtn" class="ghost" hidden>Installa</button></div>
 </header>
 
@@ -126,11 +127,11 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
     <div class="card"><div class="sectionHead"><h3>Versioni precedenti</h3><span class="muted">max 25</span></div><div id="snapshotsList" class="list"></div></div>
     <div class="card">
       <h3>☁️ Account e sincronizzazione</h3>
-      <div id="cloudStatus" class="notice">Modalità locale attiva. Il modulo cloud è predisposto ma non collegato a nessun altro tuo progetto.</div>
-      <p class="note">L’account consente l’accesso personale. Punti e diario restano sul dispositivo; il backup locale è disponibile qui sotto. Il recupero password avviene via email.</p>
+      <div id="cloudStatus" class="notice">Dati salvati su questo dispositivo. Il backup privato si aggiorna quando sei online.</div>
+      <p class="note">I dati restano disponibili sul dispositivo. Le copie cloud private sono collegate al tuo account e puoi ripristinarle da un altro telefono.</p>
       <div class="actionGrid"><button id="syncNowBtn" class="secondary" disabled>Sincronizza ora</button><button id="accountBtn" class="secondary" disabled>Account / recupero</button></div>
     </div>
-    <div class="card"><h3>📦 Uso con poco Internet</h3><ul class="plain"><li>L’app e i dati locali restano disponibili dopo il primo caricamento online.</li><li>Le porzioni di mappa già visualizzate vengono conservate nella cache del dispositivo quando il browser lo consente.</li><li>Il GPS e il salvataggio dei punti funzionano senza rete; il meteo nuovo richiede rete, ma resta visibile l’ultimo meteo già salvato.</li></ul><button id="persistBtn" class="secondary">Proteggi archiviazione locale</button></div>
+    <div class="card"><h3>📦 Uso offline e mappe scaricate</h3><ul class="plain"><li>L’app e i dati locali restano disponibili dopo il primo caricamento online.</li><li>Le porzioni di mappa già visualizzate vengono conservate nella cache del dispositivo quando il browser lo consente.</li><li>Il GPS e il salvataggio dei punti funzionano senza rete; il meteo nuovo richiede rete, ma resta visibile l’ultimo meteo già salvato.</li></ul><button id="persistBtn" class="secondary">Proteggi archiviazione locale</button></div>
   </section>
 </main>
 
@@ -163,12 +164,12 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
 </div></div>
 
 <div id="toast" class="toast" role="status"></div>
-<script type="text/plain" data-pfc-src="meteoam-only.js?v=20261015-wind-url-1"></script>
+<script type="text/plain" data-pfc-src="meteoam-only.js?v=offline-cache-20261016"></script>
 <script type="text/plain" data-pfc-src="wind-local-names.js?v=20261015"></script>
 <script type="text/plain" data-pfc-src="wind-engine-6.9.3.js?v=local-wind-20261015"></script>
-<script type="text/plain" data-pfc-src="wind-6.9.3-modes.js?v=20261015-wind-url-1"></script>
+<script type="text/plain" data-pfc-src="wind-6.9.3-modes.js?v=offline-20261016"></script>
 <script type="text/plain" data-pfc-src="dog-6.9.3-pair.js?v=6.9.3-pair1"></script>
-<script type="text/plain" data-pfc-src="app-6.9.8.js?v=radar-no-camera-20261016"></script>
+<script type="text/plain" data-pfc-src="app-6.9.8.js?v=offline-cloud-20261016"></script>
 <script type="text/plain" data-pfc-src="home-6.9.6.js?v=puglia-20261015"></script>
 <script src="vendor/supabase-2.95.3.js" defer></script>
 <script type="text/plain" data-pfc-src="native-team-6.9.9.js?v=position-only-20261015"></script>
@@ -177,7 +178,9 @@ body.pfc-auth-locked>*:not(#pfcAuthGate){display:none!important}
 
 <script type="text/plain" data-pfc-src="puglia-rules.js?v=20261015"></script>
 <script type="text/plain" data-pfc-src="puglia-restrictions.js?v=20261015"></script>
-<script src="auth-required.js?v=20261016-audit1" defer></script>
+<script type="text/plain" data-pfc-src="cloud-backup.js?v=20261016-1"></script>
+<script src="account-local.js?v=20261016-1" defer></script>
+<script src="auth-required.js?v=offline-20261016-1" defer></script>
 </body>
 </html>
 

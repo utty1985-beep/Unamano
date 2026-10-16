@@ -39,7 +39,7 @@ Verifica del 16 ottobre 2026. Progetto effettivo: `utty1985-beep/Unamano/cacciat
 | Regolamenti Puglia e avvisi in mappa | Dati ufficiali caricati: 40 aree protette e 120 SIC/ZPS; test geometrie, buchi, precisione GPS e freschezza; controllo giornaliero configurato | Una variazione della pagina normativa non genera automaticamente nuovi divieti geolocalizzati; ordinanze locali non tutte incluse |
 | ATC automatico | Rilevamento provincia/comune e correzione BAT presenti; indicazione espressamente da verificare | Non è una verifica giuridica di ogni confine ATC |
 | Funghi: comandi e schede | Ritrovamenti separati, foto, scheda specie e avviso micologico presenti; errore servizio gestito | Servizio esterno di riconoscimento non confermato disponibile: controllo di salute terminato per timeout; non certificabile come risolto |
-| Offline e backup cloud | La versione online carica `online-trial.js` e conserva localmente i dati | Questa versione richiede rete; sincronizzazione cloud dei punti e uso completo offline non risultano implementati nell'ingresso attuale |
+| Offline e backup cloud — aggiunti successivamente su richiesta | Cache dell’app corrente, accesso locale dopo il primo accesso, mappe scaricabili, backup cloud privati con 20 versioni e ripristino esplicito. Test offline/riconnessione/foto e isolamento account superati | Primo accesso e nuove mappe richiedono rete. Meteo/Squadra Live nuovi richiedono Internet. Vedi OFFLINE-E-BACKUP-CLOUD.md |
 | Play Store / PRO | Nessuna attivazione di limiti o pagamenti durante i test | Pubblicazione store, firma APK e Billing non verificati qui |
 | Video tutorial | Richiesta rintracciata nello storico | Consegna finale del tutorial non accertata da questa verifica |
 
@@ -57,4 +57,4 @@ Il workflow Pages ora richiede questi controlli prima del deploy, invece di veri
 
 ## Conclusione della verifica
 
-Non è corretto dichiarare tutte le richieste storiche già concluse. Le regressioni web riproducibili coperte dai test sono corrette; restano aperti consegna email, disponibilità del riconoscimento funghi e verifiche Android reali. La fotocamera del radar è stata successivamente rimossa su richiesta del 16 ottobre. Offline completo, cloud dei punti, pubblicazione store e tutorial non hanno un completamento verificabile nell'ingresso attuale. Le funzioni rimosse il 15 ottobre non sono state reintrodotte.
+Le regressioni web riproducibili coperte dai test sono corrette; restano aperti consegna email, disponibilità del riconoscimento funghi e verifiche Android reali. La fotocamera del radar è stata rimossa su richiesta del 16 ottobre. Dopo la verifica l’utente ha richiesto uso offline e backup cloud: implementati con test dedicati e isolamento degli account sul database. Il Play Store resta escluso e il tutorial non è stato verificato. Vedi OFFLINE-E-BACKUP-CLOUD.md per la preparazione delle mappe e i limiti di rete.

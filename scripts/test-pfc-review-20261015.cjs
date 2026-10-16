@@ -20,6 +20,7 @@ const stored={points:[{id:'old',type:'Postazione',name:'Vecchio appostamento',la
 w.localStorage.setItem('cacciatraccia-direct-v5',JSON.stringify(stored));
 w.localStorage.setItem('cacciatraccia-hunt-day-v1','2026-10-01');
 (async()=>{try{
+w.eval(fs.readFileSync(root+'/account-local.js','utf8'));
 w.eval(fs.readFileSync(root+'/vendor/supabase-2.95.3.js','utf8'));
 for(const script of w.document.querySelectorAll('[data-pfc-src]'))w.eval(fs.readFileSync(root+'/'+script.dataset.pfcSrc.split('?')[0],'utf8'));
 await w.__PFC_BOOT_READY__;await new Promise(r=>setTimeout(r,500));
@@ -48,7 +49,7 @@ q('pfc676NavMap').click();assert(q('page-map').classList.contains('active'));
 q('layersBtn').click();w.document.querySelector('[data-basemap="street"]').click();
 await q('parkHereBtn').onclick();data=JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5'));assert.equal(data.car.lat,41.46);
 q('clearCarBtn').click();assert.equal(JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).car,null);
-q('startTrackBtn').click();await q('stopTrackBtn').onclick();assert.equal(JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).outings.length,1);
+q('startTrackBtn').click();assert.throws(()=>w.__PFC_LIVE_API__.restoreBackup(w.__PFC_LIVE_API__.backup(),'replace'),/Termina la camminata/);await q('stopTrackBtn').onclick();assert.equal(JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).outings.length,1);
 // Comparison with a real saved bird must not throw the old p.Number error.
 w.document.querySelector('[data-history="sightings"]').click();q('ctSightingDate').value=new Date().toLocaleDateString('en-CA');await q('ctSightingRun').onclick();
 assert.equal(q('ctSightingRun').disabled,false);
@@ -65,6 +66,12 @@ q('ctRadarBtn').click();await new Promise(r=>setTimeout(r,50));assert(q('ctRadar
 for(let i=0;i<3;i++){const e=new w.Event('deviceorientationabsolute');Object.assign(e,{alpha:270,beta:0,gamma:0});w.dispatchEvent(e)}assert.equal(q('ct664Deg').textContent,'90°');q('ct664Close').click();assert(!q('ctRadar664').classList.contains('open'));assert.equal(mediaRequests,0);
 // Deletion removes the same record from persistence, map API and both lists.
 const removing=w.CT.del('bird');q('pfcDeletePointDialog').querySelector('button:last-child').click();assert(await removing);assert(!w.__PFC_LIVE_API__.points().some(p=>p.id==='bird'));assert(!JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).points.some(p=>p.id==='bird'));
+// Cloud restore uses the real core, preserving newer local records and rejecting invalid data.
+const api=w.__PFC_LIVE_API__,beforeCloud=api.backup();const oldLocal=beforeCloud.data.points.find(p=>p.id==='old');
+const remote={version:1,data:{points:[{...oldLocal,name:'Stale name',updatedAt:'2020-01-01T00:00:00Z'},{id:'cloud-only',name:'Cloud recovered',lat:41.5,lng:15.6,type:'Postazione'}],diary:[],outings:[],car:null},settings:{'pfc-account-auth':'must never restore','pfc-v661-settings':JSON.stringify({mode:'hunt',region:'Lazio'})}};
+api.restoreBackup(remote,'merge');assert(api.points().some(p=>p.id==='cloud-only'));assert.equal(api.points().find(p=>p.id==='old').name,oldLocal.name);assert.equal(w.localStorage.getItem('pfc-account-auth'),null);
+const count=api.points().length;assert.throws(()=>api.restoreBackup({data:{points:'invalid',outings:[],diary:[]}},'replace'));assert.equal(api.points().length,count);
+api.restoreBackup(remote,'replace');assert.equal(api.points().length,2);assert.equal(JSON.parse(w.localStorage.getItem('pfc-v661-settings')).region,'Puglia');assert.equal(w.localStorage.getItem('pfc-account-auth'),null);assert(JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5-snapshots')).length>0);
 console.log(JSON.stringify({status:w.__PFC_APP_STATUS__,errors,warnings: warnings.slice(0,5),tests:'startup, saved points across dates, explicit filter, point coordinates, calm wind, diary save/delete, invalid backup, map navigation/layers, parking, walking, bird comparison'}));
 assert.deepEqual(errors,['Error: Formato backup non valido'],'only deliberate bad-import error is expected');
 }finally{setTimeout(()=>process.exit(process.exitCode||0),0)}})().catch(e=>{console.error(e);setTimeout(()=>process.exit(process.exitCode||0),0);process.exitCode=1});

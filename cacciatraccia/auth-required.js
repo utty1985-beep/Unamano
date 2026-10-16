@@ -22,17 +22,25 @@
  async function openApp(){
   if(opened||loading||recovery)return;loading=true;
   try {
-   const {data,error}=await client.auth.getUser();
-   if(error||!data?.user||data.user.is_anonymous)throw Error(error && !/session missing/i.test(error.message||'') ? 'Verifica account non riuscita. Controlla Internet e riprova.' : 'Accedi con email e password per continuare.');
-   const user=data.user;
-   status('Accesso verificato. Apertura app…');
+   let user,offline=false;const remembered=window.PFC_LOCAL?.profile();
+   if(!navigator.onLine&&!remembered)throw Error('Per il primo accesso su questo dispositivo serve Internet.');
+   if(!navigator.onLine&&remembered){user=remembered;offline=true}
+   else{
+    let result,timer;try{result=await Promise.race([client.auth.getUser(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('network timeout')),10000)})])}catch(error){result={error}}finally{clearTimeout(timer)}
+    if(result.error&&remembered&&(/fetch|network|timeout|offline/i.test(result.error.message||'')||result.error.status===0)){user=remembered;offline=true}
+    else if(result.error||!result.data?.user||result.data.user.is_anonymous)throw Error(result.error&&!/session missing/i.test(result.error.message||'')?'Verifica account non riuscita. Controlla Internet e riprova.':'Accedi con email e password per continuare.');
+    else user=result.data.user;
+   }
+   window.PFC_LOCAL?.selectAccount(user);if(!offline)window.PFC_LOCAL?.remember(user);
+   window.__PFC_ACCOUNT_CONTEXT__={id:user.id,email:user.email||'',client,offline};
+   status(offline?'Apro i dati locali senza rete…':'Accesso verificato. Apertura app…');
    for(const script of document.querySelectorAll('script[data-pfc-src]'))await loadScript(script.dataset.pfcSrc);
    opened=true;document.body.classList.remove('pfc-auth-locked');gate.hidden=true;
    const account=document.createElement('button');account.id='pfcAccountLogout';account.className='ghost';account.textContent='Esci';account.title=user.email||'Account';
-   account.onclick=async()=>{account.disabled=true;const {error}=await client.auth.signOut();if(error){account.disabled=false;alert('Uscita non riuscita. Riprova.');return;}location.reload();};
+   account.onclick=async()=>{account.disabled=true;const {error}=await client.auth.signOut();if(error){account.disabled=false;alert('Uscita non riuscita. Riprova.');return;}window.PFC_LOCAL?.forget();location.reload();};
    document.querySelector('.topActions')?.appendChild(account);
    if(q('accountBtn')){q('accountBtn').disabled=false;q('accountBtn').textContent='Account / Esci';q('accountBtn').onclick=()=>{if(confirm('Account: '+user.email+'\nVuoi uscire?'))account.click();};}
-   if(q('cloudStatus'))q('cloudStatus').textContent='Accesso effettuato: '+user.email+'. Punti e diario sono conservati su questo dispositivo.';
+   if(q('cloudStatus'))q('cloudStatus').textContent=offline?'Offline: modifiche sul dispositivo; backup in attesa di Internet.':'Account: '+user.email+' · preparo il backup privato.';
    window.dispatchEvent(new CustomEvent('pfc:authenticated',{detail:{id:user.id}}));
   }catch(e){status(e.message||'Accesso non disponibile. Riprova.');}finally{loading=false;}
  }
@@ -69,9 +77,10 @@
    if(!window.supabase)throw Error('Servizio di accesso non caricato. Ricarica con Internet.');
    client=window.supabase.createClient('https://cfnivvdtyhpgbwmbgoke.supabase.co','sb_publishable_p_nrywLxqXT26U69v_SmPA_c1-4INqb',{auth:{storageKey:'pfc-account-auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
    recovery=location.hash.includes('type=recovery');
-   client.auth.onAuthStateChange((event)=>{
+   client.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&opened&&session?.user?.id!==window.__PFC_ACCOUNT_CONTEXT__?.id){location.reload();return;}
     if(event==='PASSWORD_RECOVERY'){recovery=true;setMode('reset');}
-    if(event==='SIGNED_OUT'&&opened){document.body.classList.add('pfc-auth-locked');gate.hidden=false;location.reload();}
+    if(event==='SIGNED_OUT'){window.PFC_LOCAL?.forget();}if(event==='SIGNED_OUT'&&opened){document.body.classList.add('pfc-auth-locked');gate.hidden=false;location.reload();}
    });
    if(linkError){status('Link non valido o scaduto. Usa Reinvia conferma oppure Password dimenticata e apri soltanto il link più recente.');return;}
    if(recovery){setMode('reset');return;}
