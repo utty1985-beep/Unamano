@@ -10,7 +10,7 @@ async function event(t){let p;listeners[t]({waitUntil(v){p=v}});await p}
 async function request(url,mode='cors'){let p;listeners.fetch({request:{url:new URL(url,base).href,method:'GET',mode},respondWith(v){p=v}});return p?await p:null}
 (async()=>{await event('install');await event('activate');online=false;
 const page=await request('./?t=offline-restart','navigate');assert.match(await page.text(),/auth-required.js/);assert(!(await request('https://example.supabase.co/auth/v1/user')),'authentication must not be cached');assert(!(await request('https://example.supabase.co/rest/v1/pfc_backups')),'private data must not be cached');
-const script=await request('app-6.9.8.js?v=offline-cloud-20261016');assert.match(await script.text(),/restoreCloudPayload/);
+const script=await request(fs.readFileSync('cacciatraccia/index.html','utf8').match(/data-pfc-src="(app-6\.9\.8\.js[^"]*)/)[1]);assert.match(await script.text(),/restoreCloudPayload/);
 const pinned=await caches.open('cacciatraccia-offline-tiles-v1'),tile='https://tile.openstreetmap.org/14/8898/6091.png';await pinned.put(tile,new Response('downloaded map'));
 assert.equal(await(await request(tile,'no-cors')).text(),'downloaded map');assert.match(await(await request('https://tile.openstreetmap.org/14/8899/6091.png','no-cors')).text(),/Area non scaricata/);
 console.log('PASS offline worker: complete current shell, offline restart, exact script versions, prepared maps, uncached-area indicator, no auth/cloud caching.');})().catch(e=>{console.error(e);process.exitCode=1});

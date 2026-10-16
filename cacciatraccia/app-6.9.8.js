@@ -1642,55 +1642,49 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(!a)a=[String(label||'Specie non determinata').replace(/_/g,' '),'Non determinabile in sicurezza','SCONOSCIUTO','—','—','—','—','—'];
     return {name:a[0],tox:a[1],risk:a[2],cap:a[3],hym:a[4],stem:a[5],hab:a[6],season:a[7]};
   }
-  function mushWarning(){return '<div class="ctMushWarn"><b>⚠️ Riconoscimento indicativo.</b><br>La foto può essere sbagliata o appartenere a una specie che il modello non conosce. Non mangiare o assaggiare un fungo basandoti sull’app: per il consumo serve il controllo di un micologo / Ispettorato Micologico ASL.</div>'}
+  function mushWarning(){return '<div class="ctMushWarn"><b>⚠️ Riconoscimento indicativo: confronto fra sole 16 specie.</b><br>La foto viene inviata al servizio MushroomWise AI (Hugging Face); non vengono inviate posizione o credenziali. La foto può essere sbagliata o appartenere a una specie che il modello non conosce. Non mangiare o assaggiare un fungo basandoti sull’app: per il consumo serve il controllo di un micologo / Ispettorato Micologico ASL.</div>'}
   function mushCard(label,conf){
     const d=mushroomInfo(label),pct=Number.isFinite(conf)?Math.round(conf*100):null;
     return '<div class="ctMushBox"><div class="ctMushHead"><div class="emoji">🍄</div><div><b style="font-size:17px">'+esc(d.name)+'</b>'+(pct!=null?'<div class="muted">Corrispondenza fotografica indicativa: '+pct+'%</div>':'')+'</div></div><div class="ctMushGrid"><div><span>Tossicità indicativa</span><b>'+esc(d.tox)+'</b></div><div><span>Rischio</span><b>'+esc(d.risk)+'</b></div></div><div class="ctMushDetails"><b>Cappello</b><br>'+esc(d.cap)+'<br><b>Lamelle / pori</b><br>'+esc(d.hym)+'<br><b>Gambo</b><br>'+esc(d.stem)+'<br><b>Habitat</b><br>'+esc(d.hab)+'<br><b>Periodo</b><br>'+esc(d.season)+'</div>'+mushWarning()+'</div>';
   }
-  function parsePrediction(v){
-    const seen=new Set();
-    function walk(x){
-      if(x==null)return null;if(typeof x==='string'&&x.length>2)return {label:x,confidence:null};
-      if(typeof x!=='object'||seen.has(x))return null;seen.add(x);
-      if(typeof x.label==='string')return {label:x.label,confidence:Number.isFinite(+x.confidence)?+x.confidence:null};
-      if(Array.isArray(x.confidences)&&x.confidences.length){const a=[...x.confidences].sort((a,b)=>(+b.confidence||0)-(+a.confidence||0))[0];if(a&&a.label)return {label:a.label,confidence:+a.confidence||null}}
-      const nums=Object.entries(x).filter(e=>typeof e[1]==='number'&&Number.isFinite(e[1]));if(nums.length>=2){nums.sort((a,b)=>b[1]-a[1]);return {label:nums[0][0],confidence:nums[0][1]}}
-      if(Array.isArray(x)){for(const z of x){const r=walk(z);if(r)return r}}else{for(const z of Object.values(x)){const r=walk(z);if(r)return r}}
-      return null;
-    }return walk(v);
-  }
+  let mushRequest=0,mushController=null;
+  function cancelMushroom(){mushRequest++;mushController?.abort();mushController=null;}
   async function identifyMushroom(file,target){
-    target.innerHTML='<div class="empty">🔎🍄 Analizzo la foto…</div>';
+    cancelMushroom();const request=mushRequest,pointId=editing,pointMode=target.id==='ctPointMush';mushAnalysis=null;
+    mushController=new AbortController();
+    const current=()=>request===mushRequest&&target.isConnected&&(!pointMode||editing===pointId);
+    target.innerHTML='<div class="empty">🔎🍄 Analizzo la foto… L’analisi può richiedere fino a 90 secondi.</div>';
+    if($('ctMushSave'))$('ctMushSave').hidden=true;
     try{
-      const mod=await import('https://cdn.jsdelivr.net/npm/@gradio/client/+esm');
-      const client=await mod.Client.connect('gaglileoo/MushroomWiseAI');
-      const hf=await mod.handle_file(file);let out=null,err=null;
-      try{out=await client.predict('/predict',[hf])}catch(e){err=e}
-      if(!out){
-        try{const api=await client.view_api(),names=Object.keys(api&&api.named_endpoints||{});for(const ep of names){try{out=await client.predict(ep,[hf]);if(out)break}catch(e){err=e}}}catch(e){err=e}
-      }
-      if(!out)throw err||Error('Servizio di riconoscimento non disponibile');
-      const p=parsePrediction(out);if(!p||!p.label)throw Error('Risposta non interpretabile');
+      const p=await window.PFC_MUSHROOM.identify(file,{signal:mushController.signal});if(!current())return;
       const d=mushroomInfo(p.label);mushAnalysis={raw:p.label,label:d.name,confidence:p.confidence,tox:d.tox,risk:d.risk,at:new Date().toISOString()};
       target.innerHTML=mushCard(p.label,p.confidence);
-      if(mushMode&&$('pointSpecies'))$('pointSpecies').value=d.name;
-      if($('ctMushSave'))$('ctMushSave').hidden=false;
+      if(pointMode&&mushMode&&$('pointSpecies'))$('pointSpecies').value=d.name;
+      if(!pointMode&&$('ctMushSave')){$('ctMushSave').hidden=false;$('ctMushSave').textContent='📍 Salva ipotesi e foto';}
     }catch(e){
-      console.warn('Mushroom identify',e);mushAnalysis=null;
-      target.innerHTML='<div class="ctMushBox"><b>Riconoscimento automatico non disponibile in questo momento.</b><div class="muted" style="margin-top:5px">La foto resta visibile e puoi riprovare con Internet attivo.</div><button id="ctMushExternal" class="secondary wide" type="button" style="margin-top:8px">🌐 Apri riconoscimento esterno</button>'+mushWarning()+'</div>';
-      setTimeout(()=>{const b=$('ctMushExternal');if(b)b.onclick=()=>window.open('https://huggingface.co/spaces/gaglileoo/MushroomWiseAI','_blank','noopener')},0);
+      if(!current()||e.name==='AbortError')return;mushAnalysis=null;
+      target.innerHTML='<div class="ctMushBox"><b>Riconoscimento non completato.</b><p>'+esc(e.message||'Servizio non disponibile. Riprova tra poco.')+'</p><button class="secondary wide" type="button" data-mush-retry>Riprova con questa foto</button>'+mushWarning()+'</div>';
+      target.querySelector('[data-mush-retry]').onclick=()=>identifyMushroom(file,target);
+      if(!pointMode&&$('ctMushSave')){$('ctMushSave').hidden=false;$('ctMushSave').textContent='📍 Salva foto da identificare';}
     }
   }
   const toData=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
+  async function readMushroomPhoto(file,target,preview){
+    cancelMushroom();const request=mushRequest;mushAnalysis=null;
+    if($('ctMushSave'))$('ctMushSave').hidden=true;
+    try{const data=await toData(file);if(request!==mushRequest||!target.isConnected)return;
+      mushPhotoData=data;preview(data);await identifyMushroom(file,target);
+    }catch(e){if(request===mushRequest)target.innerHTML='<div class="ctMushBox">Impossibile leggere la foto. Scegli un’altra immagine.</div>';}
+  }
   function ensureMushModal(){
     if($('ctMushModal'))return;
     const m=document.createElement('div');m.id='ctMushModal';m.className='modal';
     m.innerHTML='<div class="dialog" style="max-width:720px;max-height:94vh;overflow:auto"><div class="sectionHead"><div><h2>🔎🍄 Vedi specie</h2><div class="muted">Scatta o scegli una foto del fungo</div></div><button id="ctMushClose" class="iconBtn">✕</button></div><div class="field"><label>Foto fungo</label><input id="ctMushFile" type="file" accept="image/*" capture="environment"></div><img id="ctMushPreview" hidden alt="Foto fungo"><div id="ctMushResult">'+mushWarning()+'</div><div class="actionGrid"><button id="ctMushAgain" class="secondary" type="button">📷 Altra foto</button><button id="ctMushSave" class="primary" type="button" hidden>📍 Salva fungo qui</button></div></div>';
-    document.body.appendChild(m);$('ctMushClose').onclick=()=>m.classList.remove('open');m.onclick=e=>{if(e.target===m)m.classList.remove('open')};$('ctMushAgain').onclick=()=>$('ctMushFile').click();
-    $('ctMushFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;mushPhotoData=await toData(f);const im=$('ctMushPreview');im.src=mushPhotoData;im.hidden=false;$('ctMushSave').hidden=true;await identifyMushroom(f,$('ctMushResult'))};
+    document.body.appendChild(m);$('ctMushClose').onclick=()=>{cancelMushroom();m.classList.remove('open')};m.onclick=e=>{if(e.target===m){cancelMushroom();m.classList.remove('open')}};$('ctMushAgain').onclick=()=>$('ctMushFile').click();
+    $('ctMushFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;await readMushroomPhoto(f,$('ctMushResult'),data=>{const im=$('ctMushPreview');im.src=data;im.hidden=false})};
     $('ctMushSave').onclick=async()=>{const analysis=mushAnalysis,photo=mushPhotoData,p=await quickMush();if(!p)return;p.name=analysis?.label||'Fungo trovato';p.species=analysis?.label||'Fungo da identificare';p.photo=photo||null;p.mushroomAnalysis=analysis||null;save();renderMarkers();renderPoints();m.classList.remove('open');fillModal(p);toast('Fungo salvato sulla mappa')};
   }
-  function openMushSpecies(){ensureMushModal();mushAnalysis=null;mushPhotoData=null;$('ctMushFile').value='';const im=$('ctMushPreview');im.hidden=true;im.removeAttribute('src');$('ctMushResult').innerHTML=mushWarning();$('ctMushSave').hidden=true;$('ctMushModal').classList.add('open')}
+  function openMushSpecies(){cancelMushroom();ensureMushModal();mushAnalysis=null;mushPhotoData=null;$('ctMushFile').value='';const im=$('ctMushPreview');im.hidden=true;im.removeAttribute('src');$('ctMushResult').innerHTML=mushWarning();$('ctMushSave').hidden=true;$('ctMushModal').classList.add('open')}
   async function quickMush(){
     const card=$('selectedCard'),at=selected&&card&&!card.classList.contains('hidden')&&Number.isFinite(selected.lat)&&Number.isFinite(selected.lng)?selected:map?.getCenter();
     follow=false;$('followBtn')?.classList.remove('active');
@@ -1713,7 +1707,7 @@ window.__PFC_BOOT_READY__=(async()=>{
 
   const baseFill=fillModal;
   fillModal=function(p){
-    mushMode=!!(p&&p.sightingKind==='mushroom');mushAnalysis=p?.mushroomAnalysis||null;baseFill(p);
+    cancelMushroom();mushMode=!!(p&&p.sightingKind==='mushroom');mushAnalysis=p?.mushroomAnalysis||null;baseFill(p);
     const lab=$('pointSpecies')?.closest('div')?.querySelector('label');if(lab)lab.textContent=mushMode?'🍄 Funghi trovati / specie':'Uccelli / funghi trovati';
     if($('pointSpecies'))$('pointSpecies').placeholder=mushMode?'es. porcino, amanita, russula…':'es. tordi, colombacci, porcini…';
     const dayLab=$('pointHuntDate')?.closest('div')?.querySelector('label');if(dayLab)dayLab.textContent=mushMode?'Giorno dell’uscita':'Giorno della caccia';
@@ -1724,12 +1718,12 @@ window.__PFC_BOOT_READY__=(async()=>{
     if(!extra){extra=document.createElement('div');extra.id='ctPointMush';extra.className='full';photo.closest('.full')?.insertAdjacentElement('afterend',extra)}
     extra.innerHTML=p?.mushroomAnalysis?mushCard(p.mushroomAnalysis.raw||p.species,p.mushroomAnalysis.confidence):'<button id="ctPointMushSearch" class="secondary wide" type="button">🔎🍄 Vedi specie dalla foto</button>'+mushWarning();
     if($('ctPointMushSearch'))$('ctPointMushSearch').onclick=()=>photo.click();
-    photo.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;mushPhotoData=await toData(f);$('pointPhotoPreview').innerHTML='<img src="'+mushPhotoData+'" style="max-width:100%;border-radius:12px">';await identifyMushroom(f,extra)};
+    photo.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;await readMushroomPhoto(f,extra,data=>{$('pointPhotoPreview').innerHTML='<img src="'+data+'" style="max-width:100%;border-radius:12px">'})};
   };
   const baseSavePoint=savePoint;
   savePoint=async function(){
-    const id=editing,was=mushMode,a=mushAnalysis;await baseSavePoint();
-    if(was&&id){const p=state.points.find(x=>x.id===id);if(p){p.sightingKind='mushroom';if(a)p.mushroomAnalysis=a;save();renderMarkers()}}
+    const id=editing,was=mushMode,a=mushAnalysis;cancelMushroom();await baseSavePoint();
+    if(was&&id){const p=state.points.find(x=>x.id===id);if(p){p.sightingKind='mushroom';p.mushroomAnalysis=a||null;save();renderMarkers()}}
   };
 
   const baseRenderDiary=renderDiary;

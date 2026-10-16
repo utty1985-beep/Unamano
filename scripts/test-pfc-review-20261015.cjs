@@ -64,6 +64,20 @@ mapElement.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,clientX:30
 let mediaRequests=0;Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia(){mediaRequests++;throw Error('Camera must not be requested')}}});
 q('ctRadarBtn').click();await new Promise(r=>setTimeout(r,50));assert(q('ctRadar664').classList.contains('open'));assert.equal(q('ctRadar664').querySelectorAll('video').length,0);assert.equal(mediaRequests,0);
 for(let i=0;i<3;i++){const e=new w.Event('deviceorientationabsolute');Object.assign(e,{alpha:270,beta:0,gamma:0});w.dispatchEvent(e)}assert.equal(q('ct664Deg').textContent,'90°');q('ct664Close').click();assert(!q('ctRadar664').classList.contains('open'));assert.equal(mediaRequests,0);
+// Mushroom recognition uses the selected photo and ignores delayed older results.
+q('pfc676Mush').click();q('quickSpeciesBtn').click();
+let finishOld,finishNew;const realMush=w.PFC_MUSHROOM;
+w.PFC_MUSHROOM={identify:()=>new Promise(resolve=>{if(!finishOld)finishOld=resolve;else finishNew=resolve})};
+const imageA=new w.File(['a'],'a.jpg',{type:'image/jpeg'}),imageB=new w.File(['b'],'b.jpg',{type:'image/jpeg'});
+const first=q('ctMushFile').onchange({target:{files:[imageA]}});while(!finishOld)await new Promise(r=>setTimeout(r,5));
+const second=q('ctMushFile').onchange({target:{files:[imageB]}});while(!finishNew)await new Promise(r=>setTimeout(r,5));
+finishNew({label:'Suillus luteus',confidence:.7});await second;finishOld({label:'Amanita muscaria',confidence:.9});await first;
+assert(q('ctMushResult').textContent.includes('Suillus luteus'));assert(!q('ctMushResult').textContent.includes('Amanita muscaria'));
+// Service failure keeps the photo and allows saving it without inventing a species.
+w.PFC_MUSHROOM={identify:async()=>{throw Error('Servizio non disponibile')}};
+await q('ctMushFile').onchange({target:{files:[imageA]}});assert(q('ctMushResult').querySelector('[data-mush-retry]'));assert.equal(q('ctMushSave').hidden,false);
+await q('ctMushSave').onclick();const unknown=w.__PFC_LIVE_API__.points().find(p=>p.species==='Fungo da identificare');assert(unknown?.photo?.startsWith('data:image/jpeg'));assert.equal(unknown.mushroomAnalysis,null);
+w.PFC_MUSHROOM=realMush;q('pfc676Hunt').click();
 // Deletion removes the same record from persistence, map API and both lists.
 const removing=w.CT.del('bird');q('pfcDeletePointDialog').querySelector('button:last-child').click();assert(await removing);assert(!w.__PFC_LIVE_API__.points().some(p=>p.id==='bird'));assert(!JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).points.some(p=>p.id==='bird'));
 // Cloud restore uses the real core, preserving newer local records and rejecting invalid data.
