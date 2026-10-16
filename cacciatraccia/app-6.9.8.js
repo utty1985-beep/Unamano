@@ -5,6 +5,26 @@ function activityMode(){try{return JSON.parse(localStorage.getItem('pfc-v661-set
 function pointMatchesMode(p){return activityMode()==='mushroom'?p.sightingKind==='mushroom':p.sightingKind!=='mushroom';}
 const STORE = 'cacciatraccia-direct-v5';
 const SNAP_STORE = 'cacciatraccia-direct-v5-snapshots';
+const POINT_DELETIONS_KEY = 'cacciatraccia-point-deletions-v1';
+function pointDeletionList(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(POINT_DELETIONS_KEY)||'[]');
+    return Array.isArray(raw)?raw.filter(v=>v&&typeof v.id==='string'&&typeof v.deletedAt==='string'&&Number.isFinite(Date.parse(v.deletedAt))):[];
+  }catch{return []}
+}
+function combinePointDeletions(first,second){
+  const map=new Map();
+  for(const x of [...first,...second]){
+    if(!x||typeof x.id!=='string'||typeof x.deletedAt!=='string'||!Number.isFinite(Date.parse(x.deletedAt)))continue;
+    const old=map.get(x.id);
+    if(!old||Date.parse(old.deletedAt)<Date.parse(x.deletedAt))map.set(x.id,{id:x.id,deletedAt:x.deletedAt});
+  }
+  return [...map.values()];
+}
+function pointSurvivesDeletion(point,deletions){
+  const at=deletions.get(String(point.id));
+  return !at||Date.parse(point.updatedAt||point.createdAt||0)>Date.parse(at);
+}
 const APP_VERSION = 6;
 const localDay = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const uniqueId = () => crypto.randomUUID?.() || Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
@@ -311,8 +331,17 @@ async function deleteSavedPoint(id){
  if(!point){toast('Punto già rimosso');return false;}
  if(!await confirmPointDeletion(point))return false;
  const remaining=state.points.filter(p=>String(p.id)!==String(id));
- try{localStorage.setItem(STORE,JSON.stringify({...state,points:remaining}));}
- catch(error){console.error('Cancellazione punto',error);toast('Impossibile salvare la cancellazione. Il punto è stato conservato.');return false;}
+ const beforeReceipts=localStorage.getItem(POINT_DELETIONS_KEY);
+ try{
+   const receipts=pointDeletionList().filter(x=>x.id!==String(id));
+   receipts.push({id:String(id),deletedAt:new Date().toISOString()});
+   localStorage.setItem(POINT_DELETIONS_KEY,JSON.stringify(receipts));
+   localStorage.setItem(STORE,JSON.stringify({...state,points:remaining}));
+ }catch(error){
+   try{if(beforeReceipts==null)localStorage.removeItem(POINT_DELETIONS_KEY);else localStorage.setItem(POINT_DELETIONS_KEY,beforeReceipts);}catch{}
+   console.error('Cancellazione punto',error);
+   toast('Impossibile salvare la cancellazione. Il punto è stato conservato.');return false;
+ }
  state.points=remaining;
  if(String(editing)===String(id)){editing=null;$('pointModal')?.classList.remove('open');}
  if(selected&&Math.abs(selected.lat-point.lat)<1e-7&&Math.abs(selected.lng-point.lng)<1e-7){selected=null;$('selectedCard')?.classList.add('hidden');}
@@ -2299,19 +2328,23 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
 
    function backupPayload(){
      let activeTrack=null;try{activeTrack=JSON.parse(localStorage.getItem('cacciatraccia-active-track-v1')||'null')}catch{}
-     return structuredClone({version:1,data:state,settings:window.PFC_LOCAL?.settings()||{},activeTrack});
+     return structuredClone({version:2,data:state,settings:window.PFC_LOCAL?.settings()||{},activeTrack,deletedPoints:pointDeletionList()});
    }
    function restoreCloudPayload(payload,mode='merge'){
      if(track.active)throw Error('Termina la camminata in corso prima di ripristinare un backup.');
      const incoming=payload?.data;if(!incoming||!['points','outings','diary'].every(k=>Array.isArray(incoming[k]))||incoming.points.some(p=>!validCoords(p))||(incoming.car!=null&&!validCoords(incoming.car))||incoming.outings.some(o=>!o||!Array.isArray(o.coords)||o.coords.some(c=>!Array.isArray(c)||!validCoords({lat:c[0],lng:c[1]})))||incoming.diary.some(d=>!d||typeof d!=='object'))throw Error('Backup non valido: dati locali conservati');
      const previous=structuredClone(state),settingsBefore=window.PFC_LOCAL?.settings()||{},trackBefore=localStorage.getItem('cacciatraccia-active-track-v1');
      const merge=(current,old)=>{const m=new Map(current.map(x=>[String(x.id),x]));for(const x of old){const local=m.get(String(x.id));if(!local||Date.parse(x.updatedAt||x.createdAt||0)>Date.parse(local.updatedAt||local.createdAt||0))m.set(String(x.id),x)}return [...m.values()]};
-     const next=mode==='replace'?structuredClone(incoming):{...previous,points:merge(previous.points,incoming.points),outings:merge(previous.outings,incoming.outings),diary:merge(previous.diary,incoming.diary),car:previous.car||incoming.car||null};
+     const remoteDeletions=Array.isArray(payload.deletedPoints)?payload.deletedPoints:[];
+     const mergedDeletions=mode==='replace'?combinePointDeletions([],remoteDeletions):combinePointDeletions(pointDeletionList(),remoteDeletions);
+     const deletedById=new Map(mergedDeletions.map(x=>[x.id,x.deletedAt]));
+     const next=mode==='replace'?structuredClone(incoming):{...previous,points:merge(previous.points,incoming.points).filter(p=>pointSurvivesDeletion(p,deletedById)),outings:merge(previous.outings,incoming.outings),diary:merge(previous.diary,incoming.diary),car:previous.car||incoming.car||null};
      makeSnapshot();
      try{
        localStorage.setItem(STORE,JSON.stringify(next));
        // Only restore whitelisted application settings, never auth or group secrets.
-       if(mode==='replace')for(const key of Object.keys(settingsBefore)){let value=payload.settings?.[key];if(value==null)continue;if(typeof value!=='string')throw Error('Impostazioni backup non valide');if(key==='pfc-v661-settings'){const c=JSON.parse(value);c.region='Puglia';value=JSON.stringify(c)}if(key==='cacciatraccia-weather-v2')value=JSON.stringify({model:'best_match',site:'openmeteo',custom:''});localStorage.setItem(key,value);}
+       if(mode==='replace')for(const key of Object.keys(settingsBefore)){if(key===POINT_DELETIONS_KEY)continue;let value=payload.settings?.[key];if(value==null)continue;if(typeof value!=='string')throw Error('Impostazioni backup non valide');if(key==='pfc-v661-settings'){const c=JSON.parse(value);c.region='Puglia';value=JSON.stringify(c)}if(key==='cacciatraccia-weather-v2')value=JSON.stringify({model:'best_match',site:'openmeteo',custom:''});localStorage.setItem(key,value);}
+       localStorage.setItem(POINT_DELETIONS_KEY,JSON.stringify(mergedDeletions));
        if(payload.activeTrack?.coords?.length&&!trackBefore){if(payload.activeTrack.coords.some(c=>!validCoords({lat:c[0],lng:c[1]})))throw Error('Percorso recuperato non valido');localStorage.setItem('cacciatraccia-active-track-v1',JSON.stringify(payload.activeTrack))}
        state=next;renderAll();window.dispatchEvent(new Event('pfc:data-changed'));return true;
      }catch(e){state=previous;localStorage.setItem(STORE,JSON.stringify(previous));for(const [k,v]of Object.entries(settingsBefore))if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v);if(trackBefore==null)localStorage.removeItem('cacciatraccia-active-track-v1');else localStorage.setItem('cacciatraccia-active-track-v1',trackBefore);renderAll();throw e;}
