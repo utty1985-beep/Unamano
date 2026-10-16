@@ -58,3 +58,8 @@ Il workflow Pages ora richiede questi controlli prima del deploy, invece di veri
 ## Conclusione della verifica
 
 Le regressioni web riproducibili coperte dai test sono corrette; restano aperti consegna email, disponibilità del riconoscimento funghi e verifiche Android reali. La fotocamera del radar è stata rimossa su richiesta del 16 ottobre. Dopo la verifica l’utente ha richiesto uso offline e backup cloud: implementati con test dedicati e isolamento degli account sul database. Il Play Store resta escluso e il tutorial non è stato verificato. Vedi OFFLINE-E-BACKUP-CLOUD.md per la preparazione delle mappe e i limiti di rete.
+
+
+## Decisione successiva: verifica funghi eliminata
+
+Il 16 ottobre 2026 l’utente ha chiesto di eliminare il riconoscimento dei funghi. Non è più una funzione da completare: rimosso il modulo corrente, i pulsanti e la presentazione delle analisi. Rimane il salvataggio di foto e note come appostamento funghi, visibile anche nel diario senza duplicare il dato.
