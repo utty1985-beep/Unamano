@@ -4,6 +4,8 @@
  const URL='https://cfnivvdtyhpgbwmbgoke.supabase.co';
  const KEY='sb_publishable_p_nrywLxqXT26U69v_SmPA_c1-4INqb';
  const q=id=>document.getElementById(id),enc=new TextEncoder(),dec=new TextDecoder();
+ const accountId=()=>String(window.__PFC_ACCOUNT_CONTEXT__?.id||'');
+ const memberNameKey=()=> 'pfc-team-name:'+accountId();
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const bytes=n=>crypto.getRandomValues(new Uint8Array(n));
  const b64=a=>btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -36,7 +38,7 @@
      connected=state==='SUBSCRIBED';
      if(connected){
        clearTimeout(reconnectTimer);reconnectTimer=null;reconnectAttempt=0;
-       try{localStorage.setItem('pfc-active-outing',JSON.stringify({token:group.token,name:ownName,id:ownId}));sessionStorage.setItem('pfc-active-outing',JSON.stringify({token:group.token,name:ownName,id:ownId}));localStorage.setItem('pfc-team-name',ownName);}catch{}
+       try{localStorage.setItem('pfc-active-outing',JSON.stringify({token:group.token,name:ownName,id:ownId,accountId:accountId()}));sessionStorage.setItem('pfc-active-outing',JSON.stringify({token:group.token,name:ownName,id:ownId,accountId:accountId()}));localStorage.setItem(memberNameKey(),ownName);localStorage.removeItem('pfc-team-name');}catch{}
        if(!configured){configured=true;showTeamMap(false);}publish(true);sync();
        window.dispatchEvent(new CustomEvent('pfc:team-ready',{detail:{id:()=>ownId,name:()=>ownName,group:()=>room,expires:()=>group?.expires,saveChat,loadChat,ready:()=>stamp===epoch&&c===channel&&connected&&navigator.onLine&&!!group,send:async payload=>{
          if(stamp!==epoch||c!==channel||!connected||!navigator.onLine||!group)throw Error('Gruppo non connesso');
@@ -164,6 +166,7 @@
    window.__PFC_FRIEND_POINTS__=()=>fresh().map(p=>({id:'friend_'+p.id,lat:p.lat,lng:p.lng,name:p.name,type:'Amico',__friend:true}));
    window.__PFC_SHOW_TEAM_MAP__=()=>showTeamMap();
    window.__PFC_RECONNECT_TEAM__=()=>{scheduleReconnect(true);render();};
+   window.__PFC_LEAVE_TEAM__=leave;
    window.addEventListener('pfc:position',e=>{const f=e.detail;if(Number.isFinite(+f?.lat)&&Number.isFinite(+f?.lng)){ownFix={lat:+f.lat,lng:+f.lng,acc:Math.max(0,+f.acc||0)};ownFixAt=Date.now();publish();render();}});
    document.addEventListener('visibilitychange',async()=>{if(!group)return;if(document.hidden){await publish(true);}else{scheduleReconnect(true);const fix=await api.getFix();if(fix){ownFix=fix;ownFixAt=Date.now();}publish(true);}render();});
    window.addEventListener('pfc:native-position',e=>{const f=e.detail;if(group&&sharing&&background()){ownFix={lat:f.lat,lng:f.lng,acc:Math.max(0,+f.acc||0)};ownFixAt=f.at;publish(true);render();}});
@@ -173,7 +176,17 @@
    window.addEventListener('pfc:native-error',e=>status(e.detail.message));
    window.addEventListener('offline',render);window.addEventListener('online',()=>{scheduleReconnect(true);publish(true);render();});
    window.addEventListener('pagehide',()=>{if(!background()){channel?.untrack();}});
-   let saved=null;try{saved=JSON.parse(localStorage.getItem('pfc-active-outing')||sessionStorage.getItem('pfc-active-outing')||'null');q('pfcFriendsName').value=localStorage.getItem('pfc-team-name')||'';}catch{}
+   let saved=null;try{
+     saved=JSON.parse(localStorage.getItem('pfc-active-outing')||sessionStorage.getItem('pfc-active-outing')||'null');
+     q('pfcFriendsName').value=localStorage.getItem(memberNameKey())||'';
+     // Older untagged sessions cannot be assigned to an account safely.
+     if(saved&&(!accountId()||saved.accountId!==accountId())){
+       saved=null;
+       localStorage.removeItem('pfc-active-outing');
+       sessionStorage.removeItem('pfc-active-outing');
+       window.__PFC_NATIVE_TEAM__?.stop();
+     }
+   }catch{saved=null;}
    const token=new URLSearchParams(location.hash.slice(1)).get('uscita');
    if(saved&&(!token||token===saved.token)){try{parse(saved.token,true);if(/^[A-Za-z0-9_-]{22}$/.test(saved.id))ownId=saved.id;q('pfcFriendsName').value=saved.name;join(saved.token,true);}catch{window.__PFC_NATIVE_TEAM__?.stop();
    try{sessionStorage.removeItem('pfc-active-outing');localStorage.removeItem('pfc-active-outing');}catch{}}}
