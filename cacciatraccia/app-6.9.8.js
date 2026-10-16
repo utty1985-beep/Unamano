@@ -1808,8 +1808,8 @@ window.__PFC6621_RESTORE_SAFE__=()=>{startGps=__pfc6621SafeStartGps;getFix=__pfc
 
 window.__PFC_APP_STATUS__={version:'6.9.8',state:'loading'};
 const setBootStatus=(state,error=null)=>{
-  window.__PFC_APP_STATUS__={version:'6.9.8',state,error};
-  const pill=$('netPill');if(pill){pill.textContent=state==='ready'?'v6.9.8':state==='error'?'Avvio da riprovare':'Caricamento…';pill.title=error||'Passione Funghi e Caccia 6.9.8';}
+  window.__PFC_APP_STATUS__={version:'6.9.10-meteo',state,error};
+  const pill=$('netPill');if(pill){pill.textContent=state==='ready'?'v6.9.10':state==='error'?'Avvio da riprovare':'Caricamento…';pill.title=error||'Passione Funghi e Caccia 6.9.8';}
   window.dispatchEvent(new CustomEvent('pfc:ready',{detail:window.__PFC_APP_STATUS__}));
 };
 setBootStatus('loading');
