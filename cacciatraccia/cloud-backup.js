@@ -1,6 +1,6 @@
 /* Versioned account-private snapshots. A server backup never silently replaces local data. */
 (()=>{'use strict';
-const q=id=>document.getElementById(id);let ctx,api,busy=false,pending=false,timer,rows=[];
+const q=id=>document.getElementById(id);let ctx,api,busy=false,pending=false,timer,rows=[],retryDelay=30000;
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const deadline=promise=>{let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('network timeout')),15000)})]).finally(()=>clearTimeout(timer))};
 const active=()=>ctx&&window.__PFC_ACCOUNT_CONTEXT__?.id===ctx.id;
@@ -21,19 +21,33 @@ async function backup(force=false){
  busy=true;pending=false;const button=q('syncNowBtn');if(button)button.disabled=true;
  try{
   const payload=api.backup(),hash=await checksum(payload);
-  if(!meta().checksum&&!payload.data.points.length&&!payload.data.diary.length&&!payload.data.outings.length&&!payload.data.car){const existing=await deadline(ctx.client.from('pfc_backups').select('id').eq('user_id',ctx.id).limit(1));if(existing.error)throw existing.error;if(existing.data?.length){await list();status('Backup già disponibili nel tuo account: scegli una versione da ripristinare su questo dispositivo.');return true}}if(!force&&meta().checksum===hash){status('Backup cloud aggiornato · '+new Date(meta().at).toLocaleString('it-IT'));return true}
+  if(!meta().checksum&&!payload.data.points.length&&!payload.data.diary.length&&!payload.data.outings.length&&!payload.data.car){const existing=await deadline(ctx.client.from('pfc_backups').select('id').eq('user_id',ctx.id).limit(1));if(existing.error)throw existing.error;if(existing.data?.length){await list();status('Backup già disponibili nel tuo account: scegli una versione da ripristinare su questo dispositivo.');return true}}if(!force&&meta().checksum===hash){retryDelay=30000;status('Backup cloud aggiornato · '+new Date(meta().at).toLocaleString('it-IT'));return true}
   if(JSON.stringify(payload).length>7500000)throw Error('Backup troppo grande: esporta il file locale completo.');
   status('Salvo il backup cloud privato…');await identity();
   const {data,error}=await deadline(ctx.client.from('pfc_backups').insert({user_id:ctx.id,device_id:device(),checksum:hash,label:force?'Backup manuale':'Backup automatico',data:payload}).select('id,created_at').single());
   if(error&&error.code!=='23505')throw error;if(!active())return false;
-  localStorage.setItem(key(),JSON.stringify({checksum:hash,at:data?.created_at||new Date().toISOString()}));
+  localStorage.setItem(key(),JSON.stringify({checksum:hash,at:data?.created_at||new Date().toISOString()}));retryDelay=30000;
   status('Backup cloud salvato · '+new Date(meta().at).toLocaleString('it-IT'));
   // Retention is restricted by RLS to this account; deletion never affects local points.
   const old=await deadline(ctx.client.from('pfc_backups').select('id').eq('user_id',ctx.id).order('created_at',{ascending:false}).range(20,200));
   if(!old.error&&old.data?.length)await deadline(ctx.client.from('pfc_backups').delete().in('id',old.data.map(x=>x.id)));
   await list();return true;
- }catch(e){pending=true;status(/troppo grande/.test(e.message||'')?e.message:networkError(e));return false}
- finally{busy=false;if(button&&active())button.disabled=false;if(pending&&navigator.onLine){clearTimeout(timer);timer=setTimeout(()=>backup(),30000)}}
+ }catch(e){
+  const tooLarge=/troppo grande/.test(e.message||'');
+  // A permanent storage limit cannot be fixed by retrying every 30 seconds.
+  pending=!tooLarge;
+  status(tooLarge?e.message:networkError(e));
+  return false;
+ }
+ finally{
+  busy=false;if(button&&active())button.disabled=false;
+  if(pending&&navigator.onLine){
+    clearTimeout(timer);
+    const delay=retryDelay;
+    retryDelay=Math.min(60*60*1000,retryDelay*2);
+    timer=setTimeout(()=>backup(),delay);
+  }
+ }
 }
 async function restore(id,mode){
  if(busy||!active())return;if(!navigator.onLine)return status('Serve Internet per scaricare questo backup.');
