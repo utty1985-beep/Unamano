@@ -2350,7 +2350,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=createPfcAlertEngi
      }catch(e){state=previous;localStorage.setItem(STORE,JSON.stringify(previous));for(const [k,v]of Object.entries(settingsBefore))if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v);if(trackBefore==null)localStorage.removeItem('cacciatraccia-active-track-v1');else localStorage.setItem('cacciatraccia-active-track-v1',trackBefore);renderAll();throw e;}
    }
    window.__PFC_LIVE_API__={backup:backupPayload,restoreBackup:restoreCloudPayload,points:()=>structuredClone(state.points||[]),map:()=>map,getFix:()=>getFix(),showMap:()=>{follow=false;$('followBtn')?.classList.remove('active');showPage('map');},openSightings:()=>{showPage('diary');historyFilter='sightings';document.querySelectorAll('[data-history]').forEach(b=>b.classList.toggle('active',b.dataset.history==='sightings'));renderDiary();}};
-   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.11';
+   const badge=$('ctVersionBadge');if(badge)badge.textContent='• V6.9.12';
    setBootStatus('ready');
  }catch(e){console.error('Avvio funzioni',e);setBootStatus('error',e.message);}
 }).catch(e=>{
