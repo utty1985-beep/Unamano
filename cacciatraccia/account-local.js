@@ -1,6 +1,6 @@
 /* Local data belong to the last verified account. Never save passwords in backups. */
 (()=>{'use strict';
-const KEYS=['cacciatraccia-direct-v5','cacciatraccia-direct-v5-snapshots','cacciatraccia-active-track-v1','pfc-v661-settings','cacciatraccia-hunt-day-v1','pfc-alert-settings-v1','cacciatraccia-weather-v2','cacciatraccia-offline-area-last'];
+const KEYS=['cacciatraccia-direct-v5','cacciatraccia-direct-v5-snapshots','cacciatraccia-active-track-v1','pfc-v661-settings','cacciatraccia-hunt-day-v1','pfc-alert-settings-v1','cacciatraccia-weather-v2','cacciatraccia-offline-area-last','cacciatraccia-point-deletions-v1'];
 const OWNER='pfc-local-owner-v1',PROFILE='pfc-offline-profile-v1';
 function read(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
 function capture(){return Object.fromEntries(KEYS.map(k=>[k,localStorage.getItem(k)]));}
