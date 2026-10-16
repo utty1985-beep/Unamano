@@ -11,7 +11,8 @@ function apply(){
  const current=mode(),mush=current==='mushroom';document.body.dataset.pfcActivity=current;
  for(const id of huntIds){const e=q(id);if(e)e.dataset.pfcActivityOnly='hunt';}
  for(const id of mushroomIds){const e=q(id);if(e)e.dataset.pfcActivityOnly='mushroom';}
- for(const id of ['pointWindName','pointWindDir','pointWindSpeed','pointWindGust','pointReadWeatherBtn','pointWeatherSummary','pointType']){const e=q(id)?.closest('.full, .formGrid > div');if(e)e.dataset.pfcActivityOnly='hunt';}
+ for(const id of ['pointWindName','pointWindDir','pointWindSpeed','pointWindGust','pointReadWeatherBtn','pointWeatherSummary']){const e=q(id)?.closest('.full, .formGrid > div');if(e)e.removeAttribute('data-pfc-activity-only');}
+ const type=q('pointType')?.closest('.full, .formGrid > div');if(type)type.dataset.pfcActivityOnly='hunt';
  document.querySelectorAll('[data-basemap="wind"],.pfcWindButton,.pfcWindResult').forEach(e=>e.dataset.pfcActivityOnly='hunt');
  document.querySelectorAll('.pfcWeatherSettings').forEach(e=>e.setAttribute('data-pfc-activity-only','hunt'));
  document.querySelectorAll('#page-backup > button').forEach(e=>{if(e.textContent.includes('GPS cane'))e.dataset.pfcActivityOnly='hunt';});
