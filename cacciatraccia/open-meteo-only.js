@@ -87,7 +87,7 @@
    const info=document.createElement('p');info.id='pfcWeatherSource';info.className='note';
    info.append('Previsioni e vento: ');
    const link=document.createElement('a');link.href='https://open-meteo.com/';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open-Meteo.com';info.appendChild(link);
-   info.append(' · dati CC BY 4.0 · aggiornamento online. I nomi locali dei venti sono indicativi.');
+   info.append(' · dati ');const licence=document.createElement('a');licence.href='https://creativecommons.org/licenses/by/4.0/';licence.target='_blank';licence.rel='noopener noreferrer';licence.textContent='CC BY 4.0';info.appendChild(licence);info.append(' · aggiornamento online. I nomi locali dei venti sono indicativi.');
    body.insertAdjacentElement('beforebegin',info);
  }
  document.addEventListener('DOMContentLoaded',credit);
