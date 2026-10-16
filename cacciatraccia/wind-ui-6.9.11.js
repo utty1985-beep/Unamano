@@ -1,4 +1,5 @@
-/* PFC 6.9.11: show dialect wind labels across weather, diary and map without altering stored data. */
+/* App 6.9.x · nomi foggiani visibili nel meteo, nella mappa e nello storico,
+   senza riscrivere i dati salvati e senza duplicare le etichette. */
 (()=>{
  'use strict';
  if(window.__PFC_WIND_UI_6911__)return;
@@ -8,7 +9,8 @@
   '#page-appostamenti','#pfcWindModal','#pfcWindOutput',
   '#ctConditionResults','#ctSightingSummary','#ctWindLegend','#ctWindHud'
  ];
- const names=/\b(Tramontana|Grecale|Ostro|Libeccio)\b/g;
+ const names=/\b(Tramontana|Grecale|Levante|Scirocco|Ostro|Libeccio|Ponente|Maestrale)\b/g;
+ const alreadyLabeled=/^\s*·\s*(?:NE|NO|SE|SO|N|E|S|O)\s*\)/i;
  const resolve=name=>window.PFC_WIND_LABELS?.name(name)||name;
  let scheduled=false;
  function visit(root){
@@ -17,20 +19,37 @@
   const nodes=[];
   while(walker.nextNode())nodes.push(walker.currentNode);
   for(const node of nodes){
-   const text=node.nodeValue||'';
-   if(!text||text.includes('Voria (')||text.includes('Favugna ('))continue;
-   const updated=text.replace(names,resolve);
-   if(updated!==text)node.nodeValue=updated;
+   const original=node.nodeValue||'';
+   if(!original)continue;
+   const updated=original.replace(names,(match,offset,whole)=>
+    alreadyLabeled.test(whole.slice(offset+match.length))?match:resolve(match));
+   if(updated!==original)node.nodeValue=updated;
   }
  }
  function legend(){
   const weather=document.getElementById('weatherBody');
   if(!weather||document.getElementById('pfcWindDialectLegend'))return;
-  const info=document.createElement('p');
-  info.id='pfcWindDialectLegend';
-  info.className='note';
-  info.textContent='Venti locali: Voria (N / NE), Favugna (S / SO), Ponente (O), Maestrale (NO). La direzione standard resta visibile.';
-  weather.insertAdjacentElement('afterend',info);
+  const rows=window.PFC_WIND_LABELS?.rows;
+  if(!rows?.length)return;
+  const details=document.createElement('details');
+  details.id='pfcWindDialectLegend';
+  details.className='note';
+  details.style.margin='10px 0';
+  const summary=document.createElement('summary');
+  summary.textContent='🧭 Nomi foggiani dei venti · apri la legenda';
+  summary.style.cursor='pointer';
+  summary.style.fontWeight='700';
+  details.append(summary);
+  const ul=document.createElement('ul');
+  ul.style.paddingLeft='20px';
+  ul.style.margin='8px 0 0';
+  for(const row of rows){
+   const li=document.createElement('li');
+   li.textContent=row.dir+' · '+row.local+' — '+row.standard;
+   ul.appendChild(li);
+  }
+  details.append(ul);
+  weather.insertAdjacentElement('afterend',details);
  }
  function editHint(){
   const input=document.getElementById('pointWindName');
@@ -46,14 +65,15 @@
   }
   const standard=String(input.value||'').trim();
   const named=resolve(standard);
-  const label= named && named!==standard?named:standard;
-  const value= label?'Nome locale: '+label:'Nome locale e direzione compariranno qui dopo la lettura meteo';
+  const label=named&&named!==standard?named:standard;
+  const value=label?'Nome locale: '+label:'Dopo la lettura meteo appariranno nome foggiano e direzione';
   if(hint.textContent!==value)hint.textContent=value;
  }
  function apply(){
   scheduled=false;
   selectors.forEach(selector=>document.querySelectorAll(selector).forEach(visit));
-  legend();editHint();
+  legend();
+  editHint();
  }
  function schedule(){
   if(scheduled)return;
