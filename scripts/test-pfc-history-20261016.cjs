@@ -1,0 +1,27 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const read=p=>fs.readFileSync('cacciatraccia/'+p,'utf8');
+const html=read('index.html'),active=[...html.matchAll(/data-pfc-src="([^"?]+)/g)].map(m=>m[1]);
+for(const file of active){assert(fs.existsSync('cacciatraccia/'+file),file);new vm.Script(read(file),{filename:file});}
+assert(active.includes('meteoam-only.js'));assert(active.includes('friends-6.9.8-reconnect.js'));assert(!active.some(f=>/^team-/.test(f)),'removed voice UI cannot load');
+assert.equal((read('app-6.9.8.js').match(/<option value="meteoam">/g)||[]).length,2,'provider and external site both MeteoAM only');
+const source=read('app-6.9.8.js'),getLine=token=>source.split('\n').find(l=>l.includes(token));
+const context={heading:null,lastSample:null,stableCount:0,absoluteSeenAt:0,jumpCandidate:null,open:true,screen:{orientation:{angle:0}},window:{},performance:{now:()=>2000},render(){},setState(){}};
+vm.createContext(context);
+const helpers=['const norm=','const adiff=','const smooth='].map(t=>source.split('\n').filter(l=>l.trim().startsWith(t)).at(-1));
+vm.runInContext([...helpers,getLine('function screenAngle()'),getLine('function rawHeading(e)'),getLine('function acceptRaw(raw,now)'),getLine('function orientation(e)')].join('\n'),context);
+vm.runInContext("orientation({type:'deviceorientationabsolute',alpha:null,beta:null,gamma:null});",context);assert.equal(context.heading,null,'missing orientation cannot invent North');
+for(let i=0;i<3;i++)vm.runInContext("orientation({type:'deviceorientationabsolute',alpha:270,beta:0,gamma:0});",context);assert.equal(context.heading,90);
+vm.runInContext("orientation({type:'deviceorientationabsolute',alpha:180,beta:30,gamma:15});",context);assert.equal(context.heading,90,'tilt freezes heading');
+const engine=require('../cacciatraccia/puglia-restrictions.js')();
+const geometry={bbox:[14,40,16,42],rings:[[[14,40],[16,40],[16,42],[14,42],[14,40]],[[14.9,40.9],[15.1,40.9],[15.1,41.1],[14.9,41.1],[14.9,40.9]]]};
+assert(engine.inside({lat:40.5,lng:14.5},geometry));assert(!engine.inside({lat:41,lng:15},geometry),'hole is not protected polygon');
+assert.equal(engine.assess({lat:40.5,lng:14.5,acc:100},{}).state,'gps');
+const layer=id=>({id,status:'ok',downloadedAt:new Date().toISOString(),features:[{...geometry,id:'test',name:'Fixture'}]});
+assert.equal(engine.assess({lat:40.5,lng:14.5,acc:5},{layers:[layer(0),layer(1)]}).state,'inside');
+assert.equal(engine.assess({lat:43,lng:17,acc:5},{layers:[layer(0),layer(1)]}).state,'no_overlap');
+assert.equal(engine.assess({lat:43,lng:17,acc:5},{layers:[]}).state,'unverified');
+const a=require('../cacciatraccia/meteoam-only.js');const now=Date.now(),times=Array.from({length:5},(_,i)=>new Date(now+(i-1)*3600000).toISOString());const values=x=>Object.fromEntries(times.map((_,i)=>[String(i),x]));
+const raw={timeseries:times,paramlist:['wkmh','wdir','2t'],datasets:{'0':{'0':values(0),'1':values(0),'2':values(20)}}};
+const result=a(raw,{latitude:41.46,longitude:15.55,timeformat:'unixtime'},now);assert.equal(result.current.wind_speed_10m,0);assert.equal(result.current.wind_direction_10m,0);assert.equal(result.current.wind_gusts_10m,null);
+assert.throws(()=>a({...raw,timeseries:times.map(t=>new Date(Date.parse(t)-24*3600000).toISOString())},{},now),/non aggiornata/);
+console.log('PASS current loaded modules: removed voice, single MeteoAM source, sensor null/tilt/rotation, official polygons/holes/GPS/freshness, missing weather never fabricated.');

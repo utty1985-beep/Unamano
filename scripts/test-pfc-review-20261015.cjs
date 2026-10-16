@@ -52,6 +52,15 @@ q('startTrackBtn').click();await q('stopTrackBtn').onclick();assert.equal(JSON.p
 // Comparison with a real saved bird must not throw the old p.Number error.
 w.document.querySelector('[data-history="sightings"]').click();q('ctSightingDate').value=new Date().toLocaleDateString('en-CA');await q('ctSightingRun').onclick();
 assert.equal(q('ctSightingRun').disabled,false);
+// Current mode controls preserve separate categories and keep the comparison stable.
+q('pfc676Mush').click();await new Promise(r=>setTimeout(r,120));assert.equal(w.document.body.dataset.pfcActivity,'mushroom');assert(!q('pointsList').textContent.includes('Vecchio appostamento'));
+q('pfc676Hunt').click();await new Promise(r=>setTimeout(r,120));q('pfc676NavSight').click();assert.equal(q('ctSightingCheck').style.display,'block');
+assert(!q('teamPTT')&&!q('teamAudioBtn'),'removed walkie-talkie controls stay absent');
+// Dragging the map disables recentering. A held touch selects a valid point.
+const map=w.__PFC_LIVE_API__.map(),mapElement=q('map');map.fire('dragstart');assert.equal(w.__PFC_FINAL_DIAG__().follow,false);
+mapElement.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,clientX:30,clientY:30,button:0}));await new Promise(r=>setTimeout(r,700));mapElement.dispatchEvent(new w.MouseEvent('pointerup',{bubbles:true,clientX:30,clientY:30,button:0}));assert(w.__PFC_FINAL_LAST_SELECT__&&Number.isFinite(w.__PFC_FINAL_LAST_SELECT__.lat));
+// Deletion removes the same record from persistence, map API and both lists.
+const removing=w.CT.del('bird');q('pfcDeletePointDialog').querySelector('button:last-child').click();assert(await removing);assert(!w.__PFC_LIVE_API__.points().some(p=>p.id==='bird'));assert(!JSON.parse(w.localStorage.getItem('cacciatraccia-direct-v5')).points.some(p=>p.id==='bird'));
 console.log(JSON.stringify({status:w.__PFC_APP_STATUS__,errors,warnings: warnings.slice(0,5),tests:'startup, saved points across dates, explicit filter, point coordinates, calm wind, diary save/delete, invalid backup, map navigation/layers, parking, walking, bird comparison'}));
 assert.deepEqual(errors,['Error: Formato backup non valido'],'only deliberate bad-import error is expected');
 }finally{setTimeout(()=>process.exit(process.exitCode||0),0)}})().catch(e=>{console.error(e);setTimeout(()=>process.exit(process.exitCode||0),0);process.exitCode=1});

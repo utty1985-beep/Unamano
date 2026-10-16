@@ -4,16 +4,21 @@
  const q=id=>document.getElementById(id);
  const gate=q('pfcAuthGate'),form=q('pfcAuthForm'),message=q('pfcAuthMessage');
  let client,mode='login',loading=false,opened=false,recovery=false;
+ const loadedScripts=new Set();let mailReadyAt=0;
+ const callbackUrl=new URL(location.href),callbackHash=new URLSearchParams(location.hash.slice(1));
+ const linkError=callbackUrl.searchParams.get('error')||callbackHash.get('error');
+ function mailCooldown(seconds=60){mailReadyAt=Date.now()+seconds*1000;}
+ function errorMessage(e){const raw=String(e.message||'');return e.status===429||/rate limit|only request this after/i.test(raw)?'Richiesta troppo ravvicinata. Attendi almeno un minuto prima di riprovare.':/invalid login/i.test(raw)?'Email o password non corrette.':/email not confirmed/i.test(raw)?'Email non confermata. Usa Reinvia conferma e apri il link più recente.':/fetch|network/i.test(raw)?'Servizio non raggiungibile. Controlla Internet e riprova.':/expired|otp_expired|token not found|invalid.*link/i.test(raw)?'Link non valido o scaduto. Richiedi un nuovo link e usa soltanto l’ultima email.':raw||'Operazione non riuscita. Riprova.';}
  function status(text){message.textContent=text;}
  function setMode(next){
-  mode=next; q('pfcAuthPasswordRow').hidden=next==='forgot';
+  mode=next; q('pfcAuthPasswordRow').hidden=next==='forgot'||next==='resend';
   q('pfcAuthPassword').autocomplete=next==='signup'||next==='reset'?'new-password':'current-password';
-  q('pfcAuthPassword').required=next!=='forgot';
-  q('pfcAuthSubmit').textContent=({login:'Accedi',signup:'Crea account',forgot:'Invia email di recupero',reset:'Salva nuova password'})[next];
-  q('pfcAuthTitle').textContent=({login:'Accedi alla tua app',signup:'Crea il tuo account',forgot:'Recupera la password',reset:'Scegli una nuova password'})[next];
+  q('pfcAuthPassword').required=next!=='forgot'&&next!=='resend';
+  q('pfcAuthSubmit').textContent=({login:'Accedi',signup:'Crea account',forgot:'Invia email di recupero',resend:'Reinvia email di conferma',reset:'Salva nuova password'})[next];
+  q('pfcAuthTitle').textContent=({login:'Accedi alla tua app',signup:'Crea il tuo account',forgot:'Recupera la password',resend:'Conferma il tuo indirizzo email',reset:'Scegli una nuova password'})[next];
   q('pfcAuthEmailRow').hidden=next==='reset';q('pfcAuthEmail').required=next!=='reset';status('');
  }
- function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=()=>reject(Error('Caricamento non riuscito. Controlla Internet e ricarica.'));document.body.appendChild(s);});}
+ function loadScript(src){if(loadedScripts.has(src))return Promise.resolve();return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.async=false;const timer=setTimeout(()=>{s.remove();reject(Error('Caricamento troppo lento. Ricarica con Internet attivo.'))},20000);s.onload=()=>{clearTimeout(timer);loadedScripts.add(src);resolve()};s.onerror=()=>{clearTimeout(timer);s.remove();reject(Error('Caricamento non riuscito. Controlla Internet e ricarica.'))};document.body.appendChild(s);});}
  async function openApp(){
   if(opened||loading||recovery)return;loading=true;
   try {
@@ -31,18 +36,22 @@
    window.dispatchEvent(new CustomEvent('pfc:authenticated',{detail:{id:user.id}}));
   }catch(e){status(e.message||'Accesso non disponibile. Riprova.');}finally{loading=false;}
  }
- q('pfcAuthSignup').onclick=()=>setMode('signup');q('pfcAuthLogin').onclick=()=>setMode('login');q('pfcAuthForgot').onclick=()=>setMode('forgot');
+ q('pfcAuthSignup').onclick=()=>setMode('signup');q('pfcAuthLogin').onclick=()=>setMode('login');q('pfcAuthForgot').onclick=()=>setMode('forgot');q('pfcAuthResend').onclick=()=>setMode('resend');
  form.onsubmit=async event=>{
   event.preventDefault();if(!client){status('Servizio di accesso non disponibile. Ricarica con Internet.');return;}
   const button=q('pfcAuthSubmit'),email=q('pfcAuthEmail').value.trim(),password=q('pfcAuthPassword').value;
   button.disabled=true;status('Attendi…');
   try{
-   if(mode==='forgot'){
-    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:new URL('./',location.href).href});if(error)throw error;
+   if(['forgot','signup','resend'].includes(mode)&&Date.now()<mailReadyAt)throw Error('Attendi '+Math.ceil((mailReadyAt-Date.now())/1000)+' secondi prima di richiedere un’altra email.');
+   if(mode==='resend'){
+    const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:new URL('./',location.href).href}});if(error)throw error;mailCooldown();
+    status('Richiesta inviata. Controlla anche Spam e usa soltanto il link dell’ultima email di conferma. Attendi un minuto prima di riprovare.');
+   }else if(mode==='forgot'){
+    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:new URL('./',location.href).href});if(error)throw error;mailCooldown();
     status('Se l’indirizzo è registrato, riceverai un’email con il link per scegliere una nuova password.');
    }else if(mode==='signup'){
     if(password.length<8)throw Error('Usa una password di almeno 8 caratteri.');
-    const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:new URL('./',location.href).href}});if(error)throw error;
+    const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:new URL('./',location.href).href}});if(error)throw error;mailCooldown();
     q('pfcAuthPassword').value='';if(data?.session)await openApp();else status('Controlla la tua email e conferma la registrazione, poi torna su Accedi.');
    }else if(mode==='reset'){
     if(password.length<8)throw Error('Usa una password di almeno 8 caratteri.');
@@ -52,7 +61,7 @@
     const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
     q('pfcAuthPassword').value='';await openApp();
    }
-  }catch(e){const raw=String(e.message||'');status(/invalid login/i.test(raw)?'Email o password non corrette.':/email not confirmed/i.test(raw)?'Conferma prima l’indirizzo tramite il link ricevuto per email.':/fetch|network/i.test(raw)?'Servizio non raggiungibile. Controlla Internet e riprova.':/rate limit/i.test(raw)?'Troppi tentativi. Attendi qualche minuto e riprova.':raw||'Operazione non riuscita. Riprova.');}
+  }catch(e){if(e.status===429)mailCooldown();status(errorMessage(e));}
   finally{button.disabled=false;}
  };
  async function init(){
@@ -64,6 +73,7 @@
     if(event==='PASSWORD_RECOVERY'){recovery=true;setMode('reset');}
     if(event==='SIGNED_OUT'&&opened){document.body.classList.add('pfc-auth-locked');gate.hidden=false;location.reload();}
    });
+   if(linkError){status('Link non valido o scaduto. Usa Reinvia conferma oppure Password dimenticata e apri soltanto il link più recente.');return;}
    if(recovery){setMode('reset');return;}
    await openApp();
   }catch(e){status(e.message||'Servizio non disponibile. Ricarica.');}
