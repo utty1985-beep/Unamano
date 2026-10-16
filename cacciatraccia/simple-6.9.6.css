@@ -54,3 +54,82 @@ body.pfc676 .topbar{padding-block:10px!important}
 
 body.pfc676 #pfc696NavCar span{display:block;line-height:1.15}
 body.pfc676 #northBtn.active{background:#173f2b;color:#fff}
+
+
+/* 6.9.13 · Outdoor ergonomics: large touch areas, less clutter, no accidental parking */
+body.pfc676 .pfc676CommercialNav{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:2px;padding:6px 5px calc(8px + env(safe-area-inset-bottom));
+  background:#fffefa;box-shadow:0 -4px 18px #102e2420;
+}
+body.pfc676 .pfc676CommercialNav button{
+  min-width:0;min-height:62px;padding:7px 2px 6px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;white-space:nowrap;
+  font-size:clamp(10px,2.6vw,12px)!important;line-height:1.15;
+  border-radius:13px;overflow-wrap:normal!important;word-break:normal!important;
+}
+body.pfc676 .pfc676CommercialNav button b{font-size:24px;line-height:1;margin:0}
+body.pfc676 #pfc696NavCar span{font-size:inherit;line-height:inherit;display:block}
+body.pfc676 .pfc676CommercialNav button.active{background:#e3f0e0;color:#174b2f}
+body.pfc676{padding-bottom:100px}
+body.pfc676 .pfcParkingSettings{margin:8px 0 12px}
+body.pfc676 .pfcParkingSettings>summary{
+  min-height:64px;display:flex;align-items:center;padding:15px 17px;
+  font-size:17px;font-weight:850;border-radius:17px;color:#174b2f;
+  background:#fffefa;border:1px solid #c9d9c7;
+}
+body.pfc676 .pfcParkingSettings[open]>summary{background:#edf5e9}
+body.pfc676 .homeCarDetail{padding:14px;margin-top:8px!important}
+body.pfc676 .homeCarDetail .sectionHead{align-items:center}
+body.pfc676 .homeCarDetail h2{font-size:21px;line-height:1.2;margin:0 0 9px}
+body.pfc676 .homeCarDetail #carInfo{font-size:14px;line-height:1.4;margin:8px 0}
+body.pfc676 .homeCarDetail .actionGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.pfc676 .homeCarDetail .actionGrid button{
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  min-height:60px;padding:12px 8px;font-size:16px;line-height:1.2;border-radius:14px;
+}
+body.pfc676 .pfc-car-empty #parkHereBtn,
+body.pfc676 .pfc-car-ready #returnCarBtn{grid-column:1/-1;background:#174b2f;color:#fff;font-size:18px}
+body.pfc676 .pfc-car-empty #moveCarBtn,
+body.pfc676 .pfc-car-empty #returnCarBtn,
+body.pfc676 .pfc-car-empty #clearCarBtn,
+body.pfc676 .pfc-car-ready #parkHereBtn{display:none!important}
+body.pfc676 .pfc-car-ready #clearCarBtn{background:#f9e8e5;color:#952d2a}
+body.pfc676:not(.pfc-car-has-position) #pfc676Return{display:none!important}
+body.pfc676 .homeWeatherCard{padding:16px!important;border-radius:20px}
+body.pfc676 .homeWeatherCard h2{font-size:22px;line-height:1.25}
+body.pfc676 .homeWeatherCard #pfcWeatherSource{
+  font-size:11px;line-height:1.35;color:#657369;margin:3px 0 12px;
+}
+body.pfc676 .homeWeatherCard #weatherBody .empty{
+  padding:16px 10px;font-size:15px;line-height:1.4;min-height:0;
+}
+body.pfc676 .homeWeatherCard .pfcWeatherFriendly{
+  display:grid;gap:9px;justify-items:center;color:#334a3c;
+}
+body.pfc676 .homeWeatherCard .pfcWeatherFriendly strong{font-size:16px}
+body.pfc676 .homeWeatherCard .pfcWeatherFriendly small{font-size:12px;color:#69766b}
+body.pfc676 .homeWeatherCard .pfcWeatherFriendly button{
+  border:0;background:#174b2f;color:white;font-weight:800;
+  min-height:46px;border-radius:12px;padding:10px 18px;
+}
+body.pfc676 .homeWeatherCard .weatherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+body.pfc676 .homeWeatherCard .weatherNow{padding:13px;border-radius:13px}
+body.pfc676 .homeWeatherCard .weatherNow span{font-size:13px;color:#5d6a5f}
+body.pfc676 .homeWeatherCard .weatherNow b{font-size:21px;line-height:1.2;margin-top:4px}
+body.pfc676 #pfcOutdoorWeatherDetails{border-top:1px solid #dce7dd;margin-top:10px}
+body.pfc676 #pfcOutdoorWeatherDetails summary{
+  padding:11px 4px;min-height:44px;cursor:pointer;font-weight:750;color:#1b5036;font-size:14px
+}
+body.pfc676 #pfcOutdoorWeatherDetails #pfcWindDialectLegend{font-size:12px;line-height:1.5;margin:3px 4px 10px}
+body.pfc676 #pfc676Quick{gap:9px}
+body.pfc676 #pfc676Quick button{min-height:84px;padding:11px 9px;border-radius:15px}
+body.pfc676 #pfc676Quick button span{font-size:15px}
+body.pfc676 #pfc676Quick button small{font-size:11px}
+body.pfc676 .mapBtn{min-width:52px;min-height:48px}
+body.pfc676 button:focus-visible,body.pfc676 summary:focus-visible{outline:3px solid #e2ad39;outline-offset:2px}
+@media(max-width:370px){
+ body.pfc676 .homeCarDetail .actionGrid{gap:7px}
+ body.pfc676 .homeCarDetail .actionGrid button{font-size:14px}
+ body.pfc676 .pfc676CommercialNav button b{font-size:22px}
+}
