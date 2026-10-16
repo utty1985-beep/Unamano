@@ -1676,7 +1676,7 @@ window.__PFC_BOOT_READY__=(async()=>{
     const day=$('ctHuntDay')?.value||localStorage.getItem('cacciatraccia-hunt-day-v1')||localDay();
     (state.points||[]).forEach(p=>{
       if(!validCoords(p)||!pointMatchesMode(p))return;if(activityMode()!=='mushroom'&&p.type!=='Avvistamento'&&!matchesPostDay(p,day))return;
-      const ic=p.type==='Avvistamento'&&p.sightingKind==='mushroom'?mushIcon():icon(p.type);
+      const ic=p.sightingKind==='mushroom'?mushIcon():icon(p.type);
       const m=L.marker([p.lat,p.lng],{icon:ic});m.addTo(markerLayer);m.on('click',e=>{L.DomEvent.stopPropagation(e);fillModal(p)});
     });
   };
