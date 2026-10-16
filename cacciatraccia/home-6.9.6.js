@@ -244,3 +244,129 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 
+
+
+/* 6.9.13 · Interface layer only: keep original handlers, GPS, stored data and backups. */
+(()=>{
+'use strict';
+if(window.__PFC_OUTDOOR_UI_6913__)return;
+window.__PFC_OUTDOOR_UI_6913__=true;
+const byId=id=>document.getElementById(id);
+let carObserved=false,weatherObserved=false;
+
+function openCarControls(){
+  const oldMapNav=document.querySelector('body > nav button[data-page="map"]');
+  if(oldMapNav)oldMapNav.click();
+  document.querySelectorAll('#pfc676Nav button').forEach(x=>x.classList.toggle('active',x.id==='pfc696NavCar'));
+  setTimeout(()=>{
+    const details=document.querySelector('.pfcParkingSettings');
+    if(!details)return;
+    details.open=true;
+    details.scrollIntoView({behavior:'smooth',block:'center'});
+  },140);
+}
+function syncCar(){
+  const status=byId('carStatus'),card=status?.closest('.homeCarDetail');
+  if(!status||!card)return;
+  const saved=/auto salvata|fissata|parcheggiata/i.test(status.textContent||'')&&!/non fissata/i.test(status.textContent||'');
+  const current=saved?'ready':'empty';
+  if(!card.classList.contains('pfc-car-'+current)){
+    card.classList.toggle('pfc-car-ready',saved);
+    card.classList.toggle('pfc-car-empty',!saved);
+  }
+  document.body.classList.toggle('pfc-car-has-position',saved);
+  const details=card.closest('.pfcParkingSettings');
+  const summary=details?.querySelector(':scope > summary');
+  const label=saved?'🚗 Auto salvata · apri i comandi':'🚗 Segna dove hai parcheggiato';
+  if(summary&&summary.textContent!==label)summary.textContent=label;
+}
+function setupCar(){
+  const button=byId('pfc696NavCar');
+  if(button&&!button.dataset.pfcUi6913){
+    button.dataset.pfcUi6913='1';
+    button.innerHTML='<b aria-hidden="true">🚗</b><span>Auto</span>';
+    button.setAttribute('aria-label','Apri comandi parcheggio');
+    // Old handler parked the car immediately: replace it with navigation only.
+    button.onclick=openCarControls;
+  }
+  const posts=byId('pfc676NavPosts');
+  if(posts&&!posts.dataset.pfcUi6913){posts.dataset.pfcUi6913='1';posts.innerHTML='<b aria-hidden="true">📍</b><span>Postazioni</span>';posts.setAttribute('aria-label','Appostamenti salvati')}
+  const sight=byId('pfc676NavSight');
+  if(sight&&!sight.dataset.pfcUi6913){sight.dataset.pfcUi6913='1';sight.innerHTML='<b aria-hidden="true">🔭</b><span>Avvisti</span>';sight.setAttribute('aria-label','Avvistamenti')}
+  const park=byId('parkHereBtn');
+  if(park&&!park.dataset.pfcUi6913){park.dataset.pfcUi6913='1';park.textContent='📍 Salva parcheggio'}
+  const move=byId('moveCarBtn');
+  if(move&&!move.dataset.pfcUi6913){move.dataset.pfcUi6913='1';move.textContent='✥ Sposta auto'}
+  const ret=byId('returnCarBtn');
+  if(ret&&!ret.dataset.pfcUi6913){
+    ret.dataset.pfcUi6913='1';ret.textContent='🧭 Torna alla macchina';
+    ret.addEventListener('click',()=>setTimeout(()=>{
+      const m=document.querySelector('.mapWrap');
+      if(m)m.scrollIntoView({behavior:'smooth',block:'start'});
+    },200));
+  }
+  const del=byId('clearCarBtn');
+  if(del&&!del.dataset.pfcUi6913){
+    del.dataset.pfcUi6913='1';del.textContent='🗑 Rimuovi auto';
+    del.addEventListener('click',e=>{
+      if(!window.confirm('Rimuovere il parcheggio salvato?')){
+        e.preventDefault();e.stopImmediatePropagation();
+      }else setTimeout(syncCar,100);
+    },true);
+  }
+  const status=byId('carStatus');
+  if(status&&!carObserved){
+    carObserved=true;
+    new MutationObserver(syncCar).observe(status,{subtree:true,childList:true,characterData:true});
+  }
+  syncCar();
+}
+function syncWeather(){
+  const body=byId('weatherBody'),card=body?.closest('.homeWeatherCard');
+  if(!body||!card)return;
+  const source=byId('pfcWeatherSource');
+  if(source&&!source.dataset.pfcShort){
+    source.dataset.pfcShort='1';
+    if(source.firstChild?.nodeType===Node.TEXT_NODE)source.firstChild.nodeValue='Fonte: ';
+    if(source.lastChild?.nodeType===Node.TEXT_NODE)source.lastChild.nodeValue='';
+  }
+  let details=byId('pfcOutdoorWeatherDetails');
+  if(!details){
+    details=document.createElement('details');details.id='pfcOutdoorWeatherDetails';
+    const title=document.createElement('summary');title.textContent='Dettagli sui venti locali';details.appendChild(title);
+    card.appendChild(details);
+  }
+  const legend=byId('pfcWindDialectLegend');
+  if(legend&&legend.parentElement!==details)details.appendChild(legend);
+  const empty=body.querySelector('.empty');
+  if(empty&&!empty.dataset.pfcFriendly && /HTTP\s*\d+|non disponibile|temporaneamente limitato/i.test(empty.textContent||'')){
+    const technical=empty.textContent.trim();
+    empty.dataset.pfcFriendly='1';
+    empty.textContent='';
+    const wrap=document.createElement('div');wrap.className='pfcWeatherFriendly';
+    const title=document.createElement('strong');title.textContent='🌦 Meteo temporaneamente non disponibile';
+    const hint=document.createElement('small');hint.textContent='Seleziona un punto sulla mappa oppure riprova.';
+    const info=document.createElement('small');info.textContent='Dettaglio tecnico: '+technical;
+    const button=document.createElement('button');button.type='button';button.textContent='🔄 Riprova / scegli punto';
+    button.addEventListener('click',()=>{
+      const selected=byId('selectedCard');
+      if(selected&&!selected.classList.contains('hidden'))byId('weatherRefreshBtn')?.click();
+      else {byId('pfc676NavMap')?.click();document.querySelector('.mapWrap')?.scrollIntoView({behavior:'smooth',block:'start'});}
+    });
+    wrap.append(title,hint,button,info);empty.appendChild(wrap);
+  }
+}
+function setupWeather(){
+  const body=byId('weatherBody');
+  if(body&&!weatherObserved){
+    weatherObserved=true;
+    new MutationObserver(syncWeather).observe(body,{subtree:false,childList:true});
+  }
+  syncWeather();
+}
+function init(){setupCar();setupWeather()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+window.addEventListener('pfc:ready',init);
+window.addEventListener('pfc:authenticated',init);
+setTimeout(init,400);setTimeout(init,1500);
+})();
